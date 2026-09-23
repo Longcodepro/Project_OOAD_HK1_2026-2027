@@ -1,0 +1,48 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Manrope, sans-serif;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+button.bg-violet-400 {
+  background: #e56b3f !important;
+  color: #fff !important;
+}
+
+button.bg-violet-400:hover {
+  background: #cf5c34 !important;
+}
+
+input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .06);
+  padding: 13px;
+  color: white;
+  font-size: 14px;
+}
+
+.font-mono {
+  font-family: 'DM Mono', monospace;
+}
+
+.eyebrow {
+  color: #bd4f29;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .19em;
+}

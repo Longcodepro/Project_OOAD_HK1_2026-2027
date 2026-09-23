@@ -1,0 +1,163 @@
+/* Checkout Timeline & Steps */
+.timeline-item {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 18px;
+  position: relative;
+  padding-bottom: 36px;
+}
+
+.timeline-item:before {
+  position: absolute;
+  left: 19px;
+  top: 40px;
+  bottom: 0;
+  width: 1px;
+  background: #deddd6;
+  content: '';
+}
+
+.timeline-item:last-child:before {
+  display: none;
+}
+
+.timeline-item i {
+  display: grid;
+  z-index: 1;
+  height: 39px;
+  place-items: center;
+  border: 1px solid #e56b3f;
+  border-radius: 50%;
+  background: #fff7f3;
+  color: #c7542c;
+  font: 11px 'DM Mono', monospace;
+  font-style: normal;
+}
+
+.timeline-item h2 {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.timeline-item p {
+  margin-top: 5px;
+  font-size: 13px;
+  color: #6e716e;
+}
+
+/* Payment Options */
+.pay-option {
+  border: 1px solid #deddd6;
+  border-radius: 14px;
+  padding: 12px;
+  text-align: left;
+  font-size: 13px;
+  color: #555854;
+  transition: border-color .18s;
+}
+
+.selected-pay {
+  border-color: #e56b3f;
+  background: #fff0e9;
+  color: #252729;
+}
+
+.order-card {
+  background: #fff;
+  box-shadow: 0 8px 26px rgba(56, 48, 42, .05);
+}
+
+/* Success & Ticket Invoice */
+.success-mark {
+  display: grid;
+  width: 82px;
+  height: 82px;
+  margin: auto;
+  place-items: center;
+  border: 1px solid #8ef1d0;
+  border-radius: 50%;
+  background: rgba(90, 230, 181, .13);
+  color: #2e9f78;
+  font-size: 38px;
+  box-shadow: 0 0 50px rgba(90, 230, 181, .2);
+}
+
+.invoice {
+  background: #fafafd;
+  color: #171a35;
+}
+
+.invoice-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 36px;
+  background: #13183b;
+  color: #ffffff !important;
+}
+
+.app-shell .invoice-head,
+.app-shell .invoice-head *,
+.app-shell .invoice-head [class*="text-white"] {
+  color: #ffffff !important;
+}
+
+.stamp {
+  border: 2px solid #3ecb99;
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: #3ecb99 !important;
+  font: 10px 'DM Mono', monospace;
+  letter-spacing: .1em;
+  transform: rotate(-4deg);
+}
+
+.invoice small {
+  display: block;
+  margin-bottom: 4px;
+  color: #85889e;
+  font: 9px 'DM Mono', monospace;
+  letter-spacing: .1em;
+}
+
+.invoice b {
+  display: block;
+  font-size: 14px;
+}
+
+.ticket-route {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -.04em;
+}
+
+.ticket-route span {
+  color: #7954cc;
+  padding: 0 6px;
+}
+
+.qr-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #ffffff;
+  padding: 10px;
+  border: 1px solid #dedfe8;
+  border-radius: 18px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, .05);
+}
+
+.qr-container img {
+  display: block;
+  width: 135px;
+  height: 135px;
+  border-radius: 6px;
+}
+
+.invoice-foot {
+  padding: 14px;
+  background: #eef0f6;
+  color: #777b93;
+  text-align: center;
+  font-size: 11px;
+}

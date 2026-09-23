@@ -1,0 +1,47 @@
+@media (max-width: 640px) {
+  .search-panel {
+    margin-top: 32px;
+    border-radius: 23px;
+  }
+
+  .search-cell {
+    min-height: 58px;
+  }
+
+  .bus-shell {
+    padding: 12px;
+  }
+
+  .seat-grid {
+    gap: 7px 12px;
+  }
+
+  .invoice-head {
+    padding: 18px;
+  }
+
+  .invoice-head .font-mono {
+    font-size: 11px;
+  }
+
+  .ticket-route {
+    font-size: 22px;
+  }
+
+  .invoice-body {
+    padding: 22px;
+  }
+
+  .crew-entry {
+    bottom: 12px;
+    right: 12px;
+  }
+
+  .auth-card {
+    margin-top: 32px;
+  }
+
+  .auth-aside {
+    display: none;
+  }
+}
