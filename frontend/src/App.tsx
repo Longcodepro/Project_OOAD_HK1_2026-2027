@@ -172,16 +172,7 @@ export default function App() {
       <div className="flex-1">{renderPage()}</div>
 
       {isCustomerPortal && <Footer setView={setView} />}
-
-      {isCustomerPortal && (
-        <button
-          type="button"
-          onClick={() => setView('scan')}
-          className="crew-entry"
-        >
-          ◉ Crew scan
-        </button>
-      )}
     </div>
+
   )
 }

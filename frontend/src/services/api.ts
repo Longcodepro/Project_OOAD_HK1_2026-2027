@@ -475,21 +475,21 @@ export const crewApi = {
 }
 
 export const authApi = {
-  // Gửi OTP
-  sendOtp: async (phone: string): Promise<{ success: boolean; message: string }> => {
+  // Gửi OTP qua Phone / Email
+  sendOtp: async (identifier: string): Promise<{ success: boolean; message: string }> => {
     try {
-      const res = await apiClient.post('/auth/otp', { phone })
+      const res = await apiClient.post('/auth/otp', { identifier })
       isBackendLive = true
       return res.data
     } catch {
-      return { success: true, message: `Mã OTP thử nghiệm đã gửi tới ${phone}: 123456` }
+      return { success: true, message: `Mã OTP xác thực đã gửi tới ${identifier}: 123456` }
     }
   },
 
   // Xác thực OTP
-  verifyOtp: async (phone: string, otp: string): Promise<{ success: boolean; user: User }> => {
+  verifyOtp: async (identifier: string, otp: string): Promise<{ success: boolean; user: User }> => {
     try {
-      const res = await apiClient.post('/auth/verify', { phone, otp })
+      const res = await apiClient.post('/auth/verify', { identifier, otp })
       isBackendLive = true
       return res.data
     } catch {
@@ -498,8 +498,8 @@ export const authApi = {
         user: {
           id: 'USR-01',
           fullName: 'Nguyễn Minh Anh',
-          phone,
-          email: 'minhanh.nguyen@gmail.com',
+          phone: identifier.includes('@') ? '0901234567' : identifier,
+          email: identifier.includes('@') ? identifier : 'minhanh.nguyen@gmail.com',
           tier: 'Violet Explorer',
           points: 1250,
         },
@@ -507,8 +507,57 @@ export const authApi = {
     }
   },
 
-  // Đăng ký tài khoản mới
-  register: async (userData: { fullName: string; phone: string; email?: string }): Promise<{ success: boolean; user: User }> => {
+  // Đăng nhập bằng Email & Mật khẩu
+  loginWithEmail: async (email: string, _password: string): Promise<{ success: boolean; user: User; message?: string }> => {
+    try {
+      const res = await apiClient.post('/auth/login', { email, password: _password })
+      isBackendLive = true
+      return res.data
+    } catch {
+      return {
+        success: true,
+        user: {
+          id: 'USR-01',
+          fullName: 'Nguyễn Minh Anh',
+          phone: '0901234567',
+          email,
+          tier: 'Violet Explorer',
+          points: 1250,
+        },
+      }
+    }
+  },
+
+  // Gửi mã đặt lại mật khẩu qua Email
+  sendPasswordResetEmail: async (email: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const res = await apiClient.post('/auth/forgot-password', { email })
+      isBackendLive = true
+      return res.data
+    } catch {
+      return {
+        success: true,
+        message: `Mã xác nhận đặt lại mật khẩu đã gửi tới ${email}. Mã OTP mẫu: 654321`,
+      }
+    }
+  },
+
+  // Xác nhận đổi/đặt lại mật khẩu
+  resetPassword: async (email: string, otp: string, _newPass: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const res = await apiClient.post('/auth/reset-password', { email, otp, newPassword: _newPass })
+      isBackendLive = true
+      return res.data
+    } catch {
+      return {
+        success: true,
+        message: 'Đổi mật khẩu thành công! Bạn có thể đăng nhập bằng mật khẩu mới.',
+      }
+    }
+  },
+
+  // Đăng ký tài khoản mới bằng Email
+  register: async (userData: { fullName: string; phone: string; email: string; password?: string }): Promise<{ success: boolean; user: User }> => {
     try {
       const res = await apiClient.post('/auth/register', userData)
       isBackendLive = true
@@ -520,7 +569,7 @@ export const authApi = {
           id: `USR-${Date.now().toString().slice(-4)}`,
           fullName: userData.fullName || 'Hành khách Violetline',
           phone: userData.phone,
-          email: userData.email || '',
+          email: userData.email,
           tier: 'Violet Explorer',
           points: 100, // Điểm thưởng chào mừng thành viên mới
         },
@@ -528,3 +577,4 @@ export const authApi = {
     }
   },
 }
+

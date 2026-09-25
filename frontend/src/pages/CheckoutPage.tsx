@@ -127,7 +127,7 @@ export function CheckoutPage({
                     >
                       ◈ Ví điện tử
                       <br />
-                      <small>{payMethod === 'e-wallet' ? 'Đã chọn' : 'MoMo / ZaloPay'}</small>
+                      <small>{payMethod === 'e-wallet' ? 'Đã chọn' : 'MoMo / Ví điện tử'}</small>
                     </button>
                     <button
                       type="button"

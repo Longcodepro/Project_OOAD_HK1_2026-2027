@@ -3,21 +3,71 @@
   background: radial-gradient(ellipse 60% 40% at 52% -10%, #f9dacb 0%, transparent 65%), #f7f6f2;
 }
 
-/* Warm travel palette overrides on tailwind utility classes */
-.app-shell [class*="text-white"] {
+/* Warm travel palette overrides on tailwind utility classes (exclude footer & dark modules) */
+.app-shell > div:not(footer) [class*="text-white"],
+.app-shell :not(footer):not(footer *) [class*="text-white"] {
   color: #252729 !important;
 }
 
-.app-shell [class*="text-violet"] {
+.app-shell > div:not(footer) [class*="text-violet"],
+.app-shell :not(footer):not(footer *) [class*="text-violet"] {
   color: #bd4f29 !important;
 }
 
-.app-shell [class*="bg-violet"] {
+.app-shell > div:not(footer) [class*="bg-violet"],
+.app-shell :not(footer):not(footer *) [class*="bg-violet"] {
   background-color: #f6d9cc !important;
 }
 
-.app-shell [class*="border-white"] {
+.app-shell > div:not(footer) [class*="border-white"],
+.app-shell :not(footer):not(footer *) [class*="border-white"] {
   border-color: #deddd6 !important;
+}
+
+/* Footer high-contrast styling */
+.app-shell footer {
+  background: #090e26 !important;
+  color: #f1f5f9 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+.app-shell footer h4 {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+}
+
+.app-shell footer p,
+.app-shell footer span,
+.app-shell footer li,
+.app-shell footer a,
+.app-shell footer button {
+  color: #cbd5e1 !important;
+}
+
+.app-shell footer .brand-title {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+}
+
+.app-shell footer button:hover,
+.app-shell footer span.cursor-pointer:hover {
+  color: #ffffff !important;
+}
+
+.app-shell footer .hotline-card {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.app-shell footer .hotline-card .hotline-num {
+  color: #fb923c !important;
+  font-weight: 800 !important;
+}
+
+.app-shell footer .footer-copyright,
+.app-shell footer .footer-copyright p {
+  color: #94a3b8 !important;
 }
 
 /* Hero section decorations */
