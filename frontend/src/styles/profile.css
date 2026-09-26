@@ -1,0 +1,52 @@
+.profile-side {
+  border-radius: 20px;
+  padding: 18px;
+  height: max-content;
+  background: #fff;
+  box-shadow: 0 8px 26px rgba(56, 48, 42, .05);
+}
+
+.profile-side > button {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  border-radius: 11px;
+  padding: 11px 12px;
+  text-align: left;
+  font-size: 13px;
+  color: #62645f;
+  transition: .15s;
+}
+
+.profile-side > button:hover {
+  background: #fbf9f5;
+}
+
+.profile-side > button.active {
+  background: #fff0e9;
+  color: #a94728;
+  font-weight: 600;
+}
+
+.history-card {
+  background: #fff;
+  box-shadow: 0 4px 20px rgba(56, 48, 42, .04);
+}
+
+.status {
+  display: inline-block;
+  border-radius: 20px;
+  padding: 5px 8px;
+  font: 9px 'DM Mono', monospace;
+  letter-spacing: .1em;
+}
+
+.upcoming {
+  background: #e5eff7;
+  color: #366982;
+}
+
+.done {
+  background: #e3f2e9;
+  color: #377255;
+}

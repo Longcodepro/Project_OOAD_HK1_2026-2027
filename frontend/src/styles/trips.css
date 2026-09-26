@@ -1,0 +1,58 @@
+/* Trip Cards in Results Page */
+.trip-card {
+  position: relative;
+  background: #fff;
+  box-shadow: 0 8px 26px rgba(56, 48, 42, .05);
+  border-radius: 22px;
+  transition: transform .2s, border-color .2s;
+}
+
+.trip-card:hover {
+  border-color: #e56b3f;
+  transform: translateY(-1px);
+}
+
+/* Quick Date Selector Pills */
+.date-pills {
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+  overflow: hidden;
+  border: 1px solid #deddd6;
+  border-radius: 14px;
+}
+
+.date-pills b {
+  padding: 8px 12px;
+  font-size: 11px;
+  color: #61635f;
+  text-align: center;
+  font-weight: 500;
+}
+
+.date-pills small {
+  font-weight: 400;
+  font-size: 10px;
+}
+
+.date-pills button {
+  padding: 0 9px;
+  color: #bd4f29;
+}
+
+.date-pills button:disabled {
+  opacity: .35;
+}
+
+.date-pills .date-choice {
+  min-width: 66px;
+  padding: 8px 11px;
+  color: #61635f;
+  line-height: 1.45;
+}
+
+.date-pills .date-choice.active {
+  background: #e56b3f !important;
+  color: #fff !important;
+  border-radius: 11px;
+}

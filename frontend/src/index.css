@@ -1,0 +1,37 @@
+/* ========================================================
+ * VIOLETLINE DESIGN SYSTEM
+ * Hệ thống CSS được phân tách thành từng module rõ ràng
+ * ======================================================== */
+
+/* 1. Thiết lập biến, theme tokens & Tailwind */
+@import './styles/variables.css';
+
+/* 2. Resets, typography & elements cơ bản */
+@import './styles/base.css';
+
+/* 3. Bố cục tổng thể & trang trí Hero */
+@import './styles/layout.css';
+
+/* 4. Form tìm kiếm chuyến xe */
+@import './styles/search.css';
+
+/* 5. Kết quả tìm kiếm & chọn ngày */
+@import './styles/trips.css';
+
+/* 6. Sơ đồ xe & ghế ngồi */
+@import './styles/seats.css';
+
+/* 7. Quy trình thanh toán & Vé điện tử */
+@import './styles/checkout.css';
+
+/* 8. Trang cá nhân & lịch sử đặt vé */
+@import './styles/profile.css';
+
+/* 9. Đăng nhập, OTP & Google auth */
+@import './styles/auth.css';
+
+/* 10. Chế độ soát vé của nhân viên (Crew) */
+@import './styles/scanner.css';
+
+/* 11. Tương thích màn hình di động (Responsive) */
+@import './styles/responsive.css';

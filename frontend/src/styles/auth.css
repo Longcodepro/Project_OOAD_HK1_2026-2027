@@ -1,0 +1,161 @@
+.auth-page {
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+  background: radial-gradient(ellipse 90% 60% at 60% 0%, #f6d5c4 0%, transparent 62%), #f7f6f2;
+}
+
+.auth-back {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  z-index: 20;
+  color: #676963;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color .18s;
+}
+
+.auth-back:hover {
+  color: #252729;
+}
+
+.auth-card {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 960px;
+  margin: auto;
+  border-color: #deddd6;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 30px 90px rgba(75, 61, 51, .12);
+  backdrop-filter: blur(18px);
+}
+
+.auth-aside {
+  background: linear-gradient(145deg, #e6754b, #f0aa87);
+}
+
+.auth-aside .eyebrow {
+  color: #fff5ef;
+}
+
+.auth-card > .bg-\[\#101638\]\/90,
+.auth-card > .bg-\[\#101638\]\/90 [class*="text-white"],
+.auth-card > .bg-\[\#101638\]\/90 h2,
+.auth-card > .bg-\[\#101638\]\/90 label {
+  color: #f7f6f2 !important;
+}
+
+.auth-card > .bg-\[\#101638\]\/90 .eyebrow {
+  color: #f2ad8e !important;
+}
+
+.auth-card > .bg-\[\#101638\]\/90 [class*="text-violet"] {
+  color: #f6b697 !important;
+}
+
+.auth-card > .bg-\[\#101638\]\/90 .google-button {
+  color: #f7f6f2;
+  border-color: rgba(255, 255, 255, .5);
+}
+
+.auth-card > .bg-\[\#101638\]\/90 .google-button:hover {
+  background: rgba(255, 255, 255, .11);
+}
+
+.auth-card > .bg-\[\#101638\]\/90 .auth-input {
+  background: #fff;
+  color: #252729;
+}
+
+.auth-input {
+  border: 1px solid #dad8d1;
+  border-radius: 13px;
+  background: #f6f5f1;
+  padding: 13px 14px;
+  color: #252729;
+  outline: none;
+}
+
+.auth-input:focus {
+  border-color: #e56b3f;
+  box-shadow: 0 0 0 3px rgba(229, 107, 63, .12);
+}
+
+.google-button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid #deddd6;
+  border-radius: 14px;
+  padding: 12px;
+  color: #252729;
+  font-size: 13px;
+  transition: .2s;
+}
+
+.google-button:hover {
+  border-color: #eaa080;
+  background: #fff7f3;
+}
+
+.google-g {
+  display: grid;
+  height: 21px;
+  width: 21px;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(#4285f4 0 25%, #34a853 0 50%, #fbbc05 0 75%, #ea4335 0);
+  color: white;
+  font-size: 13px;
+  font-weight: 800;
+  text-shadow: 0 1px 3px #111;
+}
+
+.google-card {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 480px;
+  margin: auto;
+  border: 1px solid #deddd6;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 30px 90px rgba(75, 61, 51, .12);
+  backdrop-filter: blur(20px);
+}
+
+.google-g.big {
+  width: 42px;
+  height: 42px;
+  font-size: 24px;
+}
+
+.auth-orbit {
+  position: absolute;
+  border: 1px solid rgba(199, 85, 45, .18);
+  border-radius: 50%;
+}
+
+.auth-orbit.one {
+  top: -220px;
+  left: -180px;
+  width: 600px;
+  height: 600px;
+}
+
+.auth-orbit.two {
+  right: -280px;
+  bottom: -340px;
+  width: 720px;
+  height: 720px;
+}
