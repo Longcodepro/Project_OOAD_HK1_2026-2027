@@ -90,16 +90,6 @@ export function Footer({ setView }: FooterProps) {
         <p className="text-slate-400">© 2026 VIOLETLINE Express. Dự án môn Phân tích Thiết kế Hướng đối tượng (OOAD).</p>
         <div className="flex items-center gap-4 text-slate-400 font-mono text-xs">
           <span>Tiện nghi & Đúng giờ</span>
-          {setView && (
-            <button
-              type="button"
-              onClick={() => setView('scan')}
-              className="text-[11px] text-slate-500 hover:text-slate-300 underline transition"
-              title="Cổng soát vé dành riêng cho phụ xe / kiểm soát viên"
-            >
-              [Crew Portal]
-            </button>
-          )}
         </div>
       </div>
     </footer>

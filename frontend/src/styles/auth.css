@@ -47,47 +47,38 @@
   color: #fff5ef;
 }
 
-.auth-card > .bg-\[\#101638\]\/90,
-.auth-card > .bg-\[\#101638\]\/90 [class*="text-white"],
-.auth-card > .bg-\[\#101638\]\/90 h2,
-.auth-card > .bg-\[\#101638\]\/90 label {
-  color: #f7f6f2 !important;
+/* Auth Form Input Styling (High Contrast Light Theme) */
+.auth-input,
+.auth-card input,
+.auth-page input {
+  display: block !important;
+  width: 100% !important;
+  border: 1.5px solid #94a3b8 !important;
+  border-radius: 12px !important;
+  background-color: #f8fafc !important;
+  padding: 12px 14px !important;
+  color: #0f172a !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+  transition: all .2s ease !important;
 }
 
-.auth-card > .bg-\[\#101638\]\/90 .eyebrow {
-  color: #f2ad8e !important;
+.auth-input:focus,
+.auth-card input:focus,
+.auth-page input:focus {
+  border-color: #ea580c !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, .25) !important;
 }
 
-.auth-card > .bg-\[\#101638\]\/90 [class*="text-violet"] {
-  color: #f6b697 !important;
-}
-
-.auth-card > .bg-\[\#101638\]\/90 .google-button {
-  color: #f7f6f2;
-  border-color: rgba(255, 255, 255, .5);
-}
-
-.auth-card > .bg-\[\#101638\]\/90 .google-button:hover {
-  background: rgba(255, 255, 255, .11);
-}
-
-.auth-card > .bg-\[\#101638\]\/90 .auth-input {
-  background: #fff;
-  color: #252729;
-}
-
-.auth-input {
-  border: 1px solid #dad8d1;
-  border-radius: 13px;
-  background: #f6f5f1;
-  padding: 13px 14px;
-  color: #252729;
-  outline: none;
-}
-
-.auth-input:focus {
-  border-color: #e56b3f;
-  box-shadow: 0 0 0 3px rgba(229, 107, 63, .12);
+.auth-input::placeholder,
+.auth-card input::placeholder,
+.auth-page input::placeholder {
+  color: #64748b !important;
+  opacity: 1 !important;
 }
 
 .google-button {

@@ -5,10 +5,18 @@ export type View =
   | 'checkout'
   | 'success'
   | 'profile'
+  | 'lookup'
   | 'scan'
   | 'login'
   | 'register'
   | 'google-signup'
+  // Admin Portal Views
+  | 'admin-dashboard'
+  | 'admin-tickets'
+  | 'admin-trips'
+  | 'admin-buses'
+  | 'admin-pricing'
+  | 'admin-accounts'
 
 export interface Trip {
   id: string
@@ -71,8 +79,11 @@ export interface Ticket {
   basePrice: number
   vat: number
   totalAmount: number
-  paymentStatus: 'PAID' | 'PENDING' | 'CANCELLED'
+  paymentStatus: 'PAID' | 'PENDING' | 'CANCELLED' | 'PENDING_CANCEL'
   checkinStatus: 'NOT_CHECKED_IN' | 'CHECKED_IN'
+  cancelReason?: string
+  cancelRequestedAt?: string
+  cancelAdminNote?: string
   qrData: string
   createdAt: string
 }
@@ -88,6 +99,7 @@ export interface User {
   fullName: string
   phone: string
   email: string
+  role?: 'customer' | 'admin'
   tier: string
   points: number
 }

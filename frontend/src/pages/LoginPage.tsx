@@ -36,10 +36,16 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
     setLoading(true)
     setErrorMsg('')
     try {
-      const res = await authApi.loginWithEmail(email.trim().toLowerCase(), password)
+      const cleanEmail = email.trim().toLowerCase()
+      const res = await authApi.loginWithEmail(cleanEmail, password)
       if (res.success && res.user) {
-        onLoginSuccess(res.user)
-        setView('profile')
+        const isAdmin = cleanEmail.includes('admin')
+        const userWithRole: User = {
+          ...res.user,
+          role: isAdmin ? 'admin' : 'customer',
+        }
+        onLoginSuccess(userWithRole)
+        setView(isAdmin ? 'admin-dashboard' : 'profile')
       } else {
         setErrorMsg(res.message || 'Email hoặc mật khẩu không chính xác')
       }
@@ -48,6 +54,36 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Đăng nhập nhanh tài khoản Khách hàng
+  const handleQuickCustomer = () => {
+    const customerUser: User = {
+      id: 'USR-01',
+      fullName: 'Nguyễn Minh Anh',
+      phone: '0901234567',
+      email: 'minhanh.nguyen@gmail.com',
+      role: 'customer',
+      tier: 'Violet Explorer',
+      points: 1250,
+    }
+    onLoginSuccess(customerUser)
+    setView('profile')
+  }
+
+  // Đăng nhập nhanh tài khoản Quản trị viên (Admin)
+  const handleQuickAdmin = () => {
+    const adminUser: User = {
+      id: 'ADM-01',
+      fullName: 'Quản trị viên Tổng (Admin)',
+      phone: '0909999888',
+      email: 'admin@violetline.vn',
+      role: 'admin',
+      tier: 'Super Admin',
+      points: 9999,
+    }
+    onLoginSuccess(adminUser)
+    setView('admin-dashboard')
   }
 
   // Gửi OTP đăng nhập nhanh qua Email
@@ -192,29 +228,29 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
           </div>
         </div>
 
-        {/* Khung tương tác bên phải */}
-        <div className="bg-[#101638]/90 p-7 sm:p-12">
+        {/* Khung tương tác bên phải (Clean Light Theme) */}
+        <div className="bg-white p-7 sm:p-12 text-slate-900 border-l border-slate-100">
           {authMode !== 'forgot' ? (
             <>
               {/* Tab chuyển đổi Đăng nhập / Đăng ký */}
-              <div className="flex border-b border-white/10 pb-4 mb-6 gap-6">
+              <div className="flex border-b border-slate-200 pb-4 mb-6 gap-6">
                 <button
                   type="button"
-                  className="text-base font-semibold text-violet-300 border-b-2 border-violet-400 pb-1"
+                  className="text-base font-bold text-orange-600 border-b-2 border-orange-500 pb-1"
                 >
                   Đăng nhập
                 </button>
                 <button
                   type="button"
                   onClick={() => setView('register')}
-                  className="text-base font-semibold text-white/50 hover:text-white transition pb-1"
+                  className="text-base font-semibold text-slate-400 hover:text-slate-800 transition pb-1 cursor-pointer"
                 >
                   Đăng ký tài khoản
                 </button>
               </div>
 
               {/* Lựa chọn phương thức: Mật khẩu vs Mã OTP Email */}
-              <div className="flex items-center gap-2 mb-5 p-1 rounded-xl bg-white/5 border border-white/10 text-xs">
+              <div className="flex items-center gap-2 mb-5 p-1 rounded-xl bg-slate-100 border border-slate-200 text-xs">
                 <button
                   type="button"
                   onClick={() => {
@@ -222,11 +258,10 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
                     setErrorMsg('')
                     setStatusMsg('')
                   }}
-                  className={`flex-1 py-1.5 rounded-lg font-medium transition ${
-                    authMode === 'password'
-                      ? 'bg-violet-500/30 text-violet-200 border border-violet-400/30 shadow'
-                      : 'text-white/60 hover:text-white'
-                  }`}
+                  className={`flex-1 py-1.5 rounded-lg font-semibold transition cursor-pointer ${authMode === 'password'
+                      ? 'bg-white text-orange-600 border border-orange-200 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                    }`}
                 >
                   Email & Mật khẩu
                 </button>
@@ -237,11 +272,10 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
                     setErrorMsg('')
                     setStatusMsg('')
                   }}
-                  className={`flex-1 py-1.5 rounded-lg font-medium transition ${
-                    authMode === 'otp'
-                      ? 'bg-violet-500/30 text-violet-200 border border-violet-400/30 shadow'
-                      : 'text-white/60 hover:text-white'
-                  }`}
+                  className={`flex-1 py-1.5 rounded-lg font-semibold transition cursor-pointer ${authMode === 'otp'
+                      ? 'bg-white text-orange-600 border border-orange-200 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                    }`}
                 >
                   Mã OTP qua Email
                 </button>
@@ -251,7 +285,7 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
               {authMode === 'password' && (
                 <form onSubmit={handlePasswordLogin} className="space-y-4">
                   <div>
-                    <label className="block text-xs text-white/60 mb-1.5">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                       ĐỊA CHỈ EMAIL
                     </label>
                     <input
@@ -266,7 +300,7 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
 
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-xs text-white/60">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                         MẬT KHẨU
                       </label>
                       <button
@@ -277,7 +311,7 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
                           setStatusMsg('')
                           setOtpSent(false)
                         }}
-                        className="text-[11px] text-violet-300 hover:underline"
+                        className="text-xs font-semibold text-orange-600 hover:underline cursor-pointer"
                       >
                         Quên mật khẩu?
                       </button>
@@ -293,12 +327,12 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
                   </div>
 
                   {errorMsg && (
-                    <p className="text-xs text-rose-300 bg-rose-400/10 p-2.5 rounded-xl border border-rose-400/20">
+                    <p className="text-xs text-rose-800 bg-rose-50 p-2.5 rounded-xl border border-rose-200 font-medium">
                       {errorMsg}
                     </p>
                   )}
                   {statusMsg && (
-                    <p className="text-xs text-violet-300 bg-violet-400/10 p-2.5 rounded-xl border border-violet-400/20">
+                    <p className="text-xs text-emerald-800 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 font-medium">
                       {statusMsg}
                     </p>
                   )}
@@ -317,7 +351,7 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
               {authMode === 'otp' && (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs text-white/60 mb-1.5">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                       ĐỊA CHỈ EMAIL NHẬN MÃ OTP
                     </label>
                     <input
@@ -332,11 +366,11 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
 
                   {otpSent && (
                     <div>
-                      <label className="block text-xs text-white/60 mb-1.5">
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                         MÃ XÁC THỰC OTP (Mã mẫu: 123456)
                       </label>
                       <input
-                        className="auth-input font-mono text-center tracking-widest text-lg"
+                        className="auth-input font-mono text-center tracking-widest text-lg font-bold"
                         value={otp}
                         onChange={(e) => setOtp(e.target.value)}
                         placeholder="• • • • • •"
@@ -346,12 +380,12 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
                   )}
 
                   {errorMsg && (
-                    <p className="text-xs text-rose-300 bg-rose-400/10 p-2.5 rounded-xl border border-rose-400/20">
+                    <p className="text-xs text-rose-800 bg-rose-50 p-2.5 rounded-xl border border-rose-200 font-medium">
                       {errorMsg}
                     </p>
                   )}
                   {statusMsg && (
-                    <p className="text-xs text-violet-300 bg-violet-400/10 p-2.5 rounded-xl border border-violet-400/20">
+                    <p className="text-xs text-emerald-800 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 font-medium">
                       {statusMsg}
                     </p>
                   )}
@@ -364,42 +398,49 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
                     {loading
                       ? 'Đang xử lý...'
                       : otpSent
-                      ? 'Xác thực & đăng nhập'
-                      : 'Gửi mã OTP về Email'} →
+                        ? 'Xác thực & đăng nhập'
+                        : 'Gửi mã OTP về Email'} →
                   </Button>
                 </div>
               )}
 
-              <div className="my-6 flex items-center gap-3 text-[10px] text-white/35">
-                <span className="h-px flex-1 bg-white/10" />
+              <div className="my-6 flex items-center gap-3 text-xs font-semibold text-slate-400">
+                <span className="h-px flex-1 bg-slate-200" />
                 HOẶC TIẾP TỤC VỚI
-                <span className="h-px flex-1 bg-white/10" />
+                <span className="h-px flex-1 bg-slate-200" />
               </div>
 
               <button
                 type="button"
                 onClick={() => setView('google-signup')}
-                className="google-button"
+                className="w-full flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white py-3 px-4 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer shadow-xs"
               >
-                <span className="google-g">G</span> Đăng nhập nhanh với Google
+                <span className="text-base">🌐</span> Đăng nhập nhanh với Google
               </button>
 
-              <p className="mt-6 text-center text-xs text-white/50">
+              <p className="mt-6 text-center text-xs text-slate-500 font-medium">
                 Chưa có tài khoản?{' '}
                 <button
                   type="button"
                   onClick={() => setView('register')}
-                  className="text-violet-300 font-semibold hover:underline"
+                  className="text-orange-600 font-bold hover:underline cursor-pointer"
                 >
                   Đăng ký ngay
                 </button>
               </p>
+
+              {/* Gợi ý tài khoản kiểm thử */}
+              <div className="mt-8 pt-4 border-t border-slate-100 text-xs text-slate-500 text-center space-y-1 bg-slate-50 p-3 rounded-2xl">
+                <p className="font-bold text-slate-700">Tài khoản kiểm thử:</p>
+                <p>Khách hàng: <span className="font-mono font-semibold text-orange-600">minhanh.nguyen@gmail.com</span> (mật khẩu: 123456)</p>
+                <p>Quản trị viên: <span className="font-mono font-semibold text-amber-700">admin@violetline.vn</span> (mật khẩu: 123456)</p>
+              </div>
             </>
           ) : (
             /* Chế độ Quên / Đặt lại mật khẩu qua Email */
             <div className="space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                <h3 className="text-base font-semibold text-white">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+                <h3 className="text-base font-bold text-slate-900">
                   Khôi phục mật khẩu qua Email
                 </h3>
                 <button
@@ -409,18 +450,18 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
                     setErrorMsg('')
                     setStatusMsg('')
                   }}
-                  className="text-xs text-violet-300 hover:underline"
+                  className="text-xs font-semibold text-orange-600 hover:underline cursor-pointer"
                 >
                   ← Quay lại
                 </button>
               </div>
 
-              <p className="text-xs leading-relaxed text-white/65">
+              <p className="text-xs leading-relaxed text-slate-600 font-medium">
                 Nhập email của bạn để nhận mã xác nhận đặt lại mật khẩu mới.
               </p>
 
               <div>
-                <label className="block text-xs text-white/60 mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   ĐỊA CHỈ EMAIL
                 </label>
                 <div className="flex gap-2">
@@ -446,11 +487,11 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
               {otpSent && (
                 <div className="space-y-3 pt-2">
                   <div>
-                    <label className="block text-xs text-white/60 mb-1.5">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                       MÃ XÁC THỰC TỪ EMAIL (Mã mẫu: 654321)
                     </label>
                     <input
-                      className="auth-input font-mono text-center tracking-widest text-lg"
+                      className="auth-input font-mono text-center tracking-widest text-lg font-bold"
                       value={otp}
                       onChange={(e) => setOtp(e.target.value)}
                       placeholder="• • • • • •"
@@ -459,7 +500,7 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
                   </div>
 
                   <div>
-                    <label className="block text-xs text-white/60 mb-1.5">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                       MẬT KHẨU MỚI
                     </label>
                     <input
@@ -472,7 +513,7 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
                   </div>
 
                   <div>
-                    <label className="block text-xs text-white/60 mb-1.5">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                       XÁC NHẬN MẬT KHẨU MỚI
                     </label>
                     <input
@@ -487,12 +528,12 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
               )}
 
               {errorMsg && (
-                <p className="text-xs text-rose-300 bg-rose-400/10 p-2.5 rounded-xl border border-rose-400/20">
+                <p className="text-xs text-rose-800 bg-rose-50 p-2.5 rounded-xl border border-rose-200 font-medium">
                   {errorMsg}
                 </p>
               )}
               {statusMsg && (
-                <p className="text-xs text-violet-300 bg-violet-400/10 p-2.5 rounded-xl border border-violet-400/20">
+                <p className="text-xs text-emerald-800 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 font-medium">
                   {statusMsg}
                 </p>
               )}
@@ -506,7 +547,7 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
                   {loading ? 'Đang cập nhật...' : 'Xác nhận đổi mật khẩu'} →
                 </Button>
               ) : (
-                <p className="text-[11px] text-white/40 text-center pt-2">
+                <p className="text-xs text-slate-500 text-center pt-2 font-medium">
                   Bấm "Lấy mã OTP" để hệ thống gửi mã xác minh về email.
                 </p>
               )}
