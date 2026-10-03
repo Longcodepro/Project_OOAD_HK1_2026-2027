@@ -9,6 +9,29 @@
   color: #252729 !important;
 }
 
+/* Specific exceptions: buttons, badges, notifications, and dark surfaces MUST keep crisp white text */
+.app-shell button.text-white,
+.app-shell button[class*="text-white"],
+.app-shell button [class*="text-white"],
+.app-shell [class*="bg-rose-"] [class*="text-white"],
+.app-shell [class*="bg-rose-"].text-white,
+.app-shell [class*="bg-orange-"] [class*="text-white"],
+.app-shell [class*="bg-orange-"].text-white,
+.app-shell [class*="bg-emerald-"] [class*="text-white"],
+.app-shell [class*="bg-emerald-"].text-white,
+.app-shell [class*="bg-slate-900"] [class*="text-white"],
+.app-shell [class*="bg-slate-900"].text-white,
+.app-shell [class*="bg-slate-800"] [class*="text-white"],
+.app-shell [class*="bg-slate-800"].text-white,
+.app-shell [class*="bg-violet-600"] [class*="text-white"],
+.app-shell [class*="bg-violet-700"] [class*="text-white"],
+.app-shell .auth-aside [class*="text-white"],
+.app-shell .auth-aside h1,
+.app-shell .auth-aside p,
+.app-shell .auth-aside span {
+  color: #ffffff !important;
+}
+
 .app-shell > div:not(footer) [class*="text-violet"],
 .app-shell :not(footer):not(footer *) [class*="text-violet"] {
   color: #bd4f29 !important;
