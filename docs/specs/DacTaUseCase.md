@@ -1,842 +1,497 @@
----
-tai_lieu: Đặc tả Use Case
-du_an: Hệ thống đặt vé xe khách trực tuyến (đồ án OOAD)
-khuon_mau: Chương 4 — Tóm tắt, Tiền điều kiện, Dòng sự kiện chính, Dòng sự kiện phụ, Hậu điều kiện
-phien_ban: 3.0 — đồng bộ với bộ 17 sơ đồ Use Case và BFD v3.0
-cap_nhat: 2026-10-07
-lien_quan: [USECASE.md, ../BFD/bfd.md, ../RDM (Markdown)/rdm.md]
----
+# PHÂN HỆ 04: ĐẶC TẢ USE CASE (USE CASE SPECIFICATIONS)
+### HỆ THỐNG ĐẶT VÉ XE KHÁCH TRỰC TUYẾN
+*(Tương ứng Bài thực hành BTH 4 — chuẩn hóa dựa trên tập sơ đồ Use Case trong thư mục `USECASE`)*
 
-# Đặc tả Use Case
-
-> **Cách đọc:** mỗi use case có cùng một khung. Bước trong luồng chính đánh số `1, 2, 3…`;
-> luồng phụ đánh `Ax` (thay thế — alternative) hoặc `Ex` (ngoại lệ — exception) và ghi rõ
-> **rẽ ra từ bước nào**.
->
-> **Khi sửa:** đổi một quy định (ví dụ giữ chỗ 5 phút → 10 phút) thì chỉ sửa ở bảng
-> **Quy định nghiệp vụ** dưới đây; các use case chỉ trích mã `QDxx`, không ghi lại con số.
+> **Phiên bản:** 2.0 — cập nhật theo bộ sơ đồ Use Case mới nhất (08/10/2026)
+> **Thay đổi lớn:** bỏ quan hệ `<<include>> Đăng nhập` toàn hệ thống, bổ sung 2 tác nhân phụ (Dịch vụ SMS, Cổng thanh toán), tách nhóm **Use case dùng chung**, gộp UC trùng lặp.
+> Chi tiết xem **Phụ lục A — Nhật ký chỉnh sửa & lỗi logic đã xử lý** ở cuối tài liệu.
 
 ---
 
-## Quy định nghiệp vụ dùng chung
+## 🧩 DANH SÁCH TÁC NHÂN (ACTORS)
 
-Các giá trị có dấu ⚙️ lưu trong bảng `THAM_SO` (đổi không cần sửa code).
-Giá trị có dấu *(giả định)* là đặt tạm — nhóm thống nhất lại.
+| Tác nhân | Loại | Vai trò trong hệ thống |
+| :--- | :--- | :--- |
+| **Khách hàng** | Chính (primary) | Người dùng cuối: tra cứu, đặt vé, hủy vé, quản lý tài khoản cá nhân. |
+| **Nhân viên bán vé** | Chính (primary) | Tác nghiệp tại quầy bến xe: tra cứu, bán vé, hủy vé hộ khách. |
+| **Admin** | Chính (primary) | Quản trị danh mục, lịch trình, giá vé, tài khoản và xem báo cáo. |
+| **Dịch vụ SMS** | Phụ (secondary) | Hệ thống ngoài, nhận lệnh gửi và đối chiếu mã OTP. |
+| **Cổng thanh toán** | Phụ (secondary) | Hệ thống ngoài, xử lý giao dịch thu tiền và hoàn tiền. |
 
-| Mã | Quy định | Giá trị | Mã tham số |
-|----|----------|---------|------------|
-| QD01 | Thời gian giữ ghế sau khi chọn | 5 phút ⚙️ | `THOI_GIAN_GIU_CHO_PHUT` |
-| QD02 | Mã OTP có hiệu lực | 5 phút ⚙️ | `OTP_HIEU_LUC_PHUT` |
-| QD03 | Chỉ được hủy vé trước giờ khởi hành ít nhất | 24 giờ ⚙️ | `GIO_TOI_THIEU_TRUOC_KHI_HUY` |
-| QD04 | Tỷ lệ hoàn tiền khi khách tự hủy | 90% ⚙️ | `PHAN_TRAM_HOAN_TIEN` |
-| QD05 | Số ghế tối đa trong 1 lần đặt | 5 ghế ⚙️ *(giả định)* | `SO_GHE_TOI_DA_MOI_VE` |
-| QD06 | Nhà xe hủy chuyến | Hoàn 100%, không áp QD03, QD04 | — |
-| QD07 | Mật khẩu | Tối thiểu 8 ký tự, có chữ và số | — |
-| QD08 | Tài khoản `BI_KHOA` | Không đăng nhập được | — |
-| QD09 | Khung giờ khi lọc chuyến | Sáng 05:00–11:59, Chiều 12:00–17:59, Đêm 18:00–04:59 | — |
-| QD10 | Ghế được coi là "đã có người" | Thuộc vé `DA_THANH_TOAN`, hoặc vé `GIU_CHO` chưa quá hạn giữ chỗ | — |
-| QD11 | **Không thu phí hủy vé tách riêng**, chỉ áp dụng tỷ lệ hoàn tiền QD04 trên số tiền thực trả (`thanhTien`) | — | — |
-| QD12 | **Hoàn tiền về đúng nguồn đã thanh toán**: trả online → hoàn qua cổng; trả tiền mặt → hoàn tiền mặt tại quầy | — | — |
-| QD13 | **Vé thanh toán bằng tiền mặt chỉ hủy được tại quầy**, không hủy online được | — | — |
-| QD14 | Mã giảm giá **không sửa, không xóa** — chỉ thêm, xem, bật/tắt | — | — |
-| QD15 | OTP gửi qua **SMS tới số điện thoại**, không qua email | — | — |
+> **Ghi chú mô hình hóa:** tác nhân phụ không *khởi tạo* use case, mà được hệ thống gọi tới để hoàn tất nghiệp vụ. Vì vậy mũi tên liên kết luôn đi từ use case ➜ tác nhân phụ.
 
 ---
 
-## Mục lục
+## 🌳 CÂY CẤU TRÚC HỆ THỐNG USE CASE (USE CASE TREE SUMMARY)
 
-| Mã | Use Case | Sơ đồ | Tác nhân |
-|----|----------|-------|----------|
-| [UC01](#uc01--đăng-nhập) | Đăng nhập | 1 | Cả 3 |
-| [UC02](#uc02--đăng-xuất) | Đăng xuất | 1 | Cả 3 |
-| [UC03](#uc03--đăng-ký-tài-khoản) | Đăng ký tài khoản | 2 | Khách hàng |
-| [UC04](#uc04--xác-thực-số-điện-thoại-bằng-otp) | Xác thực số điện thoại bằng OTP | 2, 3 | *(dùng chung)* |
-| [UC05](#uc05--khôi-phục-mật-khẩu) | Khôi phục mật khẩu | 3 | Khách hàng |
-| [UC06](#uc06--đổi-mật-khẩu) | Đổi mật khẩu | 4 | Cả 3 |
-| [UC07](#uc07--xem-thông-tin-cá-nhân) | Xem thông tin cá nhân | 5 | Cả 3 |
-| [UC08](#uc08--xem-lịch-sử-mua-vé) | Xem lịch sử mua vé | 6 | Khách hàng |
-| [UC09](#uc09--tra-cứu-chuyến-xe) | Tra cứu chuyến xe | 7 | Khách hàng, Nhân viên |
-| [UC10](#uc10--đặt-vé-trực-tuyến) | Đặt vé trực tuyến | 8 | Khách hàng |
-| [UC11](#uc11--giữ-chỗ-tạm-thời) | Giữ chỗ tạm thời | 8, 9 | *(dùng chung)* |
-| [UC12](#uc12--thanh-toán) | Thanh toán | 8, 9 | *(dùng chung)* |
-| [UC13](#uc13--áp-dụng-mã-giảm-giá) | Áp dụng mã giảm giá | 8, 9 | Khách hàng, Nhân viên |
-| [UC14](#uc14--bán-vé--in-vé-tại-quầy) | Bán vé & in vé tại quầy | 9 | Nhân viên |
-| [UC15](#uc15--hủy-vé-trực-tuyến) | Hủy vé trực tuyến | 10 | Khách hàng |
-| [UC16](#uc16--tra-cứu-vé) | Tra cứu vé | 11 | Nhân viên |
-| [UC17](#uc17--hủy-vé-tại-quầy) | Hủy vé tại quầy | 11 | Nhân viên |
-| [UC18](#uc18--hoàn-tiền) | Hoàn tiền | 10, 11, 12 | *(dùng chung)* |
-| [UC19](#uc19--quản-lý-chuyến-xe--lịch-trình) | Quản lý chuyến xe & lịch trình | 12 | Admin |
-| [UC20](#uc20--quản-lý-xe--sơ-đồ-ghế) | Quản lý xe & sơ đồ ghế | 13 | Admin |
-| [UC21](#uc21--quản-lý-giá-vé--khuyến-mãi) | Quản lý giá vé & khuyến mãi | 14 | Admin |
-| [UC22](#uc22--quản-lý-tài-khoản--phân-quyền) | Quản lý tài khoản & phân quyền | 15 | Admin |
-| [UC23](#uc23--thống-kê--báo-cáo-doanh-thu) | Thống kê & báo cáo doanh thu | 16 | Admin |
+```text
+HỆ THỐNG ĐẶT VÉ XE KHÁCH TRỰC TUYẾN
+│
+├── 🎯 [0] SƠ ĐỒ USE CASE TỔNG QUAN
+│   └── UC00: Sơ đồ Use Case Tổng Quan (5 tác nhân)
+│
+├── 🎫 [A] PHÂN HỆ NGHIỆP VỤ ĐẶT VÉ & BÁN VÉ
+│   ├── UC01: Tra cứu chuyến xe              (Khách hàng, Nhân viên bán vé)
+│   ├── UC02: Đặt vé trực tuyến              (Khách hàng → Cổng thanh toán)
+│   ├── UC03: Bán vé & in vé tại quầy        (Nhân viên bán vé → Cổng thanh toán)
+│   ├── UC04: Hủy vé trực tuyến              (Khách hàng → Cổng thanh toán)
+│   ├── UC05: Hủy vé tại quầy                (Nhân viên bán vé → Cổng thanh toán)
+│   └── UC06: Xem lịch sử mua vé             (Khách hàng)
+│
+├── 🔐 [B] PHÂN HỆ XÁC THỰC & QUẢN LÝ TÀI KHOẢN
+│   ├── UC07: Đăng ký tài khoản              (Khách hàng → Dịch vụ SMS)
+│   ├── UC08: Đăng nhập - Đăng xuất          (Khách hàng, Nhân viên bán vé, Admin)
+│   ├── UC09: Khôi phục mật khẩu             (Khách hàng → Dịch vụ SMS)
+│   ├── UC10: Đổi mật khẩu                   (Khách hàng)
+│   └── UC11: Quản lý thông tin cá nhân      (Khách hàng, Nhân viên bán vé, Admin)
+│
+├── ⚙️ [C] PHÂN HỆ QUẢN TRỊ & VẬN HÀNH (ADMIN)
+│   ├── UC12: Quản lý chuyến xe & lịch trình (Admin → Cổng thanh toán)
+│   ├── UC13: Quản lý xe & sơ đồ ghế         (Admin)
+│   ├── UC14: Quản lý giá vé & khuyến mãi    (Admin)
+│   ├── UC15: Quản lý tài khoản & phân quyền (Admin)
+│   └── UC16: Thống kê & báo cáo doanh thu   (Admin)
+│
+└── 🔁 [D] USE CASE DÙNG CHUNG (SHARED / INCLUDED USE CASES)
+    ├── UC17: Xác thực số điện thoại bằng OTP  ← UC07, UC09
+    ├── UC18: Giữ chỗ tạm thời                 ← UC02, UC03
+    ├── UC19: Thanh toán                       ← UC02, UC03
+    ├── UC20: Hoàn tiền                        ← UC04, UC05, UC12
+    └── UC21: Tra cứu vé                       ← UC05 (khuyến nghị thêm UC04)
+```
 
----
+```mermaid
+flowchart LR
+    classDef rootStyle fill:#EF5222,stroke:#C2380E,stroke-width:2px,color:#ffffff,font-weight:bold;
+    classDef groupStyle fill:#006037,stroke:#004024,stroke-width:1.5px,color:#ffffff,font-weight:bold;
+    classDef sharedStyle fill:#2C3E92,stroke:#1A2560,stroke-width:1.5px,color:#ffffff,font-weight:bold;
+    classDef ucStyle fill:#FFFFFF,stroke:#BDC3C7,stroke-width:1px,color:#2C3E50;
 
-## UC01 — Đăng nhập
+    Root["HỆ THỐNG ĐẶT VÉ XE KHÁCH"]:::rootStyle
 
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 1. Đăng nhập & Đăng xuất |
-| Tác nhân | Khách hàng, Nhân viên bán vé, Admin |
-| Quan hệ | Không có «include» / «extend» trên sơ đồ. Là **tiền điều kiện** của nhiều use case khác |
-| Bảng CSDL | `NGUOI_DUNG`, `VAI_TRO`, `NHAT_KY_HOAT_DONG` |
+    Root --> G0["0. Use Case Tổng quan"]:::groupStyle
+    G0 --> UC00["UC00: Sơ đồ Use Case Tổng Quan"]:::ucStyle
 
-**Tóm tắt:** Người dùng nhập tài khoản và mật khẩu để vào hệ thống. Hệ thống xác định vai trò và mở giao diện tương ứng.
+    Root --> GA["A. Đặt vé & Bán vé"]:::groupStyle
+    GA --> UC01["UC01: Tra cứu chuyến xe"]:::ucStyle
+    GA --> UC02["UC02: Đặt vé trực tuyến"]:::ucStyle
+    GA --> UC03["UC03: Bán vé & in vé tại quầy"]:::ucStyle
+    GA --> UC04["UC04: Hủy vé trực tuyến"]:::ucStyle
+    GA --> UC05["UC05: Hủy vé tại quầy"]:::ucStyle
+    GA --> UC06["UC06: Xem lịch sử mua vé"]:::ucStyle
 
-**Tiền điều kiện:**
-1. Người dùng đã có tài khoản ở trạng thái `HOAT_DONG`.
-2. Người dùng chưa đăng nhập.
+    Root --> GB["B. Xác thực & Tài khoản"]:::groupStyle
+    GB --> UC07["UC07: Đăng ký tài khoản"]:::ucStyle
+    GB --> UC08["UC08: Đăng nhập - Đăng xuất"]:::ucStyle
+    GB --> UC09["UC09: Khôi phục mật khẩu"]:::ucStyle
+    GB --> UC10["UC10: Đổi mật khẩu"]:::ucStyle
+    GB --> UC11["UC11: Quản lý thông tin cá nhân"]:::ucStyle
 
-**Dòng sự kiện chính:**
-1. Người dùng chọn "Đăng nhập".
-2. Hệ thống hiển thị form gồm email (hoặc số điện thoại) và mật khẩu.
-3. Người dùng nhập thông tin và bấm "Đăng nhập".
-4. Hệ thống kiểm tra tài khoản tồn tại, đang `HOAT_DONG` (QD08) và mật khẩu đúng.
-5. Hệ thống tạo phiên đăng nhập (token JWT), cập nhật `lanDangNhapCuoi`, ghi nhật ký `DANG_NHAP`.
-6. Hệ thống chuyển tới trang chủ theo vai trò: Khách hàng → trang tìm chuyến; Nhân viên → màn hình bán vé; Admin → trang quản trị.
+    Root --> GC["C. Quản trị & Vận hành (Admin)"]:::groupStyle
+    GC --> UC12["UC12: Quản lý chuyến xe & lịch trình"]:::ucStyle
+    GC --> UC13["UC13: Quản lý xe & sơ đồ ghế"]:::ucStyle
+    GC --> UC14["UC14: Quản lý giá vé & khuyến mãi"]:::ucStyle
+    GC --> UC15["UC15: Quản lý tài khoản & phân quyền"]:::ucStyle
+    GC --> UC16["UC16: Thống kê & báo cáo doanh thu"]:::ucStyle
 
-**Dòng sự kiện phụ:**
-- **E1 (bước 4) — Sai tài khoản hoặc mật khẩu:** báo "Thông tin đăng nhập không đúng" (không nói rõ sai cái nào), quay lại bước 3.
-- **E2 (bước 4) — Tài khoản bị khóa:** báo "Tài khoản đã bị khóa, liên hệ quản trị viên". Use case kết thúc.
-- **E3 (bước 4) — Tài khoản chưa xác thực OTP (`CHO_XAC_THUC`):** báo cần xác thực, chuyển sang UC04.
-- **A1 (bước 3) — Quên mật khẩu:** người dùng bấm "Quên mật khẩu" → chuyển sang UC05.
-
-**Hậu điều kiện:**
-1. Thành công: người dùng ở trạng thái đã đăng nhập, có token hợp lệ.
-2. Thất bại: hệ thống giữ nguyên, không tạo phiên.
-
----
-
-## UC02 — Đăng xuất
-
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 1. Đăng nhập & Đăng xuất |
-| Tác nhân | Khách hàng, Nhân viên bán vé, Admin |
-| Quan hệ | Không có «include» / «extend» trên sơ đồ |
-| Bảng CSDL | `NGUOI_DUNG`, `NHAT_KY_HOAT_DONG` |
-
-**Tóm tắt:** Người dùng kết thúc phiên làm việc.
-
-**Tiền điều kiện:** Người dùng đang đăng nhập.
-
-**Dòng sự kiện chính:**
-1. Người dùng bấm "Đăng xuất".
-2. Hệ thống hủy token hiện tại, ghi nhật ký `DANG_XUAT`.
-3. Hệ thống chuyển về trang chủ ở trạng thái chưa đăng nhập.
-
-**Dòng sự kiện phụ:**
-- **A1 (bước 1) — Nhân viên đang có phiên bán vé dở (ghế đang giữ):** hệ thống hỏi xác nhận; nếu đồng ý thì hủy phiên giao dịch và nhả ghế (như UC14 luồng A2) rồi tiếp tục bước 2.
-
-**Hậu điều kiện:** Token không còn dùng được; các chức năng cần đăng nhập bị chặn.
+    Root --> GD["D. Use case dùng chung"]:::sharedStyle
+    GD --> UC17["UC17: Xác thực SĐT bằng OTP"]:::ucStyle
+    GD --> UC18["UC18: Giữ chỗ tạm thời"]:::ucStyle
+    GD --> UC19["UC19: Thanh toán"]:::ucStyle
+    GD --> UC20["UC20: Hoàn tiền"]:::ucStyle
+    GD --> UC21["UC21: Tra cứu vé"]:::ucStyle
+```
 
 ---
 
-## UC03 — Đăng ký tài khoản
+## 1. ĐẶC TẢ SƠ ĐỒ USE CASE TỔNG QUAN (SYSTEM OVERVIEW SPECIFICATION)
 
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 2. Đăng ký tài khoản |
-| Tác nhân | Khách hàng |
-| Quan hệ | «include» UC04 (Xác thực số điện thoại bằng OTP) |
-| Bảng CSDL | `NGUOI_DUNG`, `VAI_TRO`, `MA_XAC_THUC` |
-| Hệ thống ngoài | DỊCH VỤ SMS |
+#### Mô tả use case: Sơ đồ Use Case Tổng Quan (UC00)
+*(Tương ứng sơ đồ tổng quát `USECASE/SoDoThongQuat.png`)*
 
-**Tóm tắt:** Khách hàng tạo tài khoản bằng số điện thoại và mật khẩu, xác thực qua mã OTP gửi bằng SMS (QD15).
+| Thành phần | Nội dung đặc tả |
+| :--- | :--- |
+| **Tóm tắt** | Biểu diễn phạm vi (scope) tổng thể của Hệ thống Đặt vé xe khách trực tuyến: 3 tác nhân chính (Khách hàng, Nhân viên bán vé, Admin), 2 tác nhân phụ là hệ thống ngoài (Dịch vụ SMS, Cổng thanh toán), 17 use case nghiệp vụ và 5 use case dùng chung được tái sử dụng qua quan hệ `<<include>>`. |
+| **Tác nhân** | **Chính:** Khách hàng, Nhân viên bán vé, Admin.<br>**Phụ:** Dịch vụ SMS, Cổng thanh toán. |
+| **Dòng sự kiện chính** | 1. **Khách hàng** truy cập các chức năng: Đăng ký tài khoản, Đăng nhập, Đăng xuất, Khôi phục mật khẩu, Đổi mật khẩu, Quản lý thông tin cá nhân, Tra cứu chuyến xe, Đặt vé trực tuyến, Xem lịch sử mua vé, Hủy vé trực tuyến.<br>2. **Nhân viên bán vé** truy cập: Đăng nhập, Đăng xuất, Khôi phục mật khẩu, Quản lý thông tin cá nhân, Tra cứu chuyến xe, Bán vé tại quầy, Hủy vé tại quầy.<br>3. **Admin** truy cập: Đăng nhập, Đăng xuất, Quản lý thông tin cá nhân, Quản lý chuyến xe & lịch trình, Quản lý xe & sơ đồ ghế, Quản lý giá vé & khuyến mãi, Quản lý tài khoản & phân quyền, Thống kê & báo cáo doanh thu.<br>4. **Các quan hệ `<<include>>` ở mức tổng quát** (use case dùng chung được tái sử dụng):<br>　• Đăng ký tài khoản → *Xác thực số điện thoại bằng OTP*<br>　• Khôi phục mật khẩu → *Xác thực số điện thoại bằng OTP*<br>　• Đặt vé trực tuyến → *Giữ chỗ tạm thời*, *Thanh toán*<br>　• Bán vé tại quầy → *Giữ chỗ tạm thời*, *Thanh toán*<br>　• Hủy vé trực tuyến → *Hoàn tiền*<br>　• Hủy vé tại quầy → *Tra cứu vé*, *Hoàn tiền*<br>5. **Liên kết với tác nhân phụ:** *Xác thực OTP* ➜ Dịch vụ SMS; *Thanh toán* và *Hoàn tiền* ➜ Cổng thanh toán. |
+| **Dòng sự kiện phụ** | - **Tra cứu chuyến xe** là use case công khai: khách vãng lai dùng được mà không cần đăng nhập.<br>- **Đăng ký tài khoản**, **Đăng nhập**, **Khôi phục mật khẩu** là các use case khởi đầu, không yêu cầu phiên làm việc trước đó. |
+| **Tiền điều kiện (pre-condition)** | Hệ thống đang vận hành bình thường; kết nối tới Dịch vụ SMS và Cổng thanh toán khả dụng. |
+| **Hậu điều kiện (post-condition)** | Người dùng được điều hướng tới đúng tập chức năng tương ứng với vai trò (role) đã được phân quyền. |
 
-**Tiền điều kiện:** Khách hàng chưa đăng nhập và chưa có tài khoản với số điện thoại đó.
-
-**Dòng sự kiện chính:**
-1. Khách hàng chọn "Đăng ký".
-2. Hệ thống hiển thị form: họ tên, số điện thoại, email (tùy chọn), mật khẩu, nhập lại mật khẩu.
-3. Khách hàng nhập thông tin và bấm "Đăng ký".
-4. Hệ thống kiểm tra: số điện thoại đúng định dạng và chưa được dùng; mật khẩu theo QD07; hai lần nhập mật khẩu khớp.
-5. Hệ thống tạo `NGUOI_DUNG` với vai trò `KHACH_HANG`, trạng thái `CHO_XAC_THUC`, mật khẩu đã băm.
-6. Hệ thống gọi **UC04** để xác thực số điện thoại.
-7. Hệ thống đổi trạng thái tài khoản sang `HOAT_DONG` và báo "Đăng ký thành công".
-
-**Dòng sự kiện phụ:**
-- **E1 (bước 4) — Số điện thoại đã tồn tại:** báo "Số điện thoại đã được đăng ký", gợi ý Đăng nhập hoặc Khôi phục mật khẩu. Quay lại bước 3.
-- **E2 (bước 4) — Dữ liệu không hợp lệ:** báo lỗi ngay dưới ô sai, quay lại bước 3.
-- **E3 (bước 6) — Xác thực OTP thất bại:** tài khoản vẫn ở `CHO_XAC_THUC`; khách có thể xác thực lại khi đăng nhập (UC01 E3).
-
-**Hậu điều kiện:**
-1. Thành công: có tài khoản mới `HOAT_DONG`, đăng nhập được.
-2. Chưa xác thực: tài khoản ở `CHO_XAC_THUC`, chưa đăng nhập được.
+> **⚠️ Lưu ý quan trọng về việc bỏ `<<include>> Đăng nhập`:** Ở phiên bản cũ, hầu hết use case đều `<<include>>` tới "Đăng nhập". Đây là **lỗi mô hình hóa**: `<<include>>` nghĩa là *mỗi lần* chạy use case cơ sở thì use case được include **bắt buộc chạy lại từ đầu* — tức là người dùng phải đăng nhập lại mỗi lần bấm "Đặt vé". Thực tế đăng nhập chỉ xảy ra **một lần đầu phiên**, nên đúng chuẩn UML phải ghi vào **Tiền điều kiện: "Đã đăng nhập"**. Phiên bản này đã sửa toàn bộ theo hướng đó.
 
 ---
 
-## UC04 — Xác thực số điện thoại bằng OTP
-
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 2. Đăng ký tài khoản · 3. Khôi phục mật khẩu |
-| Tác nhân | Không nối trực tiếp actor người. Actor phụ: **DỊCH VỤ SMS** |
-| Quan hệ | Được «include» bởi UC03 và UC05 |
-| Bảng CSDL | `MA_XAC_THUC`, `NGUOI_DUNG`, `THAM_SO` |
-
-**Tóm tắt:** Hệ thống sinh mã OTP, gửi tới số điện thoại qua dịch vụ SMS và kiểm tra mã người dùng nhập vào. Dùng chung cho đăng ký và khôi phục mật khẩu.
-
-**Tiền điều kiện:** Có một số điện thoại cần xác thực, do use case gọi nó truyền sang.
-
-**Dòng sự kiện chính:**
-1. Hệ thống sinh mã OTP 6 số, lưu vào `MA_XAC_THUC` kèm mục đích (`DANG_KY` hoặc `QUEN_MAT_KHAU`) và hạn dùng theo QD02.
-2. Hệ thống gửi mã tới DỊCH VỤ SMS.
-3. DỊCH VỤ SMS gửi tin nhắn tới số điện thoại của người dùng.
-4. Hệ thống hiển thị ô nhập OTP kèm đồng hồ đếm ngược.
-5. Người dùng nhập mã.
-6. Hệ thống kiểm tra mã đúng, chưa hết hạn, chưa dùng.
-7. Hệ thống đánh dấu mã đã dùng và trả kết quả thành công cho use case gọi nó.
-
-**Dòng sự kiện phụ:**
-- **E1 (bước 6) — OTP sai:** báo lỗi, quay lại bước 5. Sai quá 5 lần thì khóa việc nhập trong 15 phút.
-- **E2 (bước 6) — OTP hết hạn:** báo hết hạn, hiện nút "Gửi lại mã".
-- **A1 (bước 4) — Gửi lại mã:** người dùng bấm "Gửi lại mã" → hệ thống vô hiệu mã cũ, quay lại bước 1.
-- **E3 (bước 3) — Dịch vụ SMS lỗi:** báo "Không gửi được mã, thử lại sau". Trả kết quả thất bại cho use case gọi nó.
-
-**Hậu điều kiện:**
-1. Thành công: số điện thoại được xác thực, mã đánh dấu đã dùng.
-2. Thất bại: số điện thoại chưa xác thực.
+## 2. ĐẶC TẢ CHI TIẾT CÁC USE CASE PHÂN RÃ
 
 ---
 
-## UC05 — Khôi phục mật khẩu
+### PHẦN A: NHÓM NGHIỆP VỤ ĐẶT VÉ & BÁN VÉ
 
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 3. Khôi phục mật khẩu |
-| Tác nhân | Khách hàng |
-| Quan hệ | «include» UC04 (Xác thực số điện thoại bằng OTP) |
-| Bảng CSDL | `NGUOI_DUNG`, `MA_XAC_THUC`, `NHAT_KY_HOAT_DONG` |
-| Hệ thống ngoài | DỊCH VỤ SMS |
+#### Mô tả use case: Tra cứu chuyến xe (UC01)
+*(Tương ứng sơ đồ phân rã `USECASE/TraCuuVaTimChuyenXe.png`)*
 
-**Tóm tắt:** Người dùng quên mật khẩu, xác minh bằng OTP gửi qua SMS rồi đặt mật khẩu mới.
-
-**Tiền điều kiện:** Người dùng chưa đăng nhập.
-
-**Dòng sự kiện chính:**
-1. Người dùng bấm "Quên mật khẩu" ở màn hình đăng nhập.
-2. Người dùng nhập số điện thoại đã đăng ký.
-3. Hệ thống tìm thấy tài khoản và gọi **UC04** để xác thực.
-4. Hệ thống hiển thị form mật khẩu mới + nhập lại.
-5. Người dùng nhập mật khẩu mới.
-6. Hệ thống kiểm tra QD07, lưu mật khẩu mới (đã băm), ghi nhật ký `DOI_MAT_KHAU`.
-7. Hệ thống báo thành công và chuyển về màn hình đăng nhập.
-
-**Dòng sự kiện phụ:**
-- **A1 (bước 3) — Số điện thoại không tồn tại:** hệ thống **vẫn** báo "Nếu số điện thoại tồn tại, mã đã được gửi" để không lộ số nào có tài khoản. Không gửi OTP.
-- **E1 (bước 3) — OTP sai hoặc hết hạn:** như UC04 E1, E2.
-- **E2 (bước 6) — Mật khẩu mới không hợp lệ:** báo lỗi, quay lại bước 5.
-- **E3 (bước 3) — Tài khoản bị khóa:** không cho đặt lại mật khẩu, báo liên hệ Admin.
-
-**Hậu điều kiện:** Mật khẩu cũ hết hiệu lực; người dùng đăng nhập bằng mật khẩu mới.
+| Thành phần | Nội dung đặc tả |
+| :--- | :--- |
+| **Tóm tắt** | Cho phép Khách hàng và Nhân viên bán vé tìm danh sách chuyến xe theo điểm đi, điểm đến và ngày khởi hành; kết quả hiển thị kèm giờ chạy, giá vé và số ghế còn trống. |
+| **Tác nhân** | **Chính:** Khách hàng, Nhân viên bán vé. |
+| **Dòng sự kiện chính** | 1. Người dùng mở màn hình tra cứu chuyến xe.<br>2. Người dùng nhập **điểm đi**, **điểm đến** và **ngày khởi hành**.<br>3. Người dùng bấm "Tìm chuyến".<br>4. Hệ thống truy vấn CSDL lịch trình và trả về danh sách chuyến xe thỏa điều kiện, mỗi dòng gồm: giờ xuất bến, loại xe, giá vé, số ghế còn trống.<br>5. Người dùng xem kết quả; use case kết thúc. |
+| **Dòng sự kiện phụ** | - **Lọc kết quả tra cứu (`<<extend>>`):** tại màn hình kết quả, người dùng có thể kích hoạt bộ lọc bổ sung (khung giờ sáng/chiều/đêm, loại xe giường nằm/ghế ngồi, khoảng giá) để thu hẹp danh sách. Hệ thống truy vấn lại và hiển thị kết quả đã lọc.<br>- **E1 — Không có chuyến phù hợp:** hệ thống hiển thị thông báo "Không tìm thấy chuyến xe phù hợp" và gợi ý ngày lân cận. |
+| **Tiền điều kiện (pre-condition)** | CSDL lịch trình có dữ liệu chuyến xe. **Không yêu cầu đăng nhập.** |
+| **Hậu điều kiện (post-condition)** | Danh sách chuyến xe kèm giá vé và số ghế trống được hiển thị chính xác; dữ liệu hệ thống không thay đổi (use case chỉ đọc). |
 
 ---
 
-## UC06 — Đổi mật khẩu
+#### Mô tả use case: Đặt vé trực tuyến (UC02)
+*(Tương ứng sơ đồ phân rã `USECASE/DatVeVaTamKhoaCho.png` và `USECASE/BanVeVaThanhToanTrucTuyen.png` — **đã gộp**)*
 
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 4. Đổi mật khẩu |
-| Tác nhân | Khách hàng, Nhân viên bán vé, Admin |
-| Quan hệ | Không có «include» / «extend» trên sơ đồ |
-| Bảng CSDL | `NGUOI_DUNG`, `NHAT_KY_HOAT_DONG` |
+| Thành phần | Nội dung đặc tả |
+| :--- | :--- |
+| **Tóm tắt** | Cho phép Khách hàng hoàn tất trọn vẹn quy trình mua vé qua mạng: chọn chuyến → chọn ghế trên sơ đồ → hệ thống giữ chỗ tạm thời 5 phút → nhập thông tin hành khách và điểm đón/trả → thanh toán qua Cổng thanh toán → nhận vé điện tử kèm mã QR. |
+| **Tác nhân** | **Chính:** Khách hàng. **Phụ:** Cổng thanh toán. |
+| **Dòng sự kiện chính** | 1. Khách hàng tra cứu và chọn một chuyến xe trong kết quả của **UC01**.<br>2. Hệ thống hiển thị **sơ đồ ghế** của xe (xe giường nằm 2 tầng hiển thị tách tầng dưới / tầng trên), phân biệt rõ ghế *trống / đã bán / đang bị giữ*.<br>3. Khách hàng chọn một hoặc nhiều vị trí ghế trống.<br>4. **Giữ chỗ tạm thời (`<<include>>` → UC18):** hệ thống khóa các ghế vừa chọn trong **5 phút**, bắt đầu đếm ngược và chặn mọi kênh bán khác đặt trùng.<br>5. Khách hàng chọn **điểm đón** và **điểm trả** dọc tuyến.<br>6. Khách hàng nhập thông tin hành khách (họ tên, số điện thoại, email nhận vé).<br>7. Hệ thống tính tổng tiền và hiển thị màn hình xác nhận đơn hàng.<br>8. **Thanh toán (`<<include>>` → UC19):** hệ thống chuyển yêu cầu thu tiền sang Cổng thanh toán và chờ kết quả giao dịch.<br>9. **Xuất vé điện tử & Mã QR (`<<include>>`):** khi Cổng thanh toán báo thành công, hệ thống sinh mã vé, sinh mã QR, chuyển ghế từ trạng thái *đang giữ* sang *đã bán*, và gửi vé qua email/SMS cho khách. |
+| **Dòng sự kiện phụ** | - **Áp dụng mã giảm giá (`<<extend>>`):** tại bước 7, trước khi xác nhận, khách hàng có thể nhập mã voucher. Hệ thống kiểm tra tính hợp lệ (còn hạn, còn lượt, đủ điều kiện đơn) rồi trừ trực tiếp vào tổng tiền.<br>- **Thanh toán qua Ví MoMo / ZaloPay (`<<extend>>` của UC19):** khách chọn phương thức ví điện tử.<br>- **Thanh toán qua VietQR / Thẻ ngân hàng (`<<extend>>` của UC19):** khách quét mã VietQR hoặc nhập thông tin thẻ.<br>- **E1 — Hết thời gian giữ chỗ:** nếu quá 5 phút mà chưa thanh toán xong, hệ thống tự động nhả ghế về trạng thái trống, hủy đơn và thông báo cho khách đặt lại.<br>- **E2 — Thanh toán thất bại / bị từ chối:** Cổng thanh toán trả mã lỗi; hệ thống giữ nguyên trạng thái *đang giữ chỗ* nếu còn thời gian và cho phép khách thử lại hoặc đổi phương thức.<br>- **E3 — Ghế bị người khác chiếm:** nếu tại bước 4 ghế vừa bị kênh khác khóa trước, hệ thống báo lỗi và yêu cầu khách chọn ghế khác. |
+| **Tiền điều kiện (pre-condition)** | Khách hàng **đã đăng nhập**; chuyến xe mục tiêu còn ít nhất một ghế trống. |
+| **Hậu điều kiện (post-condition)** | **Thành công:** vé ở trạng thái "Đã thanh toán", ghế ở trạng thái "Đã bán", vé điện tử + mã QR đã gửi tới khách, giao dịch được ghi nhận vào doanh thu.<br>**Thất bại:** ghế được nhả về trạng thái "Trống", không phát sinh giao dịch tài chính. |
 
-**Tóm tắt:** Người dùng đang đăng nhập tự đổi mật khẩu của mình.
-
-**Tiền điều kiện:** Người dùng đã đăng nhập (ghi trong đặc tả, không vẽ «include» tới UC01).
-
-**Dòng sự kiện chính:**
-1. Người dùng chọn "Đổi mật khẩu".
-2. Hệ thống hiển thị form: mật khẩu hiện tại, mật khẩu mới, nhập lại mật khẩu mới.
-3. Người dùng nhập và bấm "Lưu".
-4. Hệ thống kiểm tra mật khẩu hiện tại đúng, mật khẩu mới theo QD07, hai lần nhập khớp, mật khẩu mới khác mật khẩu cũ.
-5. Hệ thống lưu mật khẩu mới (đã băm), ghi nhật ký `DOI_MAT_KHAU`.
-6. Hệ thống báo thành công và yêu cầu đăng nhập lại.
-
-**Dòng sự kiện phụ:**
-- **E1 (bước 4) — Mật khẩu hiện tại sai:** báo lỗi, giữ form, quay lại bước 3.
-- **E2 (bước 4) — Mật khẩu mới không hợp lệ hoặc trùng mật khẩu cũ:** báo lỗi tại ô sai, quay lại bước 3.
-
-**Hậu điều kiện:** Mật khẩu được đổi; các phiên đăng nhập cũ bị thu hồi.
+> **📌 Ghi chú gộp:** Bản cũ tách thành UC02 *"Đặt vé trực tuyến & Tạm khóa chỗ"* và UC03 *"Đặt vé trực tuyến"*. Hai sơ đồ này mô tả **cùng một use case nghiệp vụ** ở hai mức chi tiết khác nhau nên đã được gộp. Các mục "Tìm kiếm chuyến xe", "Xem sơ đồ ghế", "Chọn ghế", "Nhập thông tin hành khách"… **không phải use case** mà là **các bước trong dòng sự kiện chính** (xem Phụ lục A, lỗi **L2**).
 
 ---
 
-## UC07 — Xem thông tin cá nhân
+#### Mô tả use case: Bán vé & in vé tại quầy (UC03)
+*(Tương ứng sơ đồ phân rã `USECASE/BanVeVaInVeTaiQuay.png`)*
 
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 5. Quản lý thông tin cá nhân |
-| Tác nhân | Khách hàng, Nhân viên bán vé, Admin |
-| Quan hệ | "Cập nhật thông tin cá nhân" «extend» use case này |
-| Bảng CSDL | `NGUOI_DUNG`, `NHAT_KY_HOAT_DONG` |
-
-**Tóm tắt:** Người dùng xem hồ sơ của mình; nếu muốn thì sửa họ tên, số điện thoại, email.
-
-**Tiền điều kiện:** Người dùng đã đăng nhập.
-
-**Dòng sự kiện chính:**
-1. Người dùng chọn "Thông tin cá nhân".
-2. Hệ thống hiển thị: họ tên, số điện thoại, email, vai trò, ngày tạo. Vai trò và ngày tạo chỉ đọc.
-
-**Dòng sự kiện phụ:**
-- **A1 (bước 2) — Cập nhật thông tin cá nhân** *(use case mở rộng)*:
-  1. Người dùng bấm "Cập nhật", sửa họ tên / số điện thoại / email, bấm "Lưu".
-  2. Hệ thống kiểm tra họ tên không rỗng, số điện thoại đúng định dạng và chưa thuộc tài khoản khác, email đúng định dạng.
-  3. Hệ thống lưu, ghi nhật ký, hiển thị lại thông tin mới.
-- **E1 (A1 bước 2) — Dữ liệu không hợp lệ hoặc số điện thoại trùng:** báo lỗi tại ô sai, giữ form.
-- **A2 (A1) — Đổi số điện thoại:** hệ thống gọi **UC04** để xác thực số mới trước khi lưu.
-
-**Hậu điều kiện:** Thông tin cá nhân được cập nhật, hoặc giữ nguyên nếu người dùng chỉ xem.
+| Thành phần | Nội dung đặc tả |
+| :--- | :--- |
+| **Tóm tắt** | Cho phép Nhân viên bán vé phục vụ khách mua vé trực tiếp tại bến: chọn chuyến, chọn ghế, giữ chỗ, thu tiền (tiền mặt hoặc VietQR) và in vé giấy giao cho hành khách. |
+| **Tác nhân** | **Chính:** Nhân viên bán vé. **Phụ:** Cổng thanh toán. |
+| **Dòng sự kiện chính** | 1. Khách tới quầy và nêu nhu cầu; nhân viên tra cứu chuyến (**UC01**) và chọn chuyến phù hợp.<br>2. Nhân viên mở sơ đồ ghế và chọn vị trí theo yêu cầu khách.<br>3. **Giữ chỗ tạm thời (`<<include>>` → UC18):** hệ thống khóa ghế trên toàn hệ thống để kênh trực tuyến không đặt trùng trong lúc nhân viên đang lập phiếu.<br>4. Nhân viên nhập thông tin hành khách và điểm đón/trả.<br>5. **Thanh toán (`<<include>>` → UC19):** nhân viên xác nhận hình thức thu tiền và hệ thống ghi nhận giao dịch.<br>6. **In vé (`<<include>>`):** sau khi giao dịch hợp lệ, hệ thống sinh mã vé và gửi lệnh in vé giấy cho khách; ghế chuyển sang trạng thái *đã bán*.<br>7. Doanh thu được cộng vào ca trực của nhân viên đang đăng nhập. |
+| **Dòng sự kiện phụ** | - **Áp dụng mã giảm giá (`<<extend>>`):** nhân viên nhập mã voucher của khách trước khi chốt tiền.<br>- **Thanh toán tiền mặt (`<<extend>>` của UC19):** nhân viên xác nhận đã thu đủ tiền mặt; giao dịch không đi qua Cổng thanh toán.<br>- **Thanh toán qua VietQR (`<<extend>>` của UC19):** hệ thống hiển thị mã VietQR để khách quét; Cổng thanh toán xác nhận rồi hệ thống mới cho in vé.<br>- **E1 — Khách đổi ý trước khi thanh toán:** nhân viên hủy phiếu, hệ thống nhả ghế ngay lập tức.<br>- **E2 — Máy in lỗi:** giao dịch vẫn hợp lệ; nhân viên in lại từ chức năng tra cứu vé. |
+| **Tiền điều kiện (pre-condition)** | Nhân viên bán vé **đã đăng nhập** và đang mở ca làm việc hợp lệ; chuyến xe còn ghế trống. |
+| **Hậu điều kiện (post-condition)** | Vé giấy được in và giao cho khách, ghế ở trạng thái "Đã bán", tiền được ghi nhận vào doanh thu ca trực của nhân viên. |
 
 ---
 
-## UC08 — Xem lịch sử mua vé
+#### Mô tả use case: Hủy vé trực tuyến (UC04)
+*(Tương ứng sơ đồ phân rã `USECASE/HuyVeTrucTuyen.png`)*
 
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 6. Xem lịch sử mua vé |
-| Tác nhân | Khách hàng |
-| Quan hệ | "Lọc lịch sử theo trạng thái vé" «extend» use case này |
-| Bảng CSDL | `VE`, `CHI_TIET_VE`, `CHUYEN_XE`, `TUYEN_XE` |
-
-**Tóm tắt:** Khách hàng xem lại các vé mình đã mua, kèm trạng thái từng vé.
-
-**Tiền điều kiện:** Khách hàng đã đăng nhập.
-
-**Dòng sự kiện chính:**
-1. Khách hàng chọn "Lịch sử mua vé".
-2. Hệ thống lấy các vé có `maNguoiDat` là khách hàng này, sắp theo thời gian đặt giảm dần.
-3. Hệ thống hiển thị: mã vé, tuyến, giờ khởi hành, số ghế, tổng tiền, trạng thái (`GIU_CHO`, `DA_THANH_TOAN`, `DA_HUY`, `HET_HAN`).
-4. Khách hàng bấm vào một vé để xem chi tiết: từng ghế, điểm đón/trả, mã giảm giá đã dùng, lịch sử thanh toán.
-
-**Dòng sự kiện phụ:**
-- **A1 (bước 3) — Lọc lịch sử theo trạng thái vé** *(use case mở rộng)*: khách chọn một trạng thái → hệ thống lọc lại danh sách ở bước 3.
-- **A2 (bước 4) — Hủy vé:** từ màn hình chi tiết, nếu vé đủ điều kiện hủy thì khách bấm "Hủy vé" → chuyển sang **UC15**.
-- **A3 (bước 2) — Chưa mua vé nào:** hiển thị "Bạn chưa có vé nào" kèm nút tìm chuyến.
-
-**Hậu điều kiện:** Dữ liệu hệ thống không thay đổi (trừ khi khách đi tiếp sang UC15).
+| Thành phần | Nội dung đặc tả |
+| :--- | :--- |
+| **Tóm tắt** | Cho phép Khách hàng tự hủy vé đã mua qua website/ứng dụng và nhận lại tiền theo chính sách hoàn của nhà xe thông qua Cổng thanh toán. |
+| **Tác nhân** | **Chính:** Khách hàng. **Phụ:** Cổng thanh toán. |
+| **Dòng sự kiện chính** | 1. Khách hàng mở danh sách vé của mình và chọn vé cần hủy.<br>2. Hệ thống kiểm tra điều kiện hủy: trạng thái vé phải là "Đã thanh toán" và thời điểm hiện tại còn trong hạn cho phép hủy.<br>3. Hệ thống hiển thị **mức phí hủy** và **số tiền thực nhận lại** theo chính sách; khách hàng xác nhận.<br>4. **Hoàn tiền (`<<include>>` → UC20):** hệ thống gửi lệnh hoàn tiền tới Cổng thanh toán theo đúng kênh khách đã thanh toán ban đầu.<br>5. Hệ thống chuyển vé sang trạng thái "Đã hủy", nhả ghế về trạng thái "Trống" và gửi thông báo xác nhận cho khách. |
+| **Dòng sự kiện phụ** | - **E1 — Quá hạn hủy:** hệ thống từ chối và hiển thị lý do kèm chính sách hủy vé.<br>- **E2 — Hoàn tiền thất bại:** đơn hoàn được chuyển sang trạng thái "Chờ xử lý" để Admin can thiệp thủ công; vé **vẫn** được hủy và ghế vẫn được nhả. |
+| **Tiền điều kiện (pre-condition)** | Khách hàng **đã đăng nhập**; vé thuộc sở hữu của tài khoản, đang ở trạng thái "Đã thanh toán" và còn trong thời hạn được phép hủy. |
+| **Hậu điều kiện (post-condition)** | Vé ở trạng thái "Đã hủy", ghế trở lại "Trống", giao dịch hoàn tiền được khởi tạo và ghi âm vào doanh thu. |
 
 ---
 
-## UC09 — Tra cứu chuyến xe
+#### Mô tả use case: Hủy vé tại quầy (UC05)
+*(Tương ứng sơ đồ phân rã `USECASE/HuyVeTaiQuay.png`)*
 
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 7. Tra cứu & tìm chuyến xe |
-| Tác nhân | Khách hàng (**không cần đăng nhập**), Nhân viên bán vé |
-| Quan hệ | "Lọc kết quả tra cứu" «extend» use case này |
-| Bảng CSDL | `CHUYEN_XE`, `TUYEN_XE`, `DIEM_DUNG`, `GHE`, `CHI_TIET_VE` |
-
-**Tóm tắt:** Người dùng chọn điểm đi, điểm đến, ngày khởi hành và xem danh sách chuyến xe phù hợp kèm giá vé và số ghế còn trống.
-
-**Tiền điều kiện:** Không có.
-
-**Dòng sự kiện chính:**
-1. Người dùng chọn điểm đi và điểm đến.
-2. Người dùng chọn ngày khởi hành.
-3. Người dùng bấm "Tìm chuyến".
-4. Hệ thống tìm các chuyến `MO_BAN` thuộc tuyến tương ứng, khởi hành trong ngày đã chọn và chưa tới giờ chạy.
-5. Với mỗi chuyến, hệ thống tính số ghế trống theo QD10.
-6. Hệ thống hiển thị danh sách: giờ đi, giờ đến dự kiến, loại xe, giá vé, số ghế trống; sắp theo giờ đi.
-7. Người dùng chọn một chuyến → chuyển sang **UC10** (khách hàng) hoặc **UC14** (nhân viên).
-
-**Dòng sự kiện phụ:**
-- **A1 (bước 6) — Lọc kết quả tra cứu** *(use case mở rộng)*: người dùng lọc theo khung giờ (QD09), khoảng giá hoặc loại xe → hệ thống lọc lại danh sách ở bước 6.
-- **E1 (bước 3) — Thiếu thông tin, điểm đi trùng điểm đến, hoặc ngày trong quá khứ:** báo lỗi, quay lại bước 1.
-- **E2 (bước 4) — Không có chuyến nào:** hiển thị "Không có chuyến phù hợp", gợi ý chọn ngày khác.
-- **A2 (bước 6) — Chuyến hết ghế:** vẫn hiển thị nhưng ghi "Hết chỗ" và không cho chọn.
-
-**Hậu điều kiện:** Danh sách chuyến được hiển thị. Dữ liệu hệ thống không thay đổi.
+| Thành phần | Nội dung đặc tả |
+| :--- | :--- |
+| **Tóm tắt** | Cho phép Nhân viên bán vé xử lý yêu cầu hủy vé của hành khách tại bến: tra cứu vé, kiểm tra điều kiện, hoàn tiền (mặt hoặc điện tử) và in biên nhận hủy. |
+| **Tác nhân** | **Chính:** Nhân viên bán vé. **Phụ:** Cổng thanh toán. *(Hành khách là bên thụ hưởng, không trực tiếp thao tác trên hệ thống — xem lỗi **L5** ở Phụ lục A.)* |
+| **Dòng sự kiện chính** | 1. Hành khách tới quầy, cung cấp mã vé / số điện thoại đặt vé và giấy tờ tùy thân.<br>2. **Tra cứu vé (`<<include>>` → UC21):** nhân viên nhập thông tin, hệ thống truy xuất và hiển thị chi tiết vé để đối chiếu danh tính.<br>3. Hệ thống kiểm tra điều kiện hủy và hiển thị mức phí hủy, số tiền hoàn lại.<br>4. Nhân viên xác nhận hủy vé.<br>5. **Hoàn tiền (`<<include>>` → UC20):** hệ thống xử lý hoàn trả theo hình thức đã chọn.<br>6. Hệ thống chuyển vé sang "Đã hủy" và nhả ghế về "Trống". |
+| **Dòng sự kiện phụ** | - **In biên nhận hủy vé (`<<extend>>`):** nhân viên in phiếu biên nhận giao cho hành khách làm bằng chứng đã hoàn tiền.<br>- **Hoàn tiền mặt (`<<extend>>` của UC20):** nhân viên chi tiền mặt trực tiếp tại quầy, hệ thống ghi nhận giảm quỹ ca trực.<br>- **Hoàn qua cổng thanh toán (`<<extend>>` của UC20):** hệ thống gửi lệnh hoàn về tài khoản/ví của khách.<br>- **E1 — Sai thông tin định danh:** nhân viên từ chối xử lý, use case kết thúc.<br>- **E2 — Quá hạn hủy:** hệ thống từ chối, hiển thị chính sách để nhân viên giải thích cho khách. |
+| **Tiền điều kiện (pre-condition)** | Nhân viên bán vé **đã đăng nhập** và đang mở ca; vé tồn tại, ở trạng thái "Đã thanh toán" và còn trong hạn hủy. |
+| **Hậu điều kiện (post-condition)** | Vé ở trạng thái "Đã hủy", ghế trở lại "Trống", tiền đã hoàn (mặt hoặc điện tử) và biên nhận được in nếu có yêu cầu. |
 
 ---
 
-## UC10 — Đặt vé trực tuyến
+#### Mô tả use case: Xem lịch sử mua vé (UC06)
+*(Tương ứng sơ đồ phân rã `USECASE/LichsuMuaVe.png`)*
 
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 8. Đặt vé trực tuyến |
-| Tác nhân | Khách hàng |
-| Quan hệ | «include» UC11 (Giữ chỗ tạm thời), «include» UC12 (Thanh toán); UC13 (Áp dụng mã giảm giá) «extend» use case này |
-| Bảng CSDL | `VE`, `CHI_TIET_VE`, `CHUYEN_XE`, `GHE`, `DIEM_DUNG`, `MA_GIAM_GIA` |
-
-**Tóm tắt:** Khách hàng chọn ghế trên sơ đồ, nhập thông tin hành khách, tùy chọn nhập mã giảm giá, rồi thanh toán để nhận vé điện tử.
-
-**Tiền điều kiện:**
-1. Khách hàng đã chọn một chuyến `MO_BAN` ở UC09.
-2. Khách hàng **bắt buộc phải đăng nhập** để đặt vé trực tuyến.
-
-**Dòng sự kiện chính:**
-1. Hệ thống hiển thị sơ đồ ghế của xe chạy chuyến đó; ghế trống và ghế đã có người (QD10) hiển thị khác màu.
-2. Khách hàng chọn một hoặc nhiều ghế trống, tối đa QD05.
-3. Khách hàng bấm "Tiếp tục".
-4. Hệ thống gọi **UC11** để giữ các ghế đã chọn.
-5. Hệ thống hiển thị form thông tin hành khách: họ tên, số điện thoại, email (tùy chọn) và chọn điểm đón, điểm trả trong danh sách của tuyến.
-6. Khách hàng nhập thông tin và bấm "Tiếp tục".
-7. Hệ thống hiển thị tóm tắt: chuyến, ghế, điểm đón/trả, `giaGoc`, `tienGiam`, `thanhTien`.
-8. Khách hàng bấm "Thanh toán".
-9. Hệ thống gọi **UC12** với phương thức online (Ví MoMo/ZaloPay hoặc VietQR/Thẻ).
-10. Hệ thống đổi vé sang `DA_THANH_TOAN`, sinh mã QR của vé, tăng lượt dùng mã giảm giá nếu có.
-11. Hệ thống hiển thị vé điện tử và gửi mã vé qua SMS.
-
-**Dòng sự kiện phụ:**
-- **A1 (bước 7) — Áp dụng mã giảm giá** *(use case mở rộng)*: khách nhập mã → chuyển sang **UC13** → hệ thống tính lại `tienGiam`, `thanhTien` và hiển thị lại bước 7.
-- **E1 (bước 2) — Chọn quá QD05 ghế:** báo lỗi, không cho chọn thêm.
-- **E2 (bước 4) — Ghế vừa bị người khác giữ:** báo "Ghế X vừa có người chọn", tải lại sơ đồ ghế, quay lại bước 2.
-- **E3 (bước 6) — Thông tin hành khách sai định dạng:** báo lỗi tại ô sai, quay lại bước 5.
-- **E4 (bất kỳ bước nào trước bước 10) — Hết thời gian giữ chỗ (QD01):** vé chuyển `HET_HAN`, ghế được nhả, báo khách chọn lại từ bước 1.
-- **E5 (bước 9) — Thanh toán thất bại hoặc khách hủy trên cổng:** nếu vé còn hạn giữ chỗ thì cho chọn lại phương thức (quay lại bước 8); hết hạn thì như E4.
-- **A2 (bước 11) — Gửi SMS lỗi:** vé vẫn hợp lệ; hệ thống ghi nhận và cho gửi lại; khách vẫn xem được vé trong UC08.
-
-**Hậu điều kiện:**
-1. Thành công: vé `DA_THANH_TOAN`, có mã QR, ghế thuộc về khách; có một giao dịch `THANH_CONG`.
-2. Thất bại: vé `GIU_CHO` (còn hạn) hoặc `HET_HAN`; không trừ tiền khách.
+| Thành phần | Nội dung đặc tả |
+| :--- | :--- |
+| **Tóm tắt** | Cho phép Khách hàng xem lại toàn bộ vé đã giao dịch trên tài khoản của mình, kèm bộ lọc theo trạng thái vé. |
+| **Tác nhân** | **Chính:** Khách hàng. |
+| **Dòng sự kiện chính** | 1. Khách hàng mở chức năng "Lịch sử mua vé".<br>2. Hệ thống truy xuất toàn bộ vé gắn với tài khoản đang đăng nhập, sắp xếp theo ngày khởi hành giảm dần.<br>3. Hệ thống hiển thị danh sách gồm: mã vé, tuyến, ngày giờ khởi hành, số ghế, số tiền, trạng thái vé. |
+| **Dòng sự kiện phụ** | - **Lọc lịch sử theo trạng thái vé (`<<extend>>`):** khách hàng chọn lọc "Chưa đi" / "Đã hoàn thành" / "Đã hủy"; hệ thống hiển thị lại danh sách tương ứng.<br>- **E1 — Chưa có giao dịch nào:** hệ thống hiển thị trạng thái rỗng kèm gợi ý đặt vé. |
+| **Tiền điều kiện (pre-condition)** | Khách hàng **đã đăng nhập** vào tài khoản cá nhân. |
+| **Hậu điều kiện (post-condition)** | Danh sách vé của riêng tài khoản đang đăng nhập được hiển thị đầy đủ; dữ liệu không bị thay đổi. |
 
 ---
 
-## UC11 — Giữ chỗ tạm thời
+### PHẦN B: NHÓM XÁC THỰC & QUẢN LÝ TÀI KHOẢN
 
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 8. Đặt vé trực tuyến · 9. Bán vé & in vé tại quầy |
-| Tác nhân | Không nối trực tiếp actor người |
-| Quan hệ | Được «include» bởi UC10 và UC14 |
-| Bảng CSDL | `VE`, `CHI_TIET_VE`, `GHE`, `THAM_SO` |
+#### Mô tả use case: Đăng ký tài khoản (UC07)
+*(Tương ứng sơ đồ phân rã `USECASE/DangKyTaiKhoan.png`)*
 
-**Tóm tắt:** Hệ thống khóa tạm các ghế khách đang chọn trong khoảng QD01 để người khác không đặt trùng, trong lúc khách hoàn tất thanh toán.
-
-**Tiền điều kiện:** Có danh sách ghế đang trống do use case gọi nó truyền sang.
-
-**Dòng sự kiện chính:**
-1. Hệ thống kiểm tra lại từng ghế vẫn còn trống theo QD10.
-2. Hệ thống tạo `VE` ở trạng thái `GIU_CHO`, đặt `hanGiuCho` = thời điểm hiện tại + QD01.
-3. Hệ thống tạo `CHI_TIET_VE` cho từng ghế, lưu giá hiện tại của chuyến vào từng dòng.
-4. Hệ thống trả mã vé tạm cho use case gọi nó và bắt đầu đếm ngược hiển thị cho người dùng.
-
-**Dòng sự kiện phụ:**
-- **E1 (bước 1) — Có ghế vừa bị người khác giữ:** không giữ ghế nào, trả lỗi kèm danh sách ghế đã mất cho use case gọi nó.
-- **A1 — Quá hạn giữ chỗ mà chưa thanh toán:** hệ thống đổi vé sang `HET_HAN`; các ghế trở lại trạng thái trống.
-- **A2 — Người dùng chủ động quay lại hoặc đổi ghế:** hệ thống đổi vé đang giữ sang `HET_HAN` và nhả ghế ngay.
-
-**Hậu điều kiện:**
-1. Thành công: các ghế được giữ cho người dùng trong QD01; người khác thấy là "đã có người".
-2. Thất bại: không ghế nào bị giữ.
+| Thành phần | Nội dung đặc tả |
+| :--- | :--- |
+| **Tóm tắt** | Cho phép Khách hàng tạo tài khoản thành viên mới, xác minh tính chính chủ của số điện thoại bằng mã OTP gửi qua Dịch vụ SMS. |
+| **Tác nhân** | **Chính:** Khách hàng. **Phụ:** Dịch vụ SMS. |
+| **Dòng sự kiện chính** | 1. Khách hàng mở màn hình đăng ký.<br>2. Khách hàng nhập họ tên, số điện thoại và mật khẩu.<br>3. Hệ thống kiểm tra định dạng dữ liệu và kiểm tra số điện thoại chưa tồn tại trong CSDL.<br>4. **Xác thực số điện thoại bằng OTP (`<<include>>` → UC17):** hệ thống sinh mã OTP, gửi qua Dịch vụ SMS và yêu cầu khách nhập lại.<br>5. OTP hợp lệ → hệ thống lưu tài khoản mới ở trạng thái "Đã kích hoạt" và thông báo thành công. |
+| **Dòng sự kiện phụ** | - **E1 — Số điện thoại đã tồn tại:** hệ thống báo lỗi và gợi ý chuyển sang Đăng nhập hoặc Khôi phục mật khẩu.<br>- **E2 — OTP sai hoặc hết hạn:** xem dòng sự kiện phụ của **UC17**; nếu vượt quá số lần thử, hệ thống hủy phiên đăng ký và không tạo tài khoản. |
+| **Tiền điều kiện (pre-condition)** | Số điện thoại chưa được đăng ký trong hệ thống và có khả năng nhận SMS. **Không yêu cầu đăng nhập.** |
+| **Hậu điều kiện (post-condition)** | Tài khoản mới được lưu vào CSDL ở trạng thái kích hoạt; người dùng có thể đăng nhập ngay. |
 
 ---
 
-## UC12 — Thanh toán
+#### Mô tả use case: Đăng nhập - Đăng xuất (UC08)
+*(Tương ứng sơ đồ phân rã `USECASE/DangNhap-DangXuat.png`)*
 
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 8. Đặt vé trực tuyến · 9. Bán vé & in vé tại quầy |
-| Tác nhân | Không nối trực tiếp actor người. Actor phụ: **CỔNG THANH TOÁN** |
-| Quan hệ | Được «include» bởi UC10 và UC14. Các use case «extend» nó: *Ví MoMo/ZaloPay*, *VietQR/Thẻ* (online); *Tiền mặt*, *VietQR* (tại quầy) |
-| Bảng CSDL | `THANH_TOAN`, `VE` |
+| Thành phần | Nội dung đặc tả |
+| :--- | :--- |
+| **Tóm tắt** | Cung cấp luồng xác thực danh tính để khởi tạo phiên làm việc (Đăng nhập) và luồng chấm dứt phiên làm việc (Đăng xuất) cho cả ba tác nhân chính. |
+| **Tác nhân** | **Chính:** Khách hàng, Nhân viên bán vé, Admin. |
+| **Dòng sự kiện chính** | **A. Đăng nhập**<br>1. Người dùng nhập số điện thoại và mật khẩu.<br>2. Hệ thống đối chiếu với CSDL tài khoản và kiểm tra trạng thái tài khoản (không bị khóa).<br>3. Hệ thống xác định **vai trò (role)** của tài khoản, khởi tạo phiên làm việc (Session/Token) và điều hướng tới giao diện tương ứng với vai trò đó.<br><br>**B. Đăng xuất**<br>4. Người dùng chọn "Đăng xuất".<br>5. Hệ thống hủy Session/Token hiện tại, xóa dữ liệu phiên trên thiết bị và đưa người dùng về màn hình công khai. |
+| **Dòng sự kiện phụ** | - **E1 — Sai thông tin đăng nhập:** hệ thống báo lỗi chung ("Số điện thoại hoặc mật khẩu không đúng") và đếm số lần sai.<br>- **E2 — Vượt quá số lần đăng nhập sai cho phép:** hệ thống tạm khóa đăng nhập trong một khoảng thời gian để chống dò mật khẩu.<br>- **E3 — Tài khoản bị Admin khóa:** hệ thống từ chối đăng nhập và hiển thị thông báo liên hệ quản trị. |
+| **Tiền điều kiện (pre-condition)** | **Đăng nhập:** người dùng sở hữu tài khoản hợp lệ, chưa bị khóa.<br>**Đăng xuất:** đang tồn tại một phiên làm việc hợp lệ. |
+| **Hậu điều kiện (post-condition)** | **Đăng nhập:** phiên làm việc được khởi tạo kèm đúng vai trò.<br>**Đăng xuất:** phiên làm việc bị hủy hoàn toàn, mọi yêu cầu sau đó phải xác thực lại. |
 
-**Tóm tắt:** Hệ thống thu tiền cho một vé đang giữ chỗ. Kênh online đi qua CỔNG THANH TOÁN; kênh tại quầy có thêm lựa chọn tiền mặt do nhân viên thu trực tiếp.
-
-**Tiền điều kiện:** Có vé ở trạng thái `GIU_CHO` còn hạn, đã biết `thanhTien`.
-
-**Dòng sự kiện chính:**
-1. Hệ thống hiển thị các phương thức thanh toán phù hợp với kênh bán.
-2. Người dùng (khách hàng hoặc nhân viên) chọn một phương thức.
-3. Hệ thống tạo bản ghi `THANH_TOAN` trạng thái `DANG_CHO`, số tiền = `thanhTien`.
-4. **Nếu là phương thức online:** hệ thống gửi yêu cầu sang CỔNG THANH TOÁN, hiển thị mã QR hoặc chuyển tới trang của cổng; người trả tiền hoàn tất trên ứng dụng ngân hàng hoặc ví; cổng báo kết quả về hệ thống.
-5. **Nếu là tiền mặt tại quầy:** nhân viên thu tiền và bấm "Đã nhận tiền mặt"; không gọi CỔNG THANH TOÁN.
-6. Hệ thống cập nhật `THANH_TOAN` = `THANH_CONG`, ghi lại phương thức đã dùng.
-7. Hệ thống trả kết quả thành công cho use case gọi nó.
-
-**Dòng sự kiện phụ:**
-- **E1 (bước 4) — Cổng báo thất bại hoặc người dùng hủy:** `THANH_TOAN` = `THAT_BAI`; nếu vé còn hạn giữ chỗ thì cho chọn lại phương thức (quay lại bước 1).
-- **E2 (bước 4) — Cổng không phản hồi:** giữ `DANG_CHO`, hệ thống hỏi lại trạng thái giao dịch; quá thời gian chờ thì chuyển `THAT_BAI`.
-- **E3 (bước 5) — Khách không đủ tiền mặt:** nhân viên hủy phiên thanh toán; vé giữ nguyên `GIU_CHO` tới khi hết hạn.
-- **E4 (bất kỳ bước nào) — Vé hết hạn giữ chỗ:** dừng thanh toán, báo lỗi cho use case gọi nó. Nếu tiền đã bị trừ thì hệ thống tự tạo giao dịch hoàn 100%.
-
-**Hậu điều kiện:**
-1. Thành công: có một giao dịch `THANH_CONG`, phương thức được ghi lại (dùng để xác định cách hoàn tiền theo QD12).
-2. Thất bại: không có giao dịch thành công; khách không bị trừ tiền.
+> **⚠️ Sửa lỗi logic:** Sơ đồ cũ vẽ **Đăng xuất `<<include>>` Đăng nhập**. Điều này sai về ngữ nghĩa — `<<include>>` nghĩa là "chạy Đăng xuất thì phải chạy luôn cả thủ tục Đăng nhập", vô lý. Quan hệ đúng là **"đã đăng nhập" là tiền điều kiện của Đăng xuất**. Đã bỏ mũi tên include khỏi đặc tả; **cần sửa lại file `DangNhap-DangXuat.png`**.
 
 ---
 
-## UC13 — Áp dụng mã giảm giá
+#### Mô tả use case: Khôi phục mật khẩu (UC09)
+*(Tương ứng sơ đồ phân rã `USECASE/QuenMatKhau.png`)*
 
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 8. Đặt vé trực tuyến · 9. Bán vé & in vé tại quầy |
-| Tác nhân | Khách hàng, Nhân viên bán vé |
-| Quan hệ | «extend» UC10 và UC14 — tùy chọn, có thể không dùng |
-| Bảng CSDL | `MA_GIAM_GIA`, `VE` |
-
-**Tóm tắt:** Người mua nhập mã giảm giá; hệ thống kiểm tra và tính lại số tiền phải trả. Áp dụng được ở **cả hai kênh** bán vé.
-
-**Tiền điều kiện:** Đang trong luồng đặt vé hoặc bán vé, đã biết `giaGoc`.
-
-**Dòng sự kiện chính:**
-1. Người mua nhập mã giảm giá và bấm "Áp dụng".
-2. Hệ thống kiểm tra mã: tồn tại, đang bật, trong khoảng ngày hiệu lực, còn lượt dùng, `giaGoc` đạt mức đơn tối thiểu.
-3. Hệ thống tính `tienGiam` theo loại giảm (phần trăm hoặc số tiền), không vượt mức giảm tối đa.
-4. Hệ thống cập nhật `thanhTien` = `giaGoc` − `tienGiam` và hiển thị lại tóm tắt đơn.
-
-**Dòng sự kiện phụ:**
-- **E1 (bước 2) — Mã không tồn tại, đã tắt, hết hạn, hết lượt hoặc chưa đạt đơn tối thiểu:** báo rõ lý do, giữ nguyên giá, quay lại bước 1.
-- **A1 (bước 4) — Gỡ mã:** người mua bấm "Bỏ mã" → `tienGiam` = 0, `thanhTien` = `giaGoc`.
-
-**Hậu điều kiện:** Vé lưu đủ ba giá trị `giaGoc`, `tienGiam`, `thanhTien`. Lượt dùng của mã chỉ tăng khi thanh toán thành công, không tăng ở bước này.
+| Thành phần | Nội dung đặc tả |
+| :--- | :--- |
+| **Tóm tắt** | Hỗ trợ Khách hàng thiết lập mật khẩu mới khi quên mật khẩu cũ, bảo đảm an toàn bằng cách xác thực quyền sở hữu số điện thoại qua mã OTP. |
+| **Tác nhân** | **Chính:** Khách hàng. **Phụ:** Dịch vụ SMS. |
+| **Dòng sự kiện chính** | 1. Khách hàng chọn "Quên mật khẩu" và nhập số điện thoại đã đăng ký.<br>2. Hệ thống kiểm tra số điện thoại tồn tại và tài khoản đang khả dụng.<br>3. **Xác thực số điện thoại bằng OTP (`<<include>>` → UC17):** hệ thống gửi mã OTP khôi phục qua Dịch vụ SMS và yêu cầu khách nhập lại.<br>4. OTP hợp lệ → hệ thống cho phép nhập mật khẩu mới và xác nhận lại mật khẩu.<br>5. Hệ thống mã hóa, lưu mật khẩu mới và **vô hiệu hóa toàn bộ phiên đăng nhập cũ** trên mọi thiết bị. |
+| **Dòng sự kiện phụ** | - **E1 — Số điện thoại không tồn tại:** hệ thống hiển thị thông báo trung lập (không tiết lộ số nào có/không có tài khoản) nhằm tránh lộ thông tin người dùng.<br>- **E2 — Mật khẩu mới không đạt yêu cầu an toàn:** hệ thống báo lỗi và yêu cầu nhập lại.<br>- **E3 — OTP sai/hết hạn:** xem **UC17**. |
+| **Tiền điều kiện (pre-condition)** | Số điện thoại tồn tại trong CSDL và liên kết với một tài khoản khả dụng. **Không yêu cầu đăng nhập.** |
+| **Hậu điều kiện (post-condition)** | Mật khẩu mới có hiệu lực; mọi Session/Token cũ bị thu hồi. |
 
 ---
 
-## UC14 — Bán vé & in vé tại quầy
+#### Mô tả use case: Đổi mật khẩu (UC10)
+*(Tương ứng sơ đồ phân rã `USECASE/DoiMatKhau.png`)*
 
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 9. Bán vé & in vé tại quầy |
-| Tác nhân | Nhân viên bán vé |
-| Quan hệ | «include» UC11 (Giữ chỗ tạm thời), «include» UC12 (Thanh toán); UC13 «extend» use case này |
-| Bảng CSDL | `VE`, `CHI_TIET_VE`, `CHUYEN_XE`, `GHE`, `THANH_TOAN`, `NHAT_KY_HOAT_DONG` |
-
-**Tóm tắt:** Nhân viên bán vé cho khách tại quầy: tìm chuyến, chọn ghế, nhập thông tin khách, thu tiền mặt hoặc VietQR, rồi in vé.
-
-**Tiền điều kiện:** Nhân viên đã đăng nhập.
-
-**Dòng sự kiện chính:**
-1. Nhân viên tra cứu chuyến theo yêu cầu của khách (như UC09).
-2. Hệ thống hiển thị sơ đồ ghế; nhân viên chọn ghế cho khách.
-3. Hệ thống gọi **UC11** để giữ ghế.
-4. Nhân viên nhập họ tên, số điện thoại của khách, chọn điểm đón và điểm trả.
-5. Hệ thống hiển thị tóm tắt đơn và `thanhTien`.
-6. Nhân viên bấm "Thanh toán"; hệ thống hỏi chọn **tiền mặt** hay **VietQR**.
-7. Hệ thống gọi **UC12** với phương thức đã chọn.
-8. Hệ thống đổi vé sang `DA_THANH_TOAN`, kênh bán `TAI_QUAY`, ghi lại nhân viên bán, sinh mã QR lên vé.
-9. Nhân viên bấm "In vé"; hệ thống tạo phiếu vé (mã vé, chuyến, ghế, điểm đón/trả, số tiền, QR) và gửi tới máy in.
-10. Hệ thống ghi nhật ký `BAN_VE`.
-
-**Dòng sự kiện phụ:**
-- **A1 (bước 5) — Áp dụng mã giảm giá** *(use case mở rộng)*: như **UC13**.
-- **A2 (bước 6) — Khách đổi ý, hủy phiên giao dịch:** nhân viên bấm "Hủy giao dịch" → vé chuyển `HET_HAN`, ghế được nhả, giao dịch `DANG_CHO` chuyển `THAT_BAI`.
-- **E1 (bước 3) — Ghế vừa bị người khác giữ:** như UC11 E1; tải lại sơ đồ ghế, quay lại bước 2.
-- **E2 (bước 7) — Quá hạn giữ chỗ trước khi thu được tiền:** như UC12 E4.
-- **E3 (bước 9) — Máy in lỗi:** vé vẫn hợp lệ; nhân viên in lại từ màn hình tra cứu vé (**UC16**).
-
-**Hậu điều kiện:**
-1. Thành công: vé `DA_THANH_TOAN` kênh `TAI_QUAY`, ghi nhận nhân viên bán; phiếu vé đã in.
-2. Hủy phiên: không ghế nào bị giữ, không phát sinh tiền.
+| Thành phần | Nội dung đặc tả |
+| :--- | :--- |
+| **Tóm tắt** | Cho phép Khách hàng chủ động thay đổi mật khẩu đăng nhập khi vẫn đang nhớ mật khẩu hiện tại. |
+| **Tác nhân** | **Chính:** Khách hàng. |
+| **Dòng sự kiện chính** | 1. Khách hàng mở chức năng "Đổi mật khẩu".<br>2. Khách hàng nhập mật khẩu hiện tại, mật khẩu mới và xác nhận mật khẩu mới.<br>3. Hệ thống đối chiếu mật khẩu hiện tại với CSDL.<br>4. Hệ thống kiểm tra mật khẩu mới đạt chính sách an toàn và khác mật khẩu cũ.<br>5. Hệ thống mã hóa và lưu mật khẩu mới, thông báo thành công. |
+| **Dòng sự kiện phụ** | - **E1 — Mật khẩu hiện tại sai:** hệ thống từ chối và giữ nguyên mật khẩu cũ.<br>- **E2 — Hai ô mật khẩu mới không khớp:** hệ thống báo lỗi tại chỗ, chưa gửi yêu cầu lên máy chủ. |
+| **Tiền điều kiện (pre-condition)** | Khách hàng **đã đăng nhập** và nhớ mật khẩu hiện tại. |
+| **Hậu điều kiện (post-condition)** | Mật khẩu mới có hiệu lực ngay; mật khẩu cũ không còn dùng để đăng nhập được. |
 
 ---
 
-## UC15 — Hủy vé trực tuyến
+#### Mô tả use case: Quản lý thông tin cá nhân (UC11)
+*(Tương ứng sơ đồ phân rã `USECASE/QuanLyThongTinCaNhan.png`)*
 
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 10. Hủy vé trực tuyến |
-| Tác nhân | Khách hàng |
-| Quan hệ | «include» UC18 (Hoàn tiền) |
-| Bảng CSDL | `VE`, `CHI_TIET_VE`, `THANH_TOAN`, `THAM_SO` |
-
-**Tóm tắt:** Khách hàng tự hủy vé đã mua online và nhận lại tiền qua cổng thanh toán.
-
-**Tiền điều kiện:**
-1. Khách hàng **đã đăng nhập** — cần biết vé nào là của ai mới hủy được.
-2. Vé ở trạng thái `DA_THANH_TOAN` và thuộc về khách hàng này.
-
-**Dòng sự kiện chính:**
-1. Khách hàng mở một vé từ lịch sử mua vé (UC08) và bấm "Hủy vé".
-2. Hệ thống kiểm tra điều kiện hủy: vé `DA_THANH_TOAN`, còn cách giờ khởi hành ít nhất QD03, và vé **không** thanh toán bằng tiền mặt (QD13).
-3. Hệ thống tính số tiền hoàn: `thanhTien` × QD04 (phí hủy tính trên số tiền thực trả — QD11).
-4. Hệ thống hiển thị số tiền hoàn và hỏi xác nhận.
-5. Khách hàng xác nhận.
-6. Hệ thống đổi vé sang `DA_HUY`, lưu thời điểm và lý do hủy; các ghế trở lại trống.
-7. Hệ thống gọi **UC18** để hoàn tiền qua CỔNG THANH TOÁN.
-8. Hệ thống báo "Hủy vé thành công, tiền sẽ được hoàn trong X ngày".
-
-**Dòng sự kiện phụ:**
-- **E1 (bước 2) — Quá sát giờ khởi hành, vé đã hủy, hoặc chuyến đã chạy:** hiển thị lý do, ẩn nút hủy. Use case kết thúc.
-- **E2 (bước 2) — Vé thanh toán bằng tiền mặt (QD13):** báo "Vé thanh toán tiền mặt chỉ hủy được tại quầy", hướng dẫn khách ra quầy (**UC17**). Use case kết thúc.
-- **A1 (bước 5) — Khách không xác nhận:** quay lại bước 1, vé không đổi.
-- **E3 (bước 7) — Cổng hoàn tiền lỗi:** vé vẫn `DA_HUY`; giao dịch hoàn ở `DANG_CHO` để thử lại; báo khách tiền sẽ được xử lý sau.
-
-**Hậu điều kiện:**
-1. Thành công: vé `DA_HUY`, ghế trống trở lại, có giao dịch hoàn tiền.
-2. Không đủ điều kiện: vé giữ nguyên.
+| Thành phần | Nội dung đặc tả |
+| :--- | :--- |
+| **Tóm tắt** | Cho phép người dùng đã đăng nhập xem và cập nhật hồ sơ cá nhân của chính mình. |
+| **Tác nhân** | **Chính:** Khách hàng, Nhân viên bán vé, Admin. *(Sơ đồ tổng quát nối cả Admin tới use case này — xem lỗi **L7**.)* |
+| **Dòng sự kiện chính** | 1. Người dùng mở mục "Hồ sơ cá nhân".<br>2. Hệ thống truy xuất và hiển thị thông tin hiện hành: họ tên, số điện thoại, email, ngày sinh, địa chỉ, ảnh đại diện. |
+| **Dòng sự kiện phụ** | - **Cập nhật thông tin cá nhân (`<<extend>>`):** người dùng bấm "Chỉnh sửa", thay đổi các trường được phép và bấm "Lưu". Hệ thống kiểm tra hợp lệ rồi ghi vào CSDL.<br>- **E1 — Dữ liệu không hợp lệ:** hệ thống báo lỗi theo từng trường và không lưu.<br>- **Ràng buộc:** số điện thoại là định danh đăng nhập nên **không cho sửa trực tiếp** tại đây; muốn đổi phải qua quy trình xác thực OTP riêng. |
+| **Tiền điều kiện (pre-condition)** | Người dùng **đã đăng nhập** vào tài khoản của chính mình. |
+| **Hậu điều kiện (post-condition)** | Thông tin hồ sơ mới được lưu vào CSDL và hiển thị ở các màn hình liên quan. |
 
 ---
 
-## UC16 — Tra cứu vé
+### PHẦN C: NHÓM QUẢN TRỊ & VẬN HÀNH (DÀNH CHO ADMIN)
 
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 11. Hủy vé tại quầy |
-| Tác nhân | Nhân viên bán vé |
-| Quan hệ | Được «include» bởi UC17 |
-| Bảng CSDL | `VE`, `CHI_TIET_VE`, `CHUYEN_XE` |
+#### Mô tả use case: Quản lý chuyến xe & lịch trình (UC12)
+*(Tương ứng sơ đồ phân rã `USECASE/QuanLyChuyenXeVaLichTrinh.png`)*
 
-**Tóm tắt:** Nhân viên tìm vé của khách theo mã vé hoặc số điện thoại để xem chi tiết trước khi xử lý.
+| Thành phần | Nội dung đặc tả |
+| :--- | :--- |
+| **Tóm tắt** | Cho phép Admin vận hành toàn diện lịch chạy: xem danh sách, thêm chuyến mới, sửa lịch trình, hủy chuyến và xử lý hoàn tiền cho hành khách của chuyến bị hủy. |
+| **Tác nhân** | **Chính:** Admin. **Phụ:** Cổng thanh toán. |
+| **Dòng sự kiện chính** | 1. **Xem danh sách chuyến xe:** Admin mở bảng tổng quan toàn bộ chuyến xe kèm trạng thái (Đang mở bán / Đã khóa / Đã hủy).<br>2. **Thêm chuyến xe mới:** Admin khai báo tuyến, ngày giờ xuất bến, xe phụ trách và giá vé; hệ thống kiểm tra xe không bị trùng lịch rồi lưu chuyến mới.<br>3. **Sửa lịch trình chuyến xe:** Admin điều chỉnh giờ chạy hoặc đổi xe; hệ thống gửi thông báo cho hành khách đã mua vé của chuyến đó.<br>4. **Hủy chuyến xe:** Admin hủy chuyến khi có sự cố bất khả kháng, nhập lý do hủy; hệ thống khóa chuyến và ngừng bán vé ngay lập tức.<br>5. **Hoàn tiền (`<<extend>>` → UC20):** nếu chuyến bị hủy **đã có vé bán ra**, hệ thống khởi tạo hoàn tiền 100% cho toàn bộ vé hợp lệ. |
+| **Dòng sự kiện phụ** | - **Tìm kiếm chuyến xe (`<<extend>>`):** Admin lọc danh sách theo tuyến, ngày, trạng thái hoặc biển số xe.<br>- **Xử lý vé của chuyến bị hủy (`<<extend>>`):** với từng vé, Admin có thể chọn gửi SMS thông báo hoặc chuyển khách sang chuyến thay thế thay vì hoàn tiền.<br>- **Hoàn qua cổng thanh toán (`<<extend>>` của UC20)** / **Hoàn tiền mặt (`<<extend>>` của UC20).**<br>- **E1 — Sửa/xóa chuyến đã khởi hành:** hệ thống từ chối thao tác.<br>- **E2 — Xe bị trùng lịch:** hệ thống báo lỗi và chỉ ra chuyến đang xung đột. |
+| **Tiền điều kiện (pre-condition)** | Admin **đã đăng nhập** với vai trò quản trị. |
+| **Hậu điều kiện (post-condition)** | Lịch trình được cập nhật và phản ánh tức thời trên kênh bán vé trực tuyến lẫn quầy; các vé bị ảnh hưởng đã được xử lý hoàn tiền hoặc chuyển chuyến. |
 
-**Tiền điều kiện:** Nhân viên đã đăng nhập.
-
-**Dòng sự kiện chính:**
-1. Nhân viên nhập mã vé hoặc số điện thoại của khách.
-2. Hệ thống tìm các vé khớp.
-3. Hệ thống hiển thị: mã vé, chuyến, giờ khởi hành, ghế, điểm đón/trả, `giaGoc`, `tienGiam`, `thanhTien`, phương thức đã thanh toán, trạng thái vé.
-4. Nhân viên chọn một vé để thao tác tiếp.
-
-**Dòng sự kiện phụ:**
-- **E1 (bước 2) — Không tìm thấy:** báo "Không tìm thấy vé", quay lại bước 1.
-- **A1 (bước 3) — Nhiều vé trùng số điện thoại:** hiển thị danh sách để nhân viên chọn đúng vé.
-- **A2 (bước 4) — In lại vé:** nhân viên bấm "In lại" → hệ thống in lại phiếu vé (dùng cho UC14 E3).
-
-**Hậu điều kiện:** Thông tin vé được hiển thị. Dữ liệu không thay đổi.
+> **⚠️ Sửa lỗi logic:** Sơ đồ cũ vẽ **Hủy chuyến xe `<<include>>` Hoàn tiền**. Nhưng nếu chuyến bị hủy **chưa bán được vé nào** thì không có gì để hoàn — quan hệ này **có điều kiện**, nên phải là `<<extend>>` chứ không phải `<<include>>` (xem lỗi **L6**).
 
 ---
 
-## UC17 — Hủy vé tại quầy
+#### Mô tả use case: Quản lý xe & sơ đồ ghế (UC13)
+*(Tương ứng sơ đồ phân rã `USECASE/QuanLyXeVaSoDoGhe.png`)*
 
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 11. Hủy vé tại quầy |
-| Tác nhân | Nhân viên bán vé |
-| Quan hệ | «include» UC16 (Tra cứu vé), «include» UC18 (Hoàn tiền); "In biên nhận hủy vé" «extend» use case này |
-| Bảng CSDL | `VE`, `CHI_TIET_VE`, `THANH_TOAN`, `NHAT_KY_HOAT_DONG` |
-
-**Tóm tắt:** Nhân viên hủy vé hộ khách tại quầy. Đây là **cách duy nhất** để hủy vé đã thanh toán bằng tiền mặt và để khách vãng lai (không có tài khoản) hủy vé.
-
-**Tiền điều kiện:** Nhân viên đã đăng nhập; khách có mặt tại quầy với mã vé hoặc số điện thoại.
-
-**Dòng sự kiện chính:**
-1. Hệ thống gọi **UC16** để tìm vé của khách.
-2. Nhân viên bấm "Hủy vé".
-3. Hệ thống kiểm tra điều kiện hủy: vé `DA_THANH_TOAN` và còn cách giờ khởi hành ít nhất QD03.
-4. Hệ thống tính số tiền hoàn: `thanhTien` × QD04 (QD11).
-5. Hệ thống hiển thị số tiền hoàn và **cách hoàn tiền** được phép theo QD12: vé trả tiền mặt → hoàn tiền mặt; vé trả online → hoàn qua cổng.
-6. Nhân viên xác nhận với khách và bấm "Xác nhận hủy".
-7. Hệ thống đổi vé sang `DA_HUY`, lưu thời điểm, lý do và nhân viên thực hiện; các ghế trở lại trống.
-8. Hệ thống gọi **UC18** để hoàn tiền theo cách đã xác định ở bước 5.
-9. Hệ thống ghi nhật ký `HUY_VE`.
-
-**Dòng sự kiện phụ:**
-- **A1 (sau bước 9) — In biên nhận hủy vé** *(use case mở rộng)*: nhân viên bấm "In biên nhận" → hệ thống tạo biên nhận gồm mã vé, ghế, số tiền hoàn, cách hoàn, thời điểm hủy, tên nhân viên; gửi tới máy in.
-- **E1 (bước 3) — Không đủ điều kiện hủy:** hiển thị lý do, ẩn nút hủy. Use case kết thúc.
-- **A2 (bước 6) — Khách đổi ý:** quay lại bước 1, vé không đổi.
-- **E2 (bước 8) — Quầy không đủ tiền mặt để hoàn:** ghi nhận khoản phải trả, hẹn khách; vé vẫn `DA_HUY`.
-
-**Hậu điều kiện:**
-1. Thành công: vé `DA_HUY`, ghế trống trở lại, tiền đã hoàn theo đúng nguồn, có ghi nhận nhân viên thực hiện.
-2. Không đủ điều kiện: vé giữ nguyên.
+| Thành phần | Nội dung đặc tả |
+| :--- | :--- |
+| **Tóm tắt** | Cho phép Admin duy trì danh mục phương tiện (thêm, sửa, ngừng hoạt động) và cấu hình sơ đồ chỗ ngồi tương ứng cho từng xe. |
+| **Tác nhân** | **Chính:** Admin. |
+| **Dòng sự kiện chính** | 1. **Xem danh sách xe:** Admin mở bảng danh mục phương tiện kèm biển số, loại xe, số chỗ, trạng thái hoạt động.<br>2. **Thêm xe mới:** Admin khai báo biển số, hãng xe, loại xe (ghế ngồi / giường nằm / limousine).<br>3. **Thiết lập sơ đồ ghế (`<<include>>`):** ngay trong luồng thêm xe, hệ thống bắt buộc Admin định nghĩa bố cục chỗ ngồi (số tầng, số hàng, số ghế mỗi hàng, mã hiệu từng ghế) — không có sơ đồ ghế thì xe không thể được phân công chạy.<br>4. **Sửa thông tin xe:** Admin cập nhật biển số, loại xe hoặc ghi chú tình trạng kỹ thuật.<br>5. **Ngừng hoạt động xe:** Admin vô hiệu hóa xe khỏi danh sách phân công do bảo dưỡng hoặc hỏng hóc. |
+| **Dòng sự kiện phụ** | - **Xem sơ đồ ghế của xe (`<<extend>>`):** từ danh sách xe, Admin bấm xem bản vẽ minh họa bố cục ghế của riêng xe đó.<br>- **E1 — Biển số đã tồn tại:** hệ thống từ chối thêm mới.<br>- **E2 — Ngừng hoạt động xe đang có chuyến mở bán:** hệ thống cảnh báo và yêu cầu Admin xử lý các chuyến đó trước (chuyển xe khác hoặc hủy chuyến qua **UC12**).<br>- **E3 — Sửa sơ đồ ghế của xe đã bán vé:** hệ thống chỉ cho phép sửa trên các chuyến chưa mở bán, tránh làm hỏng dữ liệu vé đã phát hành. |
+| **Tiền điều kiện (pre-condition)** | Admin **đã đăng nhập** với vai trò quản trị. |
+| **Hậu điều kiện (post-condition)** | Danh mục xe và sơ đồ ghế được cấu hình đầy đủ, sẵn sàng phục vụ việc tạo chuyến và hiển thị cho khách chọn ghế. |
 
 ---
 
-## UC18 — Hoàn tiền
+#### Mô tả use case: Quản lý giá vé & khuyến mãi (UC14)
+*(Tương ứng sơ đồ phân rã `USECASE/GiaVeVaKhuyenMai.png`)*
 
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 10. Hủy vé trực tuyến · 11. Hủy vé tại quầy · 12. Quản lý chuyến xe & lịch trình |
-| Tác nhân | Không nối trực tiếp actor người. Actor phụ: **CỔNG THANH TOÁN** |
-| Quan hệ | Được «include» bởi UC15, UC17 và UC19. Các use case «extend» nó: *Hoàn tiền mặt*, *Hoàn qua cổng thanh toán* |
-| Bảng CSDL | `THANH_TOAN`, `VE`, `THAM_SO` |
-
-**Tóm tắt:** Hệ thống trả lại tiền cho khách sau khi vé bị hủy. Tiền luôn về **đúng nguồn đã thanh toán** (QD12).
-
-**Tiền điều kiện:** Có một vé vừa chuyển sang `DA_HUY` và một số tiền hoàn đã được tính.
-
-**Dòng sự kiện chính:**
-1. Hệ thống đọc phương thức của giao dịch thanh toán gốc.
-2. Hệ thống tạo bản ghi `THANH_TOAN` loại `HOAN_TIEN`, trạng thái `DANG_CHO`, số tiền = số tiền hoàn.
-3. **Nếu gốc là thanh toán online:** hệ thống gửi yêu cầu hoàn tiền sang CỔNG THANH TOÁN; cổng trả kết quả.
-4. **Nếu gốc là tiền mặt:** nhân viên trả tiền mặt cho khách tại quầy và bấm "Đã hoàn tiền mặt"; không gọi CỔNG THANH TOÁN.
-5. Hệ thống cập nhật giao dịch hoàn tiền sang `THANH_CONG`.
-6. Hệ thống trả kết quả cho use case gọi nó.
-
-**Dòng sự kiện phụ:**
-- **E1 (bước 3) — Cổng hoàn tiền lỗi hoặc không phản hồi:** giữ giao dịch ở `DANG_CHO` để thử lại; vé vẫn `DA_HUY`; báo khách tiền sẽ được xử lý sau.
-- **A1 — Nhà xe hủy chuyến:** số tiền hoàn là 100% `thanhTien`, không áp QD03 và QD04 (QD06).
-
-**Hậu điều kiện:**
-1. Thành công: có giao dịch `HOAN_TIEN` ở `THANH_CONG`, tiền về đúng nguồn.
-2. Chờ xử lý: giao dịch ở `DANG_CHO`, cần thử lại.
+| Thành phần | Nội dung đặc tả |
+| :--- | :--- |
+| **Tóm tắt** | Cho phép Admin kiểm soát giá vé niêm yết theo chuyến và vận hành các chiến dịch khuyến mãi bằng mã voucher giảm giá. |
+| **Tác nhân** | **Chính:** Admin. |
+| **Dòng sự kiện chính** | 1. **Xem giá vé các chuyến xe:** Admin mở bảng giá hiện hành theo tuyến/chuyến.<br>2. **Cập nhật giá vé chuyến xe:** Admin điều chỉnh mức giá (tăng, giảm, phụ thu dịp lễ) và xác nhận áp dụng.<br>3. **Thêm mã giảm giá mới:** Admin tạo voucher gồm mã code, loại giảm (% hoặc số tiền cố định), giá trị giảm, số lượt sử dụng, thời hạn hiệu lực và điều kiện áp dụng.<br>4. **Xem danh sách mã giảm giá:** Admin theo dõi toàn bộ voucher kèm số lượt đã dùng và trạng thái bật/tắt. |
+| **Dòng sự kiện phụ** | - **Bật / Tắt mã giảm giá (`<<extend>>`):** Admin dùng công tắc để tạm dừng hoặc kích hoạt lại một mã mà không cần xóa, giữ nguyên lịch sử sử dụng.<br>- **E1 — Mã code bị trùng:** hệ thống từ chối tạo mới.<br>- **E2 — Thời hạn kết thúc trước thời hạn bắt đầu:** hệ thống báo lỗi validation.<br>- **Ràng buộc:** giá vé mới **chỉ áp dụng cho giao dịch phát sinh sau thời điểm cập nhật**; các vé đã bán giữ nguyên giá cũ. |
+| **Tiền điều kiện (pre-condition)** | Admin **đã đăng nhập** với vai trò quản trị. |
+| **Hậu điều kiện (post-condition)** | Giá vé mới được đưa vào công thức tính tiền của **UC02/UC03**; voucher được lưu và khả dụng trên màn hình đặt vé nếu đang ở trạng thái bật. |
 
 ---
 
-## UC19 — Quản lý chuyến xe & lịch trình
+#### Mô tả use case: Quản lý tài khoản & phân quyền (UC15)
+*(Tương ứng sơ đồ phân rã `USECASE/QuanLyTaiKhoanVaPhanQuyen.png`)*
 
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 12. Quản lý chuyến xe & lịch trình |
-| Tác nhân | Admin |
-| Quan hệ | "Tìm kiếm chuyến xe" «extend» "Xem danh sách chuyến xe"; "Xử lý vé của chuyến bị hủy" «extend» "Hủy chuyến xe" và «include» UC18 (Hoàn tiền) |
-| Bảng CSDL | `CHUYEN_XE`, `TUYEN_XE`, `XE`, `DIEM_DUNG`, `VE`, `THANH_TOAN`, `NHAT_KY_HOAT_DONG` |
-
-**Tóm tắt:** Admin xem, tìm, thêm chuyến xe mới, sửa lịch trình và hủy chuyến. Khi hủy chuyến đã bán vé, hệ thống xử lý vé và hoàn tiền 100% cho khách.
-
-**Tiền điều kiện:** Admin đã đăng nhập; đã có dữ liệu tuyến xe và xe (nạp sẵn khi khởi tạo CSDL).
-
-**Dòng sự kiện chính — Thêm chuyến xe mới:**
-1. Admin mở "Quản lý chuyến xe"; hệ thống hiển thị danh sách chuyến, mới nhất trước.
-2. Admin bấm "Thêm chuyến xe mới".
-3. Hệ thống hiển thị form: tuyến, xe, thời gian khởi hành, thời gian đến dự kiến, giá vé, **danh sách điểm đón và điểm trả** của chuyến.
-4. Admin nhập thông tin và bấm "Lưu".
-5. Hệ thống kiểm tra: thời gian khởi hành ở tương lai; giờ đến sau giờ đi; xe đang `HOAT_DONG`; **xe không trùng lịch** với chuyến khác trong khoảng thời gian đó; giá vé > 0.
-6. Hệ thống lưu chuyến ở trạng thái `MO_BAN`, ghi nhật ký, cập nhật danh sách.
-
-**Dòng sự kiện phụ:**
-- **A1 (bước 1) — Tìm kiếm chuyến xe** *(use case mở rộng)*: Admin lọc theo tuyến, ngày hoặc trạng thái → hệ thống lọc lại danh sách.
-- **A2 — Sửa lịch trình chuyến xe:** Admin chọn một chuyến `MO_BAN` → sửa giờ hoặc đổi xe → hệ thống kiểm tra như bước 5. Nếu chuyến đã bán vé: chỉ cho đổi sang xe **cùng loại** (giữ nguyên sơ đồ ghế) và gửi thông báo thay đổi giờ cho khách đã mua.
-- **A3 — Hủy chuyến xe:** Admin chọn chuyến chưa khởi hành → nhập lý do → xác nhận → hệ thống đổi chuyến sang `DA_HUY`.
-  - **A3.1 — Chuyến chưa bán vé nào:** hủy thẳng, không phát sinh hoàn tiền.
-  - **A3.2 — Xử lý vé của chuyến bị hủy** *(use case mở rộng)*: với mỗi vé `DA_THANH_TOAN` của chuyến, hệ thống đổi sang `DA_HUY` và gọi **UC18** hoàn **100%** `thanhTien` (QD06, không áp QD03 và QD04); vé `GIU_CHO` chuyển `HET_HAN`; gửi thông báo cho tất cả khách bị ảnh hưởng.
-- **E1 (bước 5) — Dữ liệu không hợp lệ hoặc xe trùng lịch:** báo lỗi cụ thể, quay lại bước 4.
-- **E2 (A2, A3) — Chuyến đã khởi hành hoặc đã hoàn thành:** không cho sửa, không cho hủy.
-
-**Hậu điều kiện:** Danh sách chuyến được cập nhật. Chuyến mới `MO_BAN` xuất hiện ở UC09. Chuyến bị hủy không còn bán được và khách đã được hoàn tiền đủ.
+| Thành phần | Nội dung đặc tả |
+| :--- | :--- |
+| **Tóm tắt** | Cho phép Admin quản trị toàn bộ tài khoản hệ thống: xem danh sách, tạo và cập nhật tài khoản nhân viên, gán vai trò, đặt lại mật khẩu và khóa/mở khóa tài khoản vi phạm. |
+| **Tác nhân** | **Chính:** Admin. |
+| **Dòng sự kiện chính** | 1. **Xem danh sách người dùng:** Admin mở bảng toàn bộ tài khoản (khách hàng và nhân viên) kèm vai trò và trạng thái.<br>2. **Tạo tài khoản nhân viên:** Admin nhập thông tin nhân viên và cấp tài khoản làm việc.<br>3. **Phân quyền vai trò (`<<include>>`):** mọi thao tác **Tạo** hoặc **Cập nhật** tài khoản nhân viên đều bắt buộc đi kèm bước gán vai trò (Nhân viên bán vé / Admin) để xác định phạm vi truy cập.<br>4. **Cập nhật tài khoản nhân viên:** Admin sửa hồ sơ hoặc thay đổi vai trò của nhân viên hiện hữu.<br>5. **Đặt lại mật khẩu cho nhân viên:** Admin cưỡng chế cấp mật khẩu tạm khi nhân viên mất quyền truy cập; nhân viên buộc phải đổi mật khẩu ở lần đăng nhập kế tiếp.<br>6. **Khóa / Mở khóa tài khoản người dùng:** Admin vô hiệu hóa quyền đăng nhập của một tài khoản vi phạm hoặc khôi phục lại. |
+| **Dòng sự kiện phụ** | - **Tìm kiếm tài khoản (`<<extend>>`):** Admin lọc theo số điện thoại, họ tên hoặc vai trò.<br>- **Xem chi tiết hồ sơ & lịch sử hoạt động (`<<extend>>`):** Admin mở một tài khoản để xem hồ sơ đầy đủ và nhật ký thao tác (audit log).<br>- **E1 — Khóa tài khoản đang có phiên hoạt động:** hệ thống thu hồi Session/Token của tài khoản đó ngay lập tức.<br>- **E2 — Admin tự khóa chính mình:** hệ thống từ chối thao tác.<br>- **E3 — Khóa khách hàng đang có vé chưa đi:** hệ thống cảnh báo; vé vẫn giữ nguyên hiệu lực. |
+| **Tiền điều kiện (pre-condition)** | Admin **đã đăng nhập** với vai trò quản trị cao nhất. |
+| **Hậu điều kiện (post-condition)** | Hồ sơ, vai trò và trạng thái khóa/mở của tài khoản được cập nhật đồng bộ, quyết định ngay phạm vi truy cập của người dùng đó. |
 
 ---
 
-## UC20 — Quản lý xe & sơ đồ ghế
+#### Mô tả use case: Thống kê & báo cáo doanh thu (UC16)
+*(Tương ứng sơ đồ phân rã `USECASE/ThongKeVaBaoCao.png` và `USECASE/ThongKe.png`)*
 
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 13. Quản lý xe & sơ đồ ghế |
-| Tác nhân | Admin |
-| Quan hệ | "Xem sơ đồ ghế của xe" «extend» "Xem danh sách xe"; "Thêm xe mới" «include» "Thiết lập sơ đồ ghế" |
-| Bảng CSDL | `XE`, `LOAI_XE`, `GHE`, `CHUYEN_XE` |
-
-**Tóm tắt:** Admin quản lý danh sách xe. **Sơ đồ ghế khai báo theo từng xe**, để khách chọn chỗ trên app dùng lại được đúng sơ đồ đó.
-
-**Tiền điều kiện:** Admin đã đăng nhập.
-
-**Dòng sự kiện chính — Thêm xe mới:**
-1. Admin mở "Quản lý xe"; hệ thống hiển thị danh sách xe (biển số, loại, số ghế, trạng thái).
-2. Admin bấm "Thêm xe mới".
-3. Admin nhập biển số, chọn loại xe, năm sản xuất.
-4. Hệ thống kiểm tra biển số đúng định dạng và chưa tồn tại.
-5. Hệ thống gọi **Thiết lập sơ đồ ghế**: sinh danh sách ghế theo cấu hình tầng / hàng / cột của loại xe — tầng 1 đặt tên A01, A02…; tầng 2 đặt tên B01, B02…
-6. Hệ thống lưu xe ở trạng thái `HOAT_DONG` cùng toàn bộ ghế của nó.
-7. Hệ thống hiển thị sơ đồ ghế vừa tạo để Admin kiểm tra.
-
-**Dòng sự kiện phụ:**
-- **A1 (bước 1) — Xem sơ đồ ghế của xe** *(use case mở rộng)*: Admin bấm vào một xe → hệ thống vẽ sơ đồ ghế theo tầng / hàng / cột.
-- **A2 — Sửa thông tin xe:** sửa biển số, năm sản xuất, trạng thái. **Không cho đổi loại xe** nếu xe đã gán cho chuyến nào, vì sơ đồ ghế đã gắn với vé đã bán.
-- **A3 — Ngừng hoạt động xe:** hệ thống kiểm tra xe không còn chuyến `MO_BAN` nào phía trước → chuyển trạng thái `NGUNG_SU_DUNG`; xe không còn được chọn khi thêm chuyến mới.
-- **E1 (bước 4) — Biển số trùng hoặc sai định dạng:** báo lỗi, quay lại bước 3.
-- **E2 (A3) — Xe còn chuyến sắp chạy:** báo "Xe còn chuyến chưa khởi hành", không cho ngừng.
-
-**Hậu điều kiện:** Danh sách xe và sơ đồ ghế được cập nhật; xe `HOAT_DONG` có thể gán cho chuyến mới.
+| Thành phần | Nội dung đặc tả |
+| :--- | :--- |
+| **Tóm tắt** | Cho phép Admin nắm bắt tình hình kinh doanh qua các báo cáo trực quan về doanh thu, số lượng vé bán/hủy và tỷ lệ lấp đầy chỗ ngồi, có thể lọc theo khoảng thời gian và kết xuất ra file. |
+| **Tác nhân** | **Chính:** Admin. |
+| **Dòng sự kiện chính** | 1. **Xem bảng điều khiển doanh thu tổng quan:** Admin vào Dashboard; hệ thống mặc định tổng hợp dữ liệu kỳ hiện tại và hiển thị các chỉ số then chốt cùng biểu đồ.<br>2. **Thống kê doanh thu:** hệ thống tổng hợp dòng tiền thực thu = tiền bán vé − tiền đã hoàn, phân rã theo tuyến và theo kênh bán (trực tuyến / tại quầy).<br>3. **Thống kê vé bán & vé hủy:** hệ thống đối chiếu số vé phát hành thành công với số vé bị hủy, tính tỷ lệ hủy.<br>4. **Thống kê tỷ lệ lấp đầy chỗ ngồi:** hệ thống tính tỷ lệ = số ghế đã bán / tổng số ghế khai thác, theo từng chuyến hoặc từng tuyến. |
+| **Dòng sự kiện phụ** | - **Lọc thống kê (`<<extend>>`):** Admin chọn khoảng "Từ ngày – Đến ngày" (và tùy chọn tuyến/kênh bán). Bộ lọc tác động đồng thời lên **cả ba** báo cáo: doanh thu, vé bán & vé hủy, tỷ lệ lấp đầy — các biểu đồ được tính lại theo phạm vi mới.<br>- **Xuất báo cáo (`<<extend>>`):** Admin kết xuất dữ liệu đang hiển thị ra file Excel hoặc PDF để lưu trữ/trình ban giám đốc.<br>- **E1 — Khoảng thời gian không hợp lệ** (ngày bắt đầu sau ngày kết thúc): hệ thống báo lỗi và giữ nguyên kết quả cũ.<br>- **E2 — Không có dữ liệu trong kỳ:** hệ thống hiển thị biểu đồ rỗng kèm thông báo. |
+| **Tiền điều kiện (pre-condition)** | Admin **đã đăng nhập**; CSDL có tồn tại giao dịch bán/hủy vé trong kỳ cần xem. |
+| **Hậu điều kiện (post-condition)** | Báo cáo và biểu đồ hiển thị chính xác theo phạm vi lọc; file báo cáo được tải về nếu Admin yêu cầu. Dữ liệu nghiệp vụ không bị thay đổi (use case chỉ đọc). |
 
 ---
 
-## UC21 — Quản lý giá vé & khuyến mãi
+### PHẦN D: ĐẶC TẢ CÁC USE CASE DÙNG CHUNG (SHARED / INCLUDED USE CASES)
 
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 14. Quản lý giá vé & khuyến mãi |
-| Tác nhân | Admin |
-| Quan hệ | "Bật / Tắt mã giảm giá" «extend» "Xem danh sách mã giảm giá" |
-| Bảng CSDL | `CHUYEN_XE`, `MA_GIAM_GIA`, `NHAT_KY_HOAT_DONG` |
+> Đây là các use case **không do tác nhân khởi tạo trực tiếp**, mà được các use case khác gọi tới qua quan hệ `<<include>>`. Việc tách riêng giúp tránh mô tả lặp và thể hiện đúng nguyên tắc **tái sử dụng (reuse)** của UML.
 
-**Tóm tắt:** Admin xem và cập nhật giá vé của từng chuyến; thêm mã giảm giá mới, xem danh sách và bật/tắt mã. **Không có sửa và xóa mã** (QD14).
+#### Mô tả use case: Xác thực số điện thoại bằng OTP (UC17)
+**Được include bởi:** UC07 (Đăng ký tài khoản), UC09 (Khôi phục mật khẩu)
 
-**Tiền điều kiện:** Admin đã đăng nhập.
-
-**Dòng sự kiện chính — Cập nhật giá vé chuyến xe:**
-1. Admin mở "Giá vé & khuyến mãi"; hệ thống hiển thị các chuyến `MO_BAN` kèm giá hiện tại.
-2. Admin chọn một chuyến, nhập giá mới, bấm "Lưu".
-3. Hệ thống kiểm tra giá > 0, lưu giá mới, ghi nhật ký.
-4. Hệ thống báo thành công. Giá mới **chỉ áp dụng cho vé đặt sau thời điểm này**; vé cũ giữ nguyên giá đã lưu trong `CHI_TIET_VE`.
-
-**Dòng sự kiện phụ:**
-- **A1 — Thêm mã giảm giá mới:** Admin nhập mã, loại giảm (phần trăm hoặc số tiền), giá trị, mức giảm tối đa, đơn tối thiểu, ngày bắt đầu, ngày kết thúc, số lượt tối đa → hệ thống kiểm tra mã chưa tồn tại, giá trị hợp lệ (≤ 100 nếu là phần trăm), ngày bắt đầu ≤ ngày kết thúc → lưu ở trạng thái bật.
-- **A2 — Xem danh sách mã giảm giá:** hiển thị mã, loại giảm, giá trị, hạn dùng, số lượt đã dùng / tối đa, trạng thái bật-tắt.
-- **A3 (A2) — Bật / Tắt mã giảm giá** *(use case mở rộng)*: Admin gạt công tắc → hệ thống đảo trạng thái. Mã tắt không dùng được ở UC13.
-- **E1 (bước 3, A1) — Dữ liệu không hợp lệ hoặc mã trùng:** báo lỗi, giữ form.
-
-**Hậu điều kiện:** Giá vé và danh sách mã được cập nhật, có hiệu lực ngay cho các lần đặt sau.
-
-> **Lưu ý thiết kế:** không có chức năng sửa và xóa mã giảm giá. Lý do: vé đã dùng mã nào thì phải giữ được đúng điều kiện tại thời điểm mua. Muốn ngừng một mã thì tắt nó.
+| Thành phần | Nội dung đặc tả |
+| :--- | :--- |
+| **Tóm tắt** | Xác minh người dùng thực sự sở hữu số điện thoại đã khai báo, bằng mã OTP dùng một lần gửi qua Dịch vụ SMS. |
+| **Tác nhân** | **Phụ:** Dịch vụ SMS. |
+| **Dòng sự kiện chính** | 1. Hệ thống sinh mã OTP ngẫu nhiên kèm thời hạn hiệu lực (ví dụ 60–120 giây).<br>2. Hệ thống gửi yêu cầu tới Dịch vụ SMS để chuyển mã OTP tới số điện thoại đích.<br>3. Người dùng nhập mã OTP nhận được.<br>4. Hệ thống đối chiếu mã, kiểm tra còn hạn và chưa sử dụng → trả kết quả hợp lệ cho use case gọi nó. |
+| **Dòng sự kiện phụ** | - **E1 — Nhập sai OTP:** hệ thống báo lỗi và cho nhập lại, giới hạn số lần thử.<br>- **E2 — OTP hết hạn:** hệ thống cho phép yêu cầu gửi lại mã mới (có giới hạn tần suất để chống spam SMS).<br>- **E3 — Dịch vụ SMS không phản hồi:** hệ thống thông báo sự cố và cho thử lại sau. |
+| **Tiền điều kiện (pre-condition)** | Số điện thoại hợp lệ và có khả năng nhận SMS; kết nối tới Dịch vụ SMS khả dụng. |
+| **Hậu điều kiện (post-condition)** | Số điện thoại được đánh dấu "đã xác thực" cho phiên thao tác hiện tại; mã OTP bị vô hiệu sau khi dùng. |
 
 ---
 
-## UC22 — Quản lý tài khoản & phân quyền
+#### Mô tả use case: Giữ chỗ tạm thời (UC18)
+**Được include bởi:** UC02 (Đặt vé trực tuyến), UC03 (Bán vé & in vé tại quầy)
 
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 15. Quản lý tài khoản & phân quyền |
-| Tác nhân | Admin |
-| Quan hệ | "Tìm kiếm tài khoản" và "Xem chi tiết hồ sơ & lịch sử hoạt động" «extend» "Xem danh sách người dùng"; "Tạo tài khoản nhân viên" và "Cập nhật tài khoản nhân viên" «include» "Phân quyền vai trò" |
-| Bảng CSDL | `NGUOI_DUNG`, `VAI_TRO`, `NHAT_KY_HOAT_DONG` |
+| Thành phần | Nội dung đặc tả |
+| :--- | :--- |
+| **Tóm tắt** | Khóa tạm thời các ghế vừa được chọn trong một khoảng thời gian giới hạn (5 phút) để tránh hai kênh bán đặt trùng cùng một ghế. |
+| **Tác nhân** | *(Không có tác nhân trực tiếp — use case nội bộ hệ thống.)* |
+| **Dòng sự kiện chính** | 1. Hệ thống nhận danh sách ghế cần giữ kèm định danh phiên đặt vé.<br>2. Hệ thống kiểm tra lại trạng thái từng ghế tại thời điểm hiện tại.<br>3. Hệ thống chuyển ghế sang trạng thái **"Đang giữ"**, gắn chủ sở hữu tạm thời và mốc hết hạn = thời điểm hiện tại + 5 phút.<br>4. Hệ thống trả về xác nhận giữ chỗ và thời gian còn lại để giao diện đếm ngược. |
+| **Dòng sự kiện phụ** | - **E1 — Ghế vừa bị kênh khác chiếm:** thao tác giữ chỗ thất bại; hệ thống trả danh sách ghế không khả dụng để người dùng chọn lại.<br>- **E2 — Hết hạn giữ chỗ:** tác vụ nền tự động nhả ghế về trạng thái "Trống" và hủy đơn đang dở. |
+| **Tiền điều kiện (pre-condition)** | Các ghế được yêu cầu đang ở trạng thái "Trống". |
+| **Hậu điều kiện (post-condition)** | **Thành công:** ghế ở trạng thái "Đang giữ" kèm mốc hết hạn.<br>**Thất bại/hết hạn:** ghế trở về trạng thái "Trống". |
 
-**Tóm tắt:** Admin quản lý người dùng: tạo và cập nhật tài khoản nhân viên kèm phân quyền, khóa / mở khóa tài khoản, đặt lại mật khẩu cho nhân viên, xem lịch sử hoạt động.
-
-**Tiền điều kiện:** Admin đã đăng nhập.
-
-**Dòng sự kiện chính — Tạo tài khoản nhân viên:**
-1. Admin mở "Quản lý tài khoản"; hệ thống hiển thị danh sách người dùng (họ tên, số điện thoại, email, vai trò, trạng thái).
-2. Admin bấm "Tạo tài khoản nhân viên".
-3. Admin nhập họ tên, số điện thoại, email và **chọn vai trò** `NHAN_VIEN_BAN_VE` hoặc `ADMIN` *(Phân quyền vai trò — «include»)*.
-4. Hệ thống kiểm tra số điện thoại và email chưa tồn tại; sinh mật khẩu tạm.
-5. Hệ thống lưu tài khoản ở trạng thái `HOAT_DONG`, gửi mật khẩu tạm qua SMS tới nhân viên, ghi nhật ký.
-6. Hệ thống báo thành công và cập nhật danh sách.
-
-**Dòng sự kiện phụ:**
-- **A1 (bước 1) — Tìm kiếm tài khoản** *(use case mở rộng)*: Admin nhập số điện thoại, email hoặc họ tên → hệ thống lọc danh sách.
-- **A2 (bước 1) — Xem chi tiết hồ sơ & lịch sử hoạt động** *(use case mở rộng)*: hiển thị hồ sơ và các bản ghi nhật ký gần nhất (đăng nhập, bán vé, hủy vé…).
-- **A3 — Cập nhật tài khoản nhân viên:** sửa họ tên, số điện thoại, email và **đổi vai trò** *(Phân quyền vai trò — «include»)*.
-- **A4 — Khóa / Mở khóa tài khoản người dùng:** Admin bấm khóa → xác nhận → tài khoản `BI_KHOA`, mọi phiên đăng nhập của người đó bị hủy (QD08). Mở khóa → `HOAT_DONG`.
-- **A5 — Đặt lại mật khẩu cho nhân viên:** hệ thống sinh mật khẩu tạm mới và gửi SMS cho nhân viên đó.
-- **E1 (A4) — Admin tự khóa chính mình hoặc khóa Admin cuối cùng:** không cho phép, báo lỗi.
-- **E2 (bước 4) — Số điện thoại hoặc email đã tồn tại:** báo lỗi, quay lại bước 3.
-
-**Hậu điều kiện:** Tài khoản, vai trò và trạng thái được cập nhật, có hiệu lực ngay ở lần đăng nhập kế tiếp.
+> **📌 Thống nhất thuật ngữ:** sơ đồ cũ dùng song song hai tên *"Tạm khóa chỗ (5 phút)"* và *"Giữ chỗ tạm thời"* cho cùng một chức năng. Toàn bộ tài liệu nay thống nhất dùng **"Giữ chỗ tạm thời"** (xem lỗi **L3**).
 
 ---
 
-## UC23 — Thống kê & báo cáo doanh thu
+#### Mô tả use case: Thanh toán (UC19)
+**Được include bởi:** UC02 (Đặt vé trực tuyến), UC03 (Bán vé & in vé tại quầy)
 
-| Mục | Nội dung |
-|-----|----------|
-| Sơ đồ | 16. Thống kê & báo cáo doanh thu |
-| Tác nhân | Admin |
-| Quan hệ | "Lọc thống kê" và "Xuất báo cáo" «extend» cả ba use case thống kê |
-| Bảng CSDL | `VE`, `CHI_TIET_VE`, `THANH_TOAN`, `CHUYEN_XE`, `TUYEN_XE`, `GHE` |
-
-**Tóm tắt:** Admin xem bảng điều khiển tổng quan và ba nhóm thống kê: doanh thu, vé bán và vé hủy, tỷ lệ lấp đầy chỗ ngồi. Có thể lọc theo khoảng thời gian và xuất báo cáo ra file.
-
-**Tiền điều kiện:** Admin đã đăng nhập.
-
-**Dòng sự kiện chính:**
-1. Admin mở "Thống kê".
-2. Hệ thống lấy mặc định khoảng thời gian = tháng hiện tại.
-3. Hệ thống hiển thị **bảng điều khiển tổng quan**: tổng doanh thu, tổng vé bán, tổng vé hủy, tỷ lệ lấp đầy trung bình.
-4. Admin chọn **Thống kê doanh thu** → hệ thống tính doanh thu theo từng tuyến = tổng tiền thu − tổng tiền hoàn, và hiển thị biểu đồ cột.
-5. Admin chọn **Thống kê vé bán & vé hủy** → hệ thống đếm số vé `DA_THANH_TOAN` và `DA_HUY` theo ngày, hiển thị biểu đồ đường.
-6. Admin chọn **Thống kê tỷ lệ lấp đầy chỗ ngồi** → hệ thống tính (số ghế đã bán ÷ tổng số ghế) theo từng chuyến, hiển thị bảng.
-
-**Dòng sự kiện phụ:**
-- **A1 (bước 4, 5, 6) — Lọc thống kê** *(use case mở rộng)*: Admin chọn khoảng ngày, tuyến hoặc kênh bán (online / tại quầy) → hệ thống tính lại số liệu.
-- **A2 (bước 4, 5, 6) — Xuất báo cáo** *(use case mở rộng)*: Admin bấm "Xuất báo cáo" → hệ thống tạo file (Excel hoặc PDF) chứa bảng số liệu của màn hình đang xem và tải về.
-- **E1 (A1) — Khoảng ngày sai** (từ ngày > đến ngày): báo lỗi, giữ khoảng cũ.
-- **A3 — Không có dữ liệu trong khoảng đã chọn:** hiển thị số 0 và dòng "Chưa có giao dịch trong khoảng này".
-
-**Hậu điều kiện:** Báo cáo được hiển thị hoặc xuất ra file. **Dữ liệu hệ thống không thay đổi** — mọi số liệu đều tính lại từ truy vấn, không lưu bảng thống kê riêng.
+| Thành phần | Nội dung đặc tả |
+| :--- | :--- |
+| **Tóm tắt** | Xử lý thu tiền cho một đơn vé: xác định số tiền phải trả, chọn phương thức, thực hiện giao dịch và ghi nhận kết quả. |
+| **Tác nhân** | **Phụ:** Cổng thanh toán. |
+| **Dòng sự kiện chính** | 1. Hệ thống nhận thông tin đơn hàng và tính số tiền phải trả (đã trừ giảm giá nếu có).<br>2. Người dùng/nhân viên chọn phương thức thanh toán.<br>3. Hệ thống tạo giao dịch và gửi yêu cầu tới Cổng thanh toán (trừ trường hợp tiền mặt).<br>4. Hệ thống chờ và tiếp nhận kết quả giao dịch từ Cổng thanh toán.<br>5. Hệ thống ghi nhận giao dịch thành công kèm mã tham chiếu và trả kết quả cho use case gọi nó. |
+| **Dòng sự kiện phụ** | - **Ví MoMo / ZaloPay (`<<extend>>`):** giao dịch được chuyển hướng qua ứng dụng ví điện tử để khách xác nhận.<br>- **VietQR / Thẻ ngân hàng (`<<extend>>`):** khách quét mã VietQR hoặc nhập thông tin thẻ.<br>- **Tiền mặt (`<<extend>>`, chỉ áp dụng tại quầy):** nhân viên xác nhận đã thu đủ tiền, giao dịch **không** đi qua Cổng thanh toán.<br>- **E1 — Giao dịch bị từ chối / hết thời gian chờ:** hệ thống đánh dấu giao dịch thất bại và cho phép thử lại hoặc đổi phương thức.<br>- **E2 — Cổng thanh toán trả kết quả chậm:** hệ thống ghi giao dịch ở trạng thái "Đang xử lý" và đối soát lại bằng webhook/truy vấn định kỳ, tránh trừ tiền mà không ra vé. |
+| **Tiền điều kiện (pre-condition)** | Đơn hàng đã xác định đủ ghế, thông tin hành khách hợp lệ và thời gian giữ chỗ chưa hết hạn. |
+| **Hậu điều kiện (post-condition)** | **Thành công:** giao dịch được ghi nhận, số tiền vào doanh thu, cho phép use case gọi tiếp tục xuất vé.<br>**Thất bại:** không phát sinh thay đổi tài chính. |
 
 ---
 
-## Phụ lục — Những chỗ khác với bản đặc tả 01/10/2026
+#### Mô tả use case: Hoàn tiền (UC20)
+**Được include bởi:** UC04 (Hủy vé trực tuyến), UC05 (Hủy vé tại quầy); **được extend bởi** UC12 (Hủy chuyến xe)
 
-| Nội dung | Bản cũ (v1, 15 use case) | Bản này (v3.0, 23 use case) |
-|----------|--------------------------|------------------------------|
-| OTP | Gửi qua **email** | Gửi qua **SMS** tới số điện thoại (QD15) |
-| Đổi mật khẩu | Nằm trong UC05 như một luồng phụ | Tách thành **UC06** riêng, đúng với sơ đồ 4 |
-| Khôi phục mật khẩu | UC04 "Quên mật khẩu" | **UC05**, dùng chung UC04 Xác thực OTP với đăng ký |
-| Chọn ghế | **UC07** riêng ("Chọn ghế & tạm khóa chỗ") | Là **bước trong luồng** của UC10 và UC14; phần khóa ghế tách thành **UC11 Giữ chỗ tạm thời** dùng chung |
-| Hủy vé | **UC09** gộp tra cứu và hủy, cho cả khách và nhân viên | Tách **UC15 Hủy vé trực tuyến** (khách, bắt buộc đăng nhập) và **UC17 Hủy vé tại quầy** (nhân viên); **UC16 Tra cứu vé** tách riêng |
-| Thanh toán tiền mặt | **Ngoài phạm vi** | Có, tại quầy (UC12 bước 5) |
-| Hoàn tiền | Nằm trong UC09 | Tách **UC18** dùng chung cho UC15, UC17, UC19; hoàn về **đúng nguồn** đã trả (QD12) |
-| Phí hủy | Tính trên giá trị vé | Tính trên **số tiền thực trả** `thanhTien` (QD11) |
-| Mã giảm giá | Có thêm / sửa / xóa | Chỉ **thêm, xem, bật/tắt** (QD14) |
-| Sơ đồ ghế | Sinh theo **loại xe** | Khai báo theo **từng xe** (UC20) |
-| Yêu cầu đăng nhập | Phải đăng nhập mới đặt vé được | **Không bắt buộc** để mua vé; **bắt buộc** để hủy vé online |
+| Thành phần | Nội dung đặc tả |
+| :--- | :--- |
+| **Tóm tắt** | Xử lý trả lại tiền cho hành khách khi vé bị hủy, theo đúng chính sách phí hủy và đúng kênh đã thu tiền ban đầu. |
+| **Tác nhân** | **Phụ:** Cổng thanh toán. |
+| **Dòng sự kiện chính** | 1. Hệ thống xác định vé cần hoàn và lý do hoàn (khách tự hủy / nhà xe hủy chuyến).<br>2. Hệ thống áp dụng chính sách: khách tự hủy → trừ phí hủy theo mốc thời gian; nhà xe hủy chuyến → hoàn **100%**.<br>3. Hệ thống xác định hình thức hoàn (qua Cổng thanh toán hoặc tiền mặt).<br>4. Hệ thống tạo lệnh hoàn và ghi nhận kết quả.<br>5. Hệ thống ghi giao dịch âm vào doanh thu và gửi thông báo cho khách. |
+| **Dòng sự kiện phụ** | - **Hoàn qua cổng thanh toán (`<<extend>>`):** chuyển tiền về đúng ví/thẻ/tài khoản đã dùng khi mua.<br>- **Hoàn tiền mặt (`<<extend>>`):** chi trả trực tiếp tại quầy, giảm quỹ ca trực của nhân viên.<br>- **E1 — Lệnh hoàn bị từ chối:** chuyển sang trạng thái "Chờ xử lý thủ công" để Admin can thiệp; **việc hủy vé vẫn có hiệu lực**.<br>- **E2 — Số tiền hoàn bằng 0** (hủy quá sát giờ, phí hủy 100%): hệ thống vẫn ghi nhận bản ghi hoàn với giá trị 0 để phục vụ đối soát. |
+| **Tiền điều kiện (pre-condition)** | Vé đang ở trạng thái "Đã thanh toán" và đã được xác định đủ điều kiện hủy. |
+| **Hậu điều kiện (post-condition)** | Giao dịch hoàn được khởi tạo và ghi nhận; doanh thu kỳ tương ứng được điều chỉnh giảm. |
 
-### Điểm chưa chốt
+---
 
-| Vấn đề | Trạng thái |
-|--------|------------|
-| Use case "Quản lý đơn đặt vé" cho Admin | **Chưa quyết định**. Chưa có sơ đồ, chưa có đặc tả. Hỏi trước khi cài đặt. |
+#### Mô tả use case: Tra cứu vé (UC21)
+**Được include bởi:** UC05 (Hủy vé tại quầy). *Khuyến nghị bổ sung cho UC04 — xem lỗi **L8**.*
+
+| Thành phần | Nội dung đặc tả |
+| :--- | :--- |
+| **Tóm tắt** | Truy xuất thông tin chi tiết của một vé dựa trên mã vé hoặc số điện thoại đặt vé, phục vụ việc đối chiếu danh tính trước khi thực hiện các thao tác nhạy cảm (hủy vé, in lại vé). |
+| **Tác nhân** | *(Không có tác nhân trực tiếp — use case nội bộ hệ thống.)* |
+| **Dòng sự kiện chính** | 1. Hệ thống nhận tiêu chí tra cứu (mã vé hoặc số điện thoại đặt vé).<br>2. Hệ thống truy vấn CSDL vé.<br>3. Hệ thống trả về chi tiết: mã vé, họ tên hành khách, tuyến, giờ khởi hành, số ghế, số tiền, trạng thái vé, kênh và phương thức thanh toán. |
+| **Dòng sự kiện phụ** | - **E1 — Không tìm thấy vé:** hệ thống thông báo mã vé không tồn tại.<br>- **E2 — Nhiều vé cùng số điện thoại:** hệ thống trả về danh sách để người thao tác chọn đúng vé cần xử lý. |
+| **Tiền điều kiện (pre-condition)** | Tiêu chí tra cứu được cung cấp đầy đủ và đúng định dạng. |
+| **Hậu điều kiện (post-condition)** | Thông tin vé được hiển thị cho use case gọi nó; dữ liệu không bị thay đổi. |
+
+---
+
+## 📑 PHỤ LỤC A — NHẬT KÝ CHỈNH SỬA & CÁC LỖI LOGIC ĐÃ XỬ LÝ
+
+### A.1. Các thay đổi bám theo sơ đồ mới
+
+| # | Nội dung thay đổi | Bản cũ | Bản mới |
+| :--- | :--- | :--- | :--- |
+| 1 | Tác nhân trong sơ đồ tổng quát | 3 tác nhân | **5 tác nhân** (thêm Dịch vụ SMS, Cổng thanh toán) |
+| 2 | Quan hệ include ở sơ đồ tổng quát | Mọi chức năng `<<include>>` **Đăng nhập** | `<<include>>` tới **5 use case dùng chung**: Xác thực OTP, Giữ chỗ tạm thời, Thanh toán, Hoàn tiền, Tra cứu vé |
+| 3 | UC Tra cứu chuyến xe | 4 UC con + include "Xem giá vé & số ghế" + extend "Lọc theo khung giờ" | Gọn còn **Tra cứu chuyến xe** + extend **Lọc kết quả tra cứu** |
+| 4 | Tác nhân của Hủy vé tại quầy | Khách hàng | **Nhân viên bán vé** (+ Cổng thanh toán) |
+
+### A.2. Các lỗi logic đã phát hiện và cách xử lý
+
+| Mã | Lỗi | Phân tích | Xử lý trong tài liệu |
+| :--- | :--- | :--- | :--- |
+| **L1** | `Đăng xuất <<include>> Đăng nhập` | `<<include>>` = use case cơ sở **luôn luôn** thực thi trọn vẹn use case được include. Đăng xuất không hề chạy lại thủ tục đăng nhập; "đang có phiên" chỉ là **điều kiện đầu vào**. | Bỏ quan hệ include; chuyển thành **Tiền điều kiện** của UC08. **Cần sửa lại file `DangNhap-DangXuat.png`.** |
+| **L2** | UC02 và UC03 cũ trùng nhau | Hai sơ đồ cùng mô tả nghiệp vụ "Đặt vé trực tuyến" ở hai mức chi tiết. Ngoài ra các mục "Tìm kiếm chuyến", "Xem sơ đồ ghế", "Chọn ghế", "Nhập thông tin hành khách" là **các bước thao tác**, không phải use case (lỗi *functional decomposition* — phân rã chức năng nhầm thành use case). | **Gộp thành một UC02 duy nhất**; các bước trên đưa vào **Dòng sự kiện chính**. |
+| **L3** | Trùng tên: "Tạm khóa chỗ (5 phút)" vs "Giữ chỗ tạm thời" | Cùng một chức năng nhưng hai tên khác nhau ở hai sơ đồ → khi sang Class/Sequence Diagram sẽ sinh ra hai thành phần thừa. | Thống nhất một tên: **"Giữ chỗ tạm thời"** (UC18), thời lượng 5 phút đưa vào nội dung đặc tả. |
+| **L4** | Tên UC không nhất quán giữa sơ đồ tổng quát và sơ đồ phân rã | "Tra cứu & tìm chuyến xe" vs "Tra cứu chuyến xe"; "Khôi phục mật khẩu" vs "Quên mật khẩu"; "Bán vé & in vé tại quầy" vs "Bán vé tại quầy". | Lấy tên ở **sơ đồ tổng quát** làm chuẩn, thống nhất toàn tài liệu. |
+| **L5** | Tác nhân sai ở Hủy vé tại quầy | Hành khách **không thao tác trên phần mềm**, họ chỉ nêu yêu cầu. Tác nhân phải là người trực tiếp tương tác với hệ thống. | Tác nhân chính = **Nhân viên bán vé**; hành khách là bên thụ hưởng (nêu trong dòng sự kiện). |
+| **L6** | `Hủy chuyến xe <<include>> Hoàn tiền` | Chuyến bị hủy khi **chưa bán vé nào** thì không có gì để hoàn → quan hệ **có điều kiện**, không phải bắt buộc. | Đổi thành **`<<extend>>`** trong UC12. **Cần sửa lại file `QuanLyChuyenXeVaLichTrinh.png`.** |
+| **L7** | Admin có "Quản lý thông tin cá nhân" ở sơ đồ tổng quát nhưng không có ở sơ đồ phân rã | Mâu thuẫn giữa hai mức sơ đồ. | Bổ sung **Admin** vào tác nhân của UC11. **Cần thêm actor Admin vào `QuanLyThongTinCaNhan.png`.** |
+| **L8** | "Hủy vé trực tuyến" không include "Tra cứu vé" | Tại quầy phải tra cứu vé để đối chiếu, còn trực tuyến khách chọn vé từ danh sách của chính mình nên đã ngầm định danh. Chấp nhận được, nhưng nếu muốn cho phép hủy bằng mã vé mà không cần đăng nhập thì **bắt buộc** phải include UC21. | **Giữ nguyên** theo sơ đồ; ghi chú khuyến nghị để nhóm quyết định. |
+| **L9** | Tên UC03 có chữ "in vé" nhưng sơ đồ không có use case nào về in vé | Thiếu bước xuất vé — trong khi luồng trực tuyến lại có "Xuất vé điện tử & Mã QR". | Bổ sung bước **In vé (`<<include>>`)** vào dòng sự kiện chính UC03. **Cần thêm vào `BanVeVaInVeTaiQuay.png`.** |
+| **L10** | Hầu hết use case thiếu **dòng sự kiện ngoại lệ** | Bản cũ chỉ liệt kê các nhánh `<<extend>>`, thiếu các tình huống lỗi (thanh toán thất bại, hết hạn giữ chỗ, ghế bị chiếm...). Đây là phần chấm điểm quan trọng và là đầu vào cho Sequence Diagram. | Bổ sung các nhánh **E1, E2, E3…** cho từng use case. |
+
+### A.3. Bảng ánh xạ số hiệu UC cũ → mới
+
+| UC cũ | Tên | UC mới |
+| :--- | :--- | :--- |
+| UC00 | Sơ đồ Use Case Tổng Quan | UC00 |
+| UC01 | Tra cứu & tìm chuyến xe | **UC01** (đổi tên: Tra cứu chuyến xe) |
+| UC02 + UC03 | Đặt vé & Tạm khóa chỗ / Đặt vé trực tuyến | **UC02** (gộp) |
+| UC04 | Bán vé & in vé tại quầy | **UC03** |
+| UC05 | Hủy vé trực tuyến | **UC04** |
+| UC06 | Hủy vé tại quầy | **UC05** |
+| UC07 | Lịch sử mua vé | **UC06** |
+| UC08 | Đăng ký tài khoản | **UC07** |
+| UC09 | Đăng nhập - Đăng xuất | **UC08** |
+| UC10 | Khôi phục mật khẩu | **UC09** |
+| UC11 | Quản lý thông tin cá nhân | **UC11** |
+| UC12 | Đổi mật khẩu | **UC10** |
+| UC13 | Quản lý chuyến xe & lịch trình | **UC12** |
+| UC14 | Quản lý xe & sơ đồ ghế | **UC13** |
+| UC15 | Quản lý giá vé & khuyến mãi | **UC14** |
+| UC16 | Quản lý tài khoản & phân quyền | **UC15** |
+| UC17 | Thống kê & báo cáo doanh thu | **UC16** |
+| *(mới)* | Nhóm use case dùng chung | **UC17 – UC21** |
+
+### A.4. Việc cần làm tiếp trên file sơ đồ (.png)
+
+- [ ] `DangNhap-DangXuat.png` — bỏ mũi tên `<<include>>` từ Đăng xuất tới Đăng nhập **(L1)**
+- [ ] `QuanLyChuyenXeVaLichTrinh.png` — đổi `<<include>>` Hoàn tiền thành `<<extend>>` **(L6)**
+- [ ] `QuanLyThongTinCaNhan.png` — thêm tác nhân **Admin** **(L7)**
+- [ ] `BanVeVaInVeTaiQuay.png` — thêm use case **In vé** với quan hệ `<<include>>` **(L9)**
+- [ ] Gộp `DatVeVaTamKhoaCho.png` và `BanVeVaThanhToanTrucTuyen.png` thành một sơ đồ `DatVeTrucTuyen.png` **(L2)**
+- [ ] Rà soát lại nhãn trên sơ đồ cho khớp tên chuẩn ở Phụ lục A.3 **(L3, L4)**
