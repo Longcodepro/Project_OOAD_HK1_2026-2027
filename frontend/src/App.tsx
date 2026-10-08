@@ -8,10 +8,20 @@ import { SeatsPage } from './pages/SeatsPage'
 import { CheckoutPage } from './pages/CheckoutPage'
 import { SuccessPage } from './pages/SuccessPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { TicketLookupPage } from './pages/TicketLookupPage'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { GoogleSignupPage } from './pages/GoogleSignupPage'
 import { ScannerPage } from './pages/ScannerPage'
+
+// Admin Portal Components
+import { AdminLayout } from './components/admin/AdminLayout'
+import { AdminDashboardPage } from './pages/admin/AdminDashboardPage'
+import { AdminTicketsPage } from './pages/admin/AdminTicketsPage'
+import { AdminTripsPage } from './pages/admin/AdminTripsPage'
+import { AdminBusesPage } from './pages/admin/AdminBusesPage'
+import { AdminPricingPage } from './pages/admin/AdminPricingPage'
+import { AdminAccountsPage } from './pages/admin/AdminAccountsPage'
 
 export default function App() {
   const [view, setView] = useState<View>('home')
@@ -79,6 +89,9 @@ export default function App() {
 
   const renderPage = () => {
     switch (view) {
+      // -------------------------------------------------------------
+      // KHÁCH HÀNG (CUSTOMER PORTAL)
+      // -------------------------------------------------------------
       case 'home':
         return (
           <HomePage
@@ -140,6 +153,16 @@ export default function App() {
             onLogout={handleLogout}
           />
         )
+      case 'lookup':
+        return (
+          <TicketLookupPage
+            setView={setView}
+            user={user}
+            backendOnline={backendOnline}
+            onViewTicket={setCurrentTicket}
+            onLogout={handleLogout}
+          />
+        )
       case 'scan':
         return <ScannerPage setView={setView} />
       case 'login':
@@ -148,6 +171,47 @@ export default function App() {
         return <RegisterPage setView={setView} onRegisterSuccess={handleAuthSuccess} />
       case 'google-signup':
         return <GoogleSignupPage setView={setView} onLoginSuccess={handleAuthSuccess} />
+
+      // -------------------------------------------------------------
+      // QUẢN TRỊ VIÊN (ADMIN PORTAL)
+      // -------------------------------------------------------------
+      case 'admin-dashboard':
+        return (
+          <AdminLayout currentView={view} setView={setView} user={user} onLogout={handleLogout}>
+            <AdminDashboardPage setView={setView} onViewTicket={setCurrentTicket} />
+          </AdminLayout>
+        )
+      case 'admin-tickets':
+        return (
+          <AdminLayout currentView={view} setView={setView} user={user} onLogout={handleLogout}>
+            <AdminTicketsPage setView={setView} onViewTicket={setCurrentTicket} />
+          </AdminLayout>
+        )
+      case 'admin-trips':
+        return (
+          <AdminLayout currentView={view} setView={setView} user={user} onLogout={handleLogout}>
+            <AdminTripsPage setView={setView} />
+          </AdminLayout>
+        )
+      case 'admin-buses':
+        return (
+          <AdminLayout currentView={view} setView={setView} user={user} onLogout={handleLogout}>
+            <AdminBusesPage setView={setView} />
+          </AdminLayout>
+        )
+      case 'admin-pricing':
+        return (
+          <AdminLayout currentView={view} setView={setView} user={user} onLogout={handleLogout}>
+            <AdminPricingPage setView={setView} />
+          </AdminLayout>
+        )
+      case 'admin-accounts':
+        return (
+          <AdminLayout currentView={view} setView={setView} user={user} onLogout={handleLogout}>
+            <AdminAccountsPage setView={setView} />
+          </AdminLayout>
+        )
+
       default:
         return (
           <HomePage
@@ -162,6 +226,7 @@ export default function App() {
   }
 
   const isCustomerPortal =
+    !view.startsWith('admin-') &&
     view !== 'login' &&
     view !== 'register' &&
     view !== 'google-signup' &&
@@ -170,18 +235,7 @@ export default function App() {
   return (
     <div className="app-shell flex flex-col justify-between min-h-screen">
       <div className="flex-1">{renderPage()}</div>
-
       {isCustomerPortal && <Footer setView={setView} />}
-
-      {isCustomerPortal && (
-        <button
-          type="button"
-          onClick={() => setView('scan')}
-          className="crew-entry"
-        >
-          ◉ Crew scan
-        </button>
-      )}
     </div>
   )
 }

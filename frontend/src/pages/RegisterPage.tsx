@@ -14,17 +14,30 @@ export function RegisterPage({ setView, onRegisterSuccess }: RegisterPageProps) 
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
   const handleRegister = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
-    if (!phone) {
-      setErrorMsg('Vui lòng nhập số điện thoại')
+    if (!fullName.trim()) {
+      setErrorMsg('Vui lòng nhập họ và tên của bạn')
       return
     }
-    if (!fullName) {
-      setErrorMsg('Vui lòng nhập họ và tên')
+    if (!email.trim() || !email.includes('@')) {
+      setErrorMsg('Vui lòng nhập email hợp lệ để nhận vé và quản lý tài khoản')
+      return
+    }
+    if (!phone.trim()) {
+      setErrorMsg('Vui lòng nhập số điện thoại để nhà xe liên hệ khi đón')
+      return
+    }
+    if (!password || password.length < 6) {
+      setErrorMsg('Mật khẩu phải có ít nhất 6 ký tự')
+      return
+    }
+    if (password !== confirmPassword) {
+      setErrorMsg('Xác nhận mật khẩu không khớp')
       return
     }
 
@@ -32,9 +45,10 @@ export function RegisterPage({ setView, onRegisterSuccess }: RegisterPageProps) 
     setErrorMsg('')
     try {
       const res = await authApi.register({
-        fullName,
-        phone,
-        email,
+        fullName: fullName.trim(),
+        phone: phone.trim(),
+        email: email.trim().toLowerCase(),
+        password,
       })
       if (res.success && res.user) {
         onRegisterSuccess(res.user)
@@ -71,7 +85,7 @@ export function RegisterPage({ setView, onRegisterSuccess }: RegisterPageProps) 
             Đăng ký tài khoản để nhận đặc quyền du lịch.
           </h1>
           <p className="mt-4 max-w-xs text-sm leading-6 text-white/70">
-            Tích điểm trên mọi dặm đường, nhận vé điện tử lập tức và đổi lịch trình linh hoạt 24/7.
+            Tích điểm trên mọi dặm đường, nhận vé điện tử trực tiếp qua email và quản lý hành trình linh hoạt 24/7.
           </p>
 
           <div className="mt-12 space-y-3.5 text-xs text-white/80">
@@ -79,28 +93,28 @@ export function RegisterPage({ setView, onRegisterSuccess }: RegisterPageProps) 
               <span className="text-violet-300">✦</span> Tặng ngay 100 điểm thưởng chào mừng
             </p>
             <p className="flex items-center gap-2">
-              <span className="text-violet-300">✦</span> Quản lý & lưu danh sách vé trọn đời
+              <span className="text-violet-300">✦</span> Quản lý & lưu danh sách vé trọn đời qua Email
             </p>
             <p className="flex items-center gap-2">
-              <span className="text-violet-300">✦</span> Ưu tiên chọn vị trí ghế đẹp nhất
+              <span className="text-violet-300">✦</span> Bảo mật tài khoản & hỗ trợ 24/7
             </p>
           </div>
         </div>
 
-        {/* Form đăng ký bên phải */}
-        <div className="bg-[#101638]/90 p-7 sm:p-12">
+        {/* Form đăng ký bên phải (Clean Light Theme) */}
+        <div className="bg-white p-7 sm:p-12 text-slate-900 border-l border-slate-100">
           {/* Tab chuyển đổi Đăng nhập / Đăng ký */}
-          <div className="flex border-b border-white/10 pb-4 mb-6 gap-6">
+          <div className="flex border-b border-slate-200 pb-4 mb-6 gap-6">
             <button
               type="button"
               onClick={() => setView('login')}
-              className="text-base font-semibold text-white/50 hover:text-white transition pb-1"
+              className="text-base font-semibold text-slate-400 hover:text-slate-800 transition pb-1 cursor-pointer"
             >
               Đăng nhập
             </button>
             <button
               type="button"
-              className="text-base font-semibold text-violet-300 border-b-2 border-violet-400 pb-1"
+              className="text-base font-bold text-orange-600 border-b-2 border-orange-500 pb-1"
             >
               Đăng ký tài khoản
             </button>
@@ -108,8 +122,8 @@ export function RegisterPage({ setView, onRegisterSuccess }: RegisterPageProps) 
 
           <form onSubmit={handleRegister} className="space-y-4">
             <div>
-              <label className="block text-xs text-white/60 mb-1.5">
-                HỌ VÀ TÊN <span className="text-rose-400">*</span>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                HỌ VÀ TÊN <span className="text-rose-600">*</span>
               </label>
               <input
                 className="auth-input"
@@ -121,47 +135,67 @@ export function RegisterPage({ setView, onRegisterSuccess }: RegisterPageProps) 
             </div>
 
             <div>
-              <label className="block text-xs text-white/60 mb-1.5">
-                SỐ ĐIỆN THOẠI <span className="text-rose-400">*</span>
-              </label>
-              <input
-                className="auth-input"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="Nhập số điện thoại (dùng để đăng nhập và nhận vé)"
-                inputMode="tel"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-white/60 mb-1.5">
-                EMAIL (TÙY CHỌN)
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                ĐỊA CHỈ EMAIL <span className="text-rose-600">*</span>{' '}
+                <span className="text-[11px] text-orange-600 font-normal lowercase">(dùng đăng nhập & nhận vé)</span>
               </label>
               <input
                 className="auth-input"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@example.com (nhận thông báo vé)"
+                placeholder="tenban@example.com"
+                required
               />
             </div>
 
             <div>
-              <label className="block text-xs text-white/60 mb-1.5">
-                MẬT KHẨU
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                SỐ ĐIỆN THOẠI <span className="text-rose-600">*</span>{' '}
+                <span className="text-[11px] text-slate-400 font-normal">(tài xế liên hệ khi đón)</span>
               </label>
               <input
                 className="auth-input"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Tạo mật khẩu đăng nhập (tối thiểu 6 ký tự)"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="0901234567"
+                inputMode="tel"
+                required
               />
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  MẬT KHẨU <span className="text-rose-600">*</span>
+                </label>
+                <input
+                  className="auth-input"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Tối thiểu 6 ký tự"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  XÁC NHẬN MẬT KHẨU <span className="text-rose-600">*</span>
+                </label>
+                <input
+                  className="auth-input"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Nhập lại mật khẩu"
+                  required
+                />
+              </div>
+            </div>
+
             {errorMsg && (
-              <p className="text-xs text-rose-300 bg-rose-400/10 p-2.5 rounded-xl border border-rose-400/20">
+              <p className="text-xs text-rose-800 bg-rose-50 p-2.5 rounded-xl border border-rose-200 font-medium">
                 {errorMsg}
               </p>
             )}
@@ -169,32 +203,33 @@ export function RegisterPage({ setView, onRegisterSuccess }: RegisterPageProps) 
             <Button
               type="submit"
               disabled={loading}
-              className="mt-6 w-full"
+              className="mt-4 w-full"
             >
-              {loading ? 'Đang tạo tài khoản...' : 'Đăng ký ngay'} →
+              {loading ? 'Đang tạo tài khoản...' : 'Đăng ký tài khoản'} →
             </Button>
           </form>
 
-          <div className="my-6 flex items-center gap-3 text-[10px] text-white/35">
-            <span className="h-px flex-1 bg-white/10" />
+
+          <div className="my-6 flex items-center gap-3 text-xs font-semibold text-slate-400">
+            <span className="h-px flex-1 bg-slate-200" />
             HOẶC ĐĂNG KÝ VỚI
-            <span className="h-px flex-1 bg-white/10" />
+            <span className="h-px flex-1 bg-slate-200" />
           </div>
 
           <button
             type="button"
             onClick={() => setView('google-signup')}
-            className="google-button"
+            className="w-full flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white py-3 px-4 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer shadow-xs"
           >
-            <span className="google-g">G</span> Đăng ký nhanh với Google
+            <span className="text-base">🌐</span> Đăng ký nhanh với Google
           </button>
 
-          <p className="mt-6 text-center text-xs text-white/50">
+          <p className="mt-6 text-center text-xs text-slate-500 font-medium">
             Đã có tài khoản?{' '}
             <button
               type="button"
               onClick={() => setView('login')}
-              className="text-violet-300 font-semibold hover:underline"
+              className="text-orange-600 font-bold hover:underline cursor-pointer"
             >
               Đăng nhập tại đây
             </button>

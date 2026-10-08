@@ -5,6 +5,7 @@ import { Button } from '../common/Button'
 const navItems: { label: string; view: View }[] = [
   { label: 'Tìm chuyến', view: 'home' },
   { label: 'Hành trình', view: 'profile' },
+  { label: 'Tra cứu vé', view: 'lookup' },
   { label: 'Ưu đãi', view: 'home' },
 ]
 
@@ -35,6 +36,8 @@ export function Header({
     else setView('register')
   }
 
+  const isAdmin = user?.role === 'admin'
+
   return (
     <header className="relative z-30 mx-auto flex max-w-[1320px] items-center justify-between px-5 py-5 lg:px-8">
       <div className="flex items-center gap-4">
@@ -55,7 +58,19 @@ export function Header({
         ))}
       </nav>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
+        {/* Nút vào Portal Admin CHỈ hiển thị khi tài khoản đăng nhập có quyền Admin */}
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => setView('admin-dashboard')}
+            className="flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 hover:bg-amber-100 transition shadow-xs cursor-pointer"
+          >
+            <span>⚙</span>
+            <span>Vào Portal Admin</span>
+          </button>
+        )}
+
         {user ? (
           <div className="flex items-center gap-2">
             <Button
