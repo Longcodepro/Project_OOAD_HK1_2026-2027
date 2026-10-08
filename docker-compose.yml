@@ -31,10 +31,16 @@ services:
       mysql:
         condition: service_healthy
 
-  # frontend:
-  #   build: ./frontend   # can co frontend/Dockerfile that - xem frontend/README.md
-  #   ports:
-  #     - "3000:3000"
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    environment:
+      VITE_BACKEND_URL: http://backend:8000   # ten service trong Docker network, khong phai localhost
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    ports:
+      - "3000:3000"
 
 volumes:
   mysql_data:
