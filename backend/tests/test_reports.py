@@ -108,3 +108,48 @@ def test_csv_export_and_permissions(client, make_user):
         ).status_code
         == 403
     )
+
+
+def test_export_xlsx_has_data_and_vietnamese_headers(client, make_user):
+    import io
+
+    from openpyxl import load_workbook
+
+    admin, *_ = setup_data(client, make_user)
+    r = client.get(
+        "/admin/reports/export.xlsx",
+        headers=admin,
+        params={
+            "date_from": date.today().isoformat(),
+            "date_to": (date.today() + timedelta(days=7)).isoformat(),
+        },
+    )
+    assert r.status_code == 200 and "spreadsheetml" in r.headers["content-type"]
+    wb = load_workbook(io.BytesIO(r.content))
+    assert wb.sheetnames == ["Doanh thu", "Lấp đầy"]
+    rows = list(wb["Doanh thu"].iter_rows(values_only=True))
+    assert rows[3][:3] == ("Tuyến", "Doanh thu", "Đã hoàn")
+    totals = next(r for r in rows if r[0] == "TỔNG")
+    assert totals[1] == 1300000 and totals[4] == 4
+    fill = {r[0]: r[3] for r in wb["Lấp đầy"].iter_rows(min_row=5, values_only=True) if r[0]}
+    assert fill["Hà Nội - Đà Nẵng"] == 0.75
+
+
+def test_export_pdf_is_valid_pdf_and_empty_period_still_works(client, make_user):
+    admin, *_ = setup_data(client, make_user)
+    params = {
+        "date_from": date.today().isoformat(),
+        "date_to": (date.today() + timedelta(days=7)).isoformat(),
+    }
+    r = client.get("/admin/reports/export.pdf", headers=admin, params=params)
+    assert r.status_code == 200 and r.headers["content-type"] == "application/pdf"
+    assert r.content.startswith(b"%PDF") and len(r.content) > 5000
+    empty = client.get(
+        "/admin/reports/export.pdf",
+        headers=admin,
+        params={"date_from": "2099-01-01", "date_to": "2099-01-02"},
+    )
+    assert empty.status_code == 200 and empty.content.startswith(b"%PDF")
+    assert client.get("/admin/reports/export.xlsx", params=params).status_code == 401
+    _, cust = make_user(Role.CUSTOMER)
+    assert client.get("/admin/reports/export.pdf", headers=cust, params=params).status_code == 403

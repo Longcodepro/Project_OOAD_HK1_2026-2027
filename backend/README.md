@@ -93,6 +93,9 @@ Tên trong code là tiếng Anh, ánh xạ với `docs/rdm/RDM.md`:
 
 ## Chức năng đã có
 
+Tham số hệ thống (Admin): `GET /admin/settings`, `PATCH /admin/settings/{tên}` (giữ chỗ, phí hủy, OTP, khóa đăng nhập; áp dụng ngay).
+Đổi số điện thoại (UC11): `POST /auth/phone/otp`, `POST /auth/phone/change`. Sửa chuyến (UC13): `PATCH /admin/trips/{id}` đổi giờ hoặc đổi xe, hành khách được báo SMS. Xuất báo cáo: `/admin/reports/export.csv|.xlsx|.pdf`.
+
 Thống kê (UC17, Admin): `GET /admin/reports?date_from=&date_to=&route_id=&channel=` (doanh thu thực thu = bán − hoàn, vé bán/hủy, tỷ lệ lấp đầy; một bộ lọc cho cả ba), `GET /admin/reports/export.csv` (mở bằng Excel). Chưa xuất PDF/xlsx để khỏi thêm thư viện.
 
 Tài khoản & phân quyền (UC16, Admin): `/admin/users` (danh sách + tìm kiếm, tạo nhân viên với mật khẩu tạm, đổi vai trò, `reset-password`, `lock`, `unlock`, chi tiết kèm nhật ký hoạt động). Đăng nhập/đăng xuất cũng được ghi vào nhật ký (bảng `activity_logs`).

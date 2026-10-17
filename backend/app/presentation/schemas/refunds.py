@@ -37,6 +37,10 @@ class RefundOut(BaseModel):
     created_at: datetime
 
 
+class CounterRefundOut(RefundOut):
+    receipt: str  # nội dung biên nhận hủy gửi máy in
+
+
 class TripCancelIn(CancelIn):
     reason: str = Field(min_length=3, max_length=255, examples=["Sự cố bất khả kháng: bão"])
 
