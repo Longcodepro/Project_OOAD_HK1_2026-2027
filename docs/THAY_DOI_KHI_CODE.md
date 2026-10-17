@@ -18,6 +18,7 @@ Ghi lại những chỗ code **khác hoặc chi tiết hơn** so với RDM/Đặ
 | UC02/UC04 Đơn | Đơn chưa trả tiền hết hạn khi ghế không còn do chủ đơn giữ (kiểm tra lười khi đọc/thanh toán). Lượt dùng mã giảm giá được giữ từ lúc tạo đơn và trả lại khi đơn bị hủy/hết hạn |
 | UC21 Thanh toán | Đổi phương thức: thanh toán `DANG_XU_LY` cũ chuyển `DA_HUY`. Webhook báo thành công đến **muộn** (đơn đã hết hạn, hoặc giao dịch đã bị hủy do đổi phương thức) thì tự tạo lệnh hoàn 100% với lý do mới `THANH_TOAN_QUA_HAN` (gắn vào vé đầu của đơn, ghi `source_transaction_id` là giao dịch gốc); cổng từ chối thì vào hàng đợi Admin ở UC18 |
 | UC22 Hoàn tiền | Vé thanh toán tiền mặt hoàn bằng tiền mặt: nhân viên hủy ở quầy thì `DA_HOAN` ngay; nhà xe hủy chuyến thì `CHO_XU_LY_THU_CONG` để chi tại quầy, Admin xác nhận ở UC18 |
+| UC10 Khôi phục MK | Số chưa có tài khoản hoặc bị khóa: API vẫn trả thành công (im lặng) thay vì báo lỗi như sơ đồ 2.8, để người lạ không dò được số nào đã đăng ký |
 | UC06 Hủy vé quầy | Kết quả hủy có thêm trường `receipt`: nội dung biên nhận hủy gửi máy in giả (sơ đồ tuần tự 2.7, bước 11–12) |
 | UC13 Hủy chuyến | Đơn đang `CHO_THANH_TOAN` của chuyến bị hủy cũng được đóng (`DA_HUY`) và nhả ghế |
 | UC13 Sửa chuyến | Đổi giờ hoặc đổi xe đều báo SMS cho mọi vé đã thanh toán. Đổi xe được cả khi đã bán vé: ghế đang bán/giữ chuyển sang **cùng mã ghế** trên xe mới; xe mới thiếu mã ghế đó thì từ chối và nêu mã thiếu; xe mới phải đang hoạt động và không trùng lịch |
