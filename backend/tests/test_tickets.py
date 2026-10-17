@@ -98,3 +98,20 @@ def test_ticket_detail_access_control(client, make_user):
     assert client.get(f"/tickets/{tid}", headers=b).status_code == 403
     assert client.get(f"/tickets/{tid}", headers=admin).status_code == 200
     assert client.get("/tickets/99999", headers=a).status_code == 404
+
+
+def test_order_view_derives_completed_status_after_departure(client, make_user):
+    admin, r, v = world(client, make_user)
+    _, h = make_user(Role.CUSTOMER)
+    trip = mk_trip(client, admin, r, v)
+    o = buy(client, h, trip, seat_ids(client, trip["id"])[:1])
+    assert o["tickets"][0]["status"] == "CHUA_DI"
+    with client.session_factory() as db:  # quay đồng hồ: chuyến đã chạy xong
+        db.execute(
+            update(TripModel).values(departure_date=(datetime.now() - timedelta(days=1)).date())
+        )
+        db.commit()
+    assert (
+        client.get(f"/orders/{o['id']}", headers=h).json()["tickets"][0]["status"]
+        == "DA_HOAN_THANH"
+    )

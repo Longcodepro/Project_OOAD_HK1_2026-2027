@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, Header
 from app.application.errors import Forbidden
 from app.application.use_cases.booking import BookingService, ItemIn, PayResult
 from app.config import settings
+from app.domain.clock import now_vn
 from app.domain.entities.account import Account, Role
 from app.domain.entities.booking import Channel, OrderAggregate
 from app.presentation.deps import get_booking_service, get_current_account, require_roles
@@ -32,7 +33,9 @@ def order_out(svc: BookingService | None, agg: OrderAggregate) -> OrderOut:
         coupon_code=o.coupon_code,
         account_id=o.account_id,
         hold_until=svc.hold_deadline(agg) if svc else None,
-        tickets=[TicketOut(**t.__dict__) for t in agg.tickets],
+        tickets=[
+            TicketOut(**{**t.__dict__, "status": t.display_status(now_vn())}) for t in agg.tickets
+        ],
         payments=[
             PaymentOut(
                 id=p.id,

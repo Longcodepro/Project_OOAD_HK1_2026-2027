@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import Depends, FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -20,6 +22,11 @@ from app.presentation.routers import (
     tickets,
     trips,
 )
+
+if settings.jwt_secret in ("change-me", "changeme_jwt") or len(settings.jwt_secret) < 32:
+    logging.getLogger("uvicorn.error").warning(
+        "JWT_SECRET đang là giá trị mặc định hoặc quá ngắn: hãy đặt chuỗi ngẫu nhiên ≥ 32 ký tự khi chạy thật."
+    )
 
 DESCRIPTION = """Backend đặt vé xe khách (đồ án OOAD). Đăng nhập ở `POST /auth/login`, bấm **Authorize** và dán `access_token` để gọi các API cần quyền.
 
