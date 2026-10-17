@@ -1,0 +1,106 @@
+{
+  "_ghi_chu": "Dữ liệu mẫu tự nạp khi chạy docker compose (xem app/seed.py). Sửa file này để đổi dữ liệu demo; chạy lại là chỉ thêm cái còn thiếu, không tạo trùng.",
+
+  "accounts": [
+    {"phone": "0900000000", "name": "Quản trị viên", "role": "ADMIN", "password": "Admin12345"},
+    {"phone": "0900000001", "name": "Nhân viên quầy Mỹ Đình", "role": "NHAN_VIEN_BAN_VE", "password": "Staff12345"},
+    {"phone": "0900000003", "name": "Nhân viên quầy Miền Đông", "role": "NHAN_VIEN_BAN_VE", "password": "Staff12345"},
+    {"phone": "0900000002", "name": "Nguyễn Văn An", "role": "KHACH_HANG", "password": "Khach12345"},
+    {"phone": "0900000010", "name": "Trần Thị Bình", "role": "KHACH_HANG", "password": "Khach12345"},
+    {"phone": "0900000011", "name": "Lê Hoàng Cường", "role": "KHACH_HANG", "password": "Khach12345"},
+    {"phone": "0900000012", "name": "Phạm Minh Đức", "role": "KHACH_HANG", "password": "Khach12345"},
+    {"phone": "0900000013", "name": "Võ Thị Em", "role": "KHACH_HANG", "password": "Khach12345"},
+    {"phone": "0900000014", "name": "Đặng Quốc Phong", "role": "KHACH_HANG", "password": "Khach12345"},
+    {"phone": "0900000015", "name": "Bùi Thanh Giang", "role": "KHACH_HANG", "password": "Khach12345"},
+    {"phone": "0900000016", "name": "Hồ Anh Huy", "role": "KHACH_HANG", "password": "Khach12345"}
+  ],
+
+  "vehicles": [
+    {"plate": "51B-111.11", "type": "Giường nằm", "brand": "Thaco Mobihome", "year": 2023, "floors": 2, "rows": 10, "per_row": 2},
+    {"plate": "29H-444.44", "type": "Giường nằm", "brand": "Hyundai Universe", "year": 2022, "floors": 2, "rows": 9, "per_row": 2},
+    {"plate": "79B-777.77", "type": "Giường nằm", "brand": "Thaco Mobihome", "year": 2024, "floors": 2, "rows": 10, "per_row": 2},
+    {"plate": "51B-222.22", "type": "Limousine", "brand": "Ford Transit Dcar", "year": 2023, "floors": 1, "rows": 6, "per_row": 3},
+    {"plate": "30F-555.55", "type": "Limousine", "brand": "Mercedes Sprinter", "year": 2023, "floors": 1, "rows": 5, "per_row": 3},
+    {"plate": "29B-333.33", "type": "Ghế ngồi", "brand": "Hyundai County", "year": 2021, "floors": 1, "rows": 12, "per_row": 4},
+    {"plate": "43B-666.66", "type": "Ghế ngồi", "brand": "Thaco Meadow", "year": 2022, "floors": 1, "rows": 11, "per_row": 4},
+    {"plate": "92B-888.88", "type": "Ghế ngồi", "brand": "Samco Felix", "year": 2020, "floors": 1, "rows": 10, "per_row": 4}
+  ],
+
+  "routes": [
+    {"from": "Hà Nội", "to": "Đà Nẵng", "km": 760, "minutes": 840, "pickups": ["Bến xe Mỹ Đình", "Bến xe Giáp Bát"], "dropoffs": ["Bến xe Trung tâm Đà Nẵng"]},
+    {"from": "Đà Nẵng", "to": "Hà Nội", "km": 760, "minutes": 840, "pickups": ["Bến xe Trung tâm Đà Nẵng"], "dropoffs": ["Bến xe Mỹ Đình", "Bến xe Giáp Bát"]},
+    {"from": "Hà Nội", "to": "Hải Phòng", "km": 120, "minutes": 120, "pickups": ["Bến xe Mỹ Đình", "Bến xe Gia Lâm"], "dropoffs": ["Bến xe Niệm Nghĩa"]},
+    {"from": "Hải Phòng", "to": "Hà Nội", "km": 120, "minutes": 120, "pickups": ["Bến xe Niệm Nghĩa"], "dropoffs": ["Bến xe Mỹ Đình", "Bến xe Gia Lâm"]},
+    {"from": "Hà Nội", "to": "Sa Pa", "km": 320, "minutes": 360, "pickups": ["Bến xe Mỹ Đình"], "dropoffs": ["Trung tâm Sa Pa"]},
+    {"from": "Hà Nội", "to": "Vinh", "km": 300, "minutes": 330, "pickups": ["Bến xe Giáp Bát", "Bến xe Nước Ngầm"], "dropoffs": ["Bến xe Vinh"]},
+    {"from": "TP. Hồ Chí Minh", "to": "Đà Lạt", "km": 300, "minutes": 420, "pickups": ["Bến xe Miền Đông", "Ngã tư Hàng Xanh"], "dropoffs": ["Bến xe Đà Lạt"]},
+    {"from": "Đà Lạt", "to": "TP. Hồ Chí Minh", "km": 300, "minutes": 420, "pickups": ["Bến xe Đà Lạt"], "dropoffs": ["Bến xe Miền Đông", "Ngã tư Hàng Xanh"]},
+    {"from": "TP. Hồ Chí Minh", "to": "Cần Thơ", "km": 170, "minutes": 210, "pickups": ["Bến xe Miền Tây"], "dropoffs": ["Bến xe Cần Thơ"]},
+    {"from": "TP. Hồ Chí Minh", "to": "Nha Trang", "km": 430, "minutes": 540, "pickups": ["Bến xe Miền Đông"], "dropoffs": ["Bến xe phía Nam Nha Trang"]}
+  ],
+
+  "trip_plan": {
+    "_ghi_chu": "Mỗi dòng tự sinh chuyến cho 14 ngày tới. every_days = cách nhau mấy ngày.",
+    "days_ahead": 14,
+    "items": [
+      {"plate": "51B-111.11", "route": ["Hà Nội", "Đà Nẵng"], "time": "18:00", "price": 450000, "every_days": 2, "start_day": 1},
+      {"plate": "29H-444.44", "route": ["Đà Nẵng", "Hà Nội"], "time": "18:00", "price": 450000, "every_days": 2, "start_day": 1},
+      {"plate": "51B-222.22", "route": ["Hà Nội", "Hải Phòng"], "time": "07:00", "price": 180000, "every_days": 1, "start_day": 1},
+      {"plate": "51B-222.22", "route": ["Hà Nội", "Hải Phòng"], "time": "14:00", "price": 180000, "every_days": 1, "start_day": 1},
+      {"plate": "30F-555.55", "route": ["Hải Phòng", "Hà Nội"], "time": "10:00", "price": 180000, "every_days": 1, "start_day": 1},
+      {"plate": "30F-555.55", "route": ["Hải Phòng", "Hà Nội"], "time": "17:00", "price": 180000, "every_days": 1, "start_day": 1},
+      {"plate": "29B-333.33", "route": ["Hà Nội", "Vinh"], "time": "06:00", "price": 250000, "every_days": 1, "start_day": 1},
+      {"plate": "29B-333.33", "route": ["Hà Nội", "Sa Pa"], "time": "14:00", "price": 320000, "every_days": 1, "start_day": 1},
+      {"plate": "43B-666.66", "route": ["TP. Hồ Chí Minh", "Đà Lạt"], "time": "06:00", "price": 280000, "every_days": 1, "start_day": 1},
+      {"plate": "43B-666.66", "route": ["Đà Lạt", "TP. Hồ Chí Minh"], "time": "13:30", "price": 280000, "every_days": 1, "start_day": 1},
+      {"plate": "79B-777.77", "route": ["TP. Hồ Chí Minh", "Nha Trang"], "time": "21:00", "price": 380000, "every_days": 1, "start_day": 1},
+      {"plate": "92B-888.88", "route": ["TP. Hồ Chí Minh", "Cần Thơ"], "time": "08:00", "price": 150000, "every_days": 1, "start_day": 1},
+      {"plate": "92B-888.88", "route": ["TP. Hồ Chí Minh", "Cần Thơ"], "time": "15:00", "price": 150000, "every_days": 1, "start_day": 1}
+    ]
+  },
+
+  "coupons": [
+    {"code": "CHAOBAN", "kind": "PHAN_TRAM", "value": 10, "max_discount": 50000, "min_order": 200000, "quantity": 100, "from_days": -1, "to_days": 90, "description": "Giảm 10% (tối đa 50.000đ) cho đơn từ 200.000đ"},
+    {"code": "GIAM30K", "kind": "SO_TIEN", "value": 30000, "max_discount": null, "min_order": 300000, "quantity": 200, "from_days": -1, "to_days": 90, "description": "Giảm 30.000đ cho đơn từ 300.000đ"},
+    {"code": "TET2027", "kind": "PHAN_TRAM", "value": 20, "max_discount": 150000, "min_order": 500000, "quantity": 50, "from_days": 30, "to_days": 60, "description": "Mã Tết: chưa tới ngày áp dụng"},
+    {"code": "HETHAN", "kind": "SO_TIEN", "value": 20000, "max_discount": null, "min_order": 0, "quantity": 10, "from_days": -60, "to_days": -30, "description": "Mã đã hết hạn (để thử trường hợp lỗi)"},
+    {"code": "DANGTAT", "kind": "SO_TIEN", "value": 10000, "max_discount": null, "min_order": 0, "quantity": 10, "from_days": -1, "to_days": 90, "status": "TAT", "description": "Mã đang bị tắt (để thử trường hợp lỗi)"}
+  ],
+
+  "bookings": {
+    "_ghi_chu": "Đơn mẫu chạy qua đúng các use case (giữ chỗ → đặt đơn → thanh toán → hủy). by = khách (phone) hoặc nhân viên quầy; cancel = true | 'fail_refund' (cổng từ chối hoàn → vào hàng đợi Admin).",
+    "items": [
+      {"by": "0900000002", "route": ["Hà Nội", "Đà Nẵng"], "day": 3, "time": "18:00", "seats": 2, "method": "MOMO", "coupon": "CHAOBAN"},
+      {"by": "0900000002", "route": ["Hà Nội", "Hải Phòng"], "day": 2, "time": "07:00", "seats": 1, "method": "ZALOPAY"},
+      {"by": "0900000002", "route": ["TP. Hồ Chí Minh", "Đà Lạt"], "day": 5, "time": "06:00", "seats": 3, "method": "THE", "coupon": "GIAM30K"},
+      {"by": "0900000002", "route": ["Hà Nội", "Vinh"], "day": 4, "time": "06:00", "seats": 1, "method": "MOMO", "cancel": true},
+      {"by": "0900000010", "route": ["Hà Nội", "Sa Pa"], "day": 2, "time": "14:00", "seats": 2, "method": "VIETQR"},
+      {"by": "0900000010", "route": ["Hà Nội", "Đà Nẵng"], "day": 3, "time": "18:00", "seats": 1, "method": "MOMO"},
+      {"by": "0900000011", "route": ["TP. Hồ Chí Minh", "Nha Trang"], "day": 3, "time": "21:00", "seats": 2, "method": "ZALOPAY", "coupon": "CHAOBAN"},
+      {"by": "0900000011", "route": ["TP. Hồ Chí Minh", "Cần Thơ"], "day": 1, "time": "08:00", "seats": 4, "method": "THE"},
+      {"by": "0900000012", "route": ["Đà Nẵng", "Hà Nội"], "day": 3, "time": "18:00", "seats": 2, "method": "MOMO", "cancel": "fail_refund"},
+      {"by": "0900000012", "route": ["Hải Phòng", "Hà Nội"], "day": 2, "time": "10:00", "seats": 1, "method": "ZALOPAY"},
+      {"by": "0900000013", "route": ["Đà Lạt", "TP. Hồ Chí Minh"], "day": 6, "time": "13:30", "seats": 2, "method": "MOMO"},
+      {"by": "0900000013", "route": ["Hà Nội", "Hải Phòng"], "day": 3, "time": "14:00", "seats": 1, "method": "THE"},
+      {"by": "0900000014", "route": ["Hà Nội", "Đà Nẵng"], "day": 5, "time": "18:00", "seats": 3, "method": "ZALOPAY"},
+      {"by": "0900000015", "route": ["TP. Hồ Chí Minh", "Cần Thơ"], "day": 2, "time": "15:00", "seats": 2, "method": "MOMO", "cancel": true},
+      {"by": "0900000016", "route": ["Hà Nội", "Vinh"], "day": 2, "time": "06:00", "seats": 2, "method": "MOMO"},
+      {"by": "0900000001", "route": ["Hà Nội", "Hải Phòng"], "day": 1, "time": "07:00", "seats": 2, "method": "TIEN_MAT", "passenger": "Bác Tư", "phone": "0912000001"},
+      {"by": "0900000001", "route": ["Hà Nội", "Sa Pa"], "day": 1, "time": "14:00", "seats": 1, "method": "TIEN_MAT", "passenger": "Cô Lan", "phone": "0912000002"},
+      {"by": "0900000001", "route": ["Hà Nội", "Đà Nẵng"], "day": 3, "time": "18:00", "seats": 2, "method": "VIETQR", "passenger": "Anh Hùng", "phone": "0912000003", "coupon": "GIAM30K"},
+      {"by": "0900000003", "route": ["TP. Hồ Chí Minh", "Đà Lạt"], "day": 1, "time": "06:00", "seats": 3, "method": "TIEN_MAT", "passenger": "Chú Sáu", "phone": "0912000004"},
+      {"by": "0900000003", "route": ["TP. Hồ Chí Minh", "Cần Thơ"], "day": 1, "time": "15:00", "seats": 1, "method": "TIEN_MAT", "passenger": "Chị Mai", "phone": "0912000005", "cancel": true}
+    ]
+  },
+
+  "history": {
+    "_ghi_chu": "Chuyến đã chạy trong vài ngày qua (chèn thẳng vào DB) để báo cáo, lịch sử và trạng thái DA_HOAN_THANH có dữ liệu ngay.",
+    "days_back": 6,
+    "items": [
+      {"plate": "51B-222.22", "route": ["Hà Nội", "Hải Phòng"], "time": "07:00", "price": 180000, "sold": 14},
+      {"plate": "29B-333.33", "route": ["Hà Nội", "Vinh"], "time": "06:00", "price": 250000, "sold": 30},
+      {"plate": "43B-666.66", "route": ["TP. Hồ Chí Minh", "Đà Lạt"], "time": "06:00", "price": 280000, "sold": 26},
+      {"plate": "51B-111.11", "route": ["Hà Nội", "Đà Nẵng"], "time": "18:00", "price": 450000, "sold": 31}
+    ]
+  }
+}

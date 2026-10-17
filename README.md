@@ -8,6 +8,15 @@
 
 ---
 
+## CHẠY NHANH (BACKEND + DỮ LIỆU MẪU)
+
+```bash
+docker compose up -d --build mysql backend
+```
+Mở http://localhost:8000/docs. Backend tự tạo bảng và nạp dữ liệu mẫu (tài khoản Admin `0900000000 / Admin12345`, nhân viên quầy `0900000001 / Staff12345`, khách `0900000002 / Khach12345`). Chi tiết ở `backend/README.md`.
+
+---
+
 ## MỤC LỤC TỔNG QUAN
 
 1. [Giới thiệu Đề tài & Phạm vi Nghiệp vụ](#1-giới-thiệu-đề-tài--phạm-vi-nghiệp-vụ)

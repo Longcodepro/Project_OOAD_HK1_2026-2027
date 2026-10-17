@@ -13,8 +13,23 @@ class Settings(BaseSettings):
     mysql_port: int = 3306
     mysql_database: str = "ooad_busticket"
 
+    # Các địa chỉ web được gọi API từ trình duyệt (frontend), cách nhau bằng dấu phẩy
+    cors_origins: str = "http://localhost:3000,http://localhost:5173"
+
+    gateway_key: str = "mock-gateway-key"  # khóa xác thực webhook cổng thanh toán giả
     jwt_secret: str = "change-me"
     jwt_expire_minutes: int = 60  # access token sống 1 giờ
+
+    sms_mock: bool = True  # true: API trả luôn mã OTP vì không gửi SMS thật
+    otp_ttl_seconds: int = 120
+    otp_resend_seconds: int = 60
+    otp_max_attempts: int = 5
+    login_max_failures: int = 5
+    login_lock_minutes: int = 15
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
     @property
     def database_url(self) -> str:

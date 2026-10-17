@@ -1,35 +1,53 @@
+# Chạy: docker compose up -d --build   (không cần tạo file .env, mọi giá trị đều có mặc định)
+# Backend tự: tạo bảng (alembic) → nạp dữ liệu mẫu (app/seed_data.json) → bật API tại http://localhost:8000/docs
 services:
   mysql:
     image: mysql:8.0
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-changeme_root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ooad_busticket}
+      MYSQL_USER: ${MYSQL_USER:-app_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-changeme_app}
     ports:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 12
 
   backend:
     build: ./backend
     restart: unless-stopped
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    env_file:
-      - .env
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ooad_busticket}
+      MYSQL_USER: ${MYSQL_USER:-app_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-changeme_app}
+      JWT_SECRET: ${JWT_SECRET:-docker-demo-jwt-secret-khi-chay-that-hay-doi-0123456789}
+      DEBUG: ${DEBUG:-true}
+      SMS_MOCK: ${SMS_MOCK:-true}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
     volumes:
       - ./backend/app:/app/app
+      - ./backend/alembic:/app/alembic
     ports:
       - "8000:8000"
     depends_on:
       mysql:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health', timeout=3).status == 200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 120s
 
   frontend:
     build: ./frontend
