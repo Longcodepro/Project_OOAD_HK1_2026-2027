@@ -7,7 +7,7 @@ def f_setup():
     pre = """
 const base = Date.now() % 1e8;
 const ph = k => '09' + String((base + k) % 1e8).padStart(8, '0');
-['ph_cust','ph_cust2','ph_new','ph_lock','ph_resend','ph_acc','ph_staff','ph_victim','ph_lock2'].forEach((n, i) => pm.collectionVariables.set(n, ph(i * 7 + 1)));
+['ph_cust','ph_cust2','ph_new','ph_lock','ph_resend','ph_acc','ph_staff','ph_victim','ph_lock2', 'ph_acc_new'].forEach((n, i) => pm.collectionVariables.set(n, ph(i * 7 + 1)));
 pm.collectionVariables.set('rid', base.toString(36).toUpperCase());
 """
     f.add(

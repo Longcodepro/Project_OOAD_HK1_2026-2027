@@ -48,7 +48,7 @@
                 "exec": [
                   "const base = Date.now() % 1e8;",
                   "const ph = k => '09' + String((base + k) % 1e8).padStart(8, '0');",
-                  "['ph_cust','ph_cust2','ph_new','ph_lock','ph_resend','ph_acc','ph_staff','ph_victim','ph_lock2'].forEach((n, i) => pm.collectionVariables.set(n, ph(i * 7 + 1)));",
+                  "['ph_cust','ph_cust2','ph_new','ph_lock','ph_resend','ph_acc','ph_staff','ph_victim','ph_lock2', 'ph_acc_new'].forEach((n, i) => pm.collectionVariables.set(n, ph(i * 7 + 1)));",
                   "pm.collectionVariables.set('rid', base.toString(36).toUpperCase());"
                 ]
               }
@@ -4743,7 +4743,7 @@
           ]
         },
         {
-          "name": "Sửa chuyến: đổi xe → 400",
+          "name": "Sửa chuyến: đổi sang xe nhỏ (chưa bán vé) → 200, sơ đồ ghế dựng lại còn 4 ghế",
           "request": {
             "method": "PATCH",
             "header": [
@@ -4785,7 +4785,108 @@
                 "type": "text/javascript",
                 "exec": [
                   "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
-                  "pm.test('Mã HTTP là 400', () => pm.response.to.have.status(400));"
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('4 ghế, biển số xe nhỏ', () => pm.expect(j.total_seats === 4 && j.plate === 'T' + pm.collectionVariables.get('rid') + 'B').to.be.true);",
+                  "pm.test('chưa có vé nên không báo ai', () => pm.expect(j.notified_passengers === 0).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sửa chuyến: đổi lại xe lớn → 200, 24 ghế",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/trips/{{tr_trip}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "trips",
+                "{{tr_trip}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"vehicle_id\":{{veh_big}}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('24 ghế', () => pm.expect(j.total_seats === 24).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sửa chuyến: xe không tồn tại → 404",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/trips/{{tr_trip}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "trips",
+                "{{tr_trip}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"vehicle_id\":999999}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 404', () => pm.response.to.have.status(404));"
                 ]
               }
             }
@@ -16147,6 +16248,2157 @@
                 "exec": [
                   "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
                   "pm.test('Mã HTTP là 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "16. Đổi lịch & đổi xe, hoàn tiền muộn, tham số hệ thống, đổi SĐT",
+      "description": "",
+      "item": [
+        {
+          "name": "Chuẩn bị e: tạo chuyến",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/trips",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "trips"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"route_id\":{{route_id}},\"vehicle_id\":{{veh_big}},\"departure_date\":\"{{e_date}}\",\"departure_time\":\"08:00\",\"price\":300000,\"pickup_points\":[\"Bến A\",\"Bến B\"],\"dropoff_points\":[\"Bến Đích\"]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date(Date.now() + 7*3600*1000 + 26*86400*1000);",
+                  "pm.collectionVariables.set('e_date', d.toISOString().slice(0,10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('e_trip', j.id);",
+                  "pm.collectionVariables.set('e_pick', j.stops.find(s => s.kind === 'DON').id);",
+                  "pm.collectionVariables.set('e_drop', j.stops.find(s => s.kind === 'TRA').id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chuẩn bị e: lấy ghế",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/trips/{{e_trip}}/seats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "trips",
+                "{{e_trip}}",
+                "seats"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('e_s1', j[0].seat_id);",
+                  "pm.collectionVariables.set('e_s2', j[1].seat_id);",
+                  "pm.collectionVariables.set('e_s3', j[2].seat_id);",
+                  "pm.collectionVariables.set('e_s4', j[3].seat_id);",
+                  "pm.collectionVariables.set('e_s5', j[4].seat_id);",
+                  "pm.collectionVariables.set('e_s6', j[5].seat_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chuẩn bị: giữ ghế",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_cust}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/trips/{{e_trip}}/hold",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "trips",
+                "{{e_trip}}",
+                "hold"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"seat_ids\":[{{e_s1}},{{e_s6}}]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chuẩn bị: tạo đơn",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_cust}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"trip_id\":{{e_trip}},\"items\":[{\"seat_id\":{{e_s1}},\"passenger_name\":\"Khách A\",\"passenger_phone\":\"0911111111\",\"pickup_stop_id\":{{e_pick}},\"dropoff_stop_id\":{{e_drop}}},{\"seat_id\":{{e_s6}},\"passenger_name\":\"Khách A\",\"passenger_phone\":\"0911111111\",\"pickup_stop_id\":{{e_pick}},\"dropoff_stop_id\":{{e_drop}}}]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('e_order', j.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chuẩn bị: thanh toán",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_cust}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders/{{e_order}}/pay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "{{e_order}}",
+                "pay"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"method\":\"MOMO\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('thanh toán thành công', () => pm.expect(j.result === 'THANH_CONG').to.be.true);",
+                  "pm.collectionVariables.set('e_ticket', j.order.tickets[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đổi giờ chuyến đã bán vé → 200, báo SMS 2 vé",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/trips/{{e_trip}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "trips",
+                "{{e_trip}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"departure_time\":\"09:30\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('báo 2 hành khách', () => pm.expect(j.notified_passengers === 2).to.be.true);",
+                  "pm.test('giờ mới', () => pm.expect(j.departure_time === '09:30:00').to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chỉ đổi ghi chú → không báo ai",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/trips/{{e_trip}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "trips",
+                "{{e_trip}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"note\":\"Đón sớm 15 phút\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('không báo', () => pm.expect(j.notified_passengers === 0).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đổi sang xe nhỏ (4 ghế) khi ghế A06 đang bán → 400 nêu ghế thiếu",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/trips/{{e_trip}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "trips",
+                "{{e_trip}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"vehicle_id\":{{veh_small}}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 400', () => pm.response.to.have.status(400));",
+                  "pm.test('nêu ghế A06', () => pm.expect(j.detail.includes('A06')).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tạo xe lớn thứ hai (24 ghế) để đổi",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/vehicles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "vehicles"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"plate\":\"T{{rid}}X\",\"vehicle_type_id\":{{vtype_id}},\"layout\":{\"floors\":1,\"rows\":6,\"seats_per_row\":4}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('veh_big2', j.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đổi sang xe lớn thứ hai khi đã bán vé → 200, báo SMS",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/trips/{{e_trip}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "trips",
+                "{{e_trip}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"vehicle_id\":{{veh_big2}}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('báo 2 vé, vẫn 22 ghế trống', () => pm.expect(j.notified_passengers === 2 && j.available_seats === 22).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Vé vẫn giữ đúng mã ghế trên xe mới",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_cust}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders/{{e_order}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "{{e_order}}"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('ghế A01 và A06, biển số mới', () => pm.expect(j.tickets.map(t => t.seat_code).sort().join() === 'A01,A06' && j.tickets[0].plate === 'T' + pm.collectionVariables.get('rid') + 'X').to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chuẩn bị l: tạo chuyến",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/trips",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "trips"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"route_id\":{{route_id}},\"vehicle_id\":{{veh_big}},\"departure_date\":\"{{l_date}}\",\"departure_time\":\"08:00\",\"price\":250000,\"pickup_points\":[\"Bến A\",\"Bến B\"],\"dropoff_points\":[\"Bến Đích\"]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date(Date.now() + 7*3600*1000 + 28*86400*1000);",
+                  "pm.collectionVariables.set('l_date', d.toISOString().slice(0,10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('l_trip', j.id);",
+                  "pm.collectionVariables.set('l_pick', j.stops.find(s => s.kind === 'DON').id);",
+                  "pm.collectionVariables.set('l_drop', j.stops.find(s => s.kind === 'TRA').id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chuẩn bị l: lấy ghế",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/trips/{{l_trip}}/seats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "trips",
+                "{{l_trip}}",
+                "seats"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('l_s1', j[0].seat_id);",
+                  "pm.collectionVariables.set('l_s2', j[1].seat_id);",
+                  "pm.collectionVariables.set('l_s3', j[2].seat_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Quầy giữ ghế cho khách quét VietQR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_clerk}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/trips/{{l_trip}}/hold",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "trips",
+                "{{l_trip}}",
+                "hold"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"seat_ids\":[{{l_s1}}]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lập phiếu quầy",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_clerk}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/counter/orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "counter",
+                "orders"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"trip_id\":{{l_trip}},\"items\":[{\"seat_id\":{{l_s1}},\"passenger_name\":\"Khách\",\"passenger_phone\":\"0922222222\",\"pickup_stop_id\":{{l_pick}},\"dropoff_stop_id\":{{l_drop}}}]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('l_order', j.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chọn VietQR → chờ thanh toán",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_clerk}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders/{{l_order}}/pay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "{{l_order}}",
+                "pay"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"method\":\"VIETQR\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('l_txn', j.order.payments[0].transaction_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Khách đổi ý trả tiền mặt → đơn thanh toán xong, mã VietQR bị hủy",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_clerk}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders/{{l_order}}/pay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "{{l_order}}",
+                "pay"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"method\":\"TIEN_MAT\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('thành công', () => pm.expect(j.result === 'THANH_CONG').to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cổng báo tiền VietQR về muộn → đơn vẫn hợp lệ, tự hoàn khoản VietQR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payments/webhook",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payments",
+                "webhook"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"transaction_id\":\"{{l_txn}}\",\"status\":\"SUCCESS\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.add({key: 'X-Gateway-Key', value: 'mock-gateway-key'});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('đơn vẫn đã thanh toán', () => pm.expect(j.status === 'DA_THANH_TOAN').to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin thấy lệnh hoàn THANH_TOAN_QUA_HAN đã hoàn xong",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/orders/{{l_order}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "orders",
+                "{{l_order}}"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('1 lệnh hoàn 250.000, không phí', () => pm.expect(j.refunds.length === 1 && j.refunds[0].reason === 'THANH_TOAN_QUA_HAN' && j.refunds[0].amount === 250000 && j.refunds[0].fee === 0).to.be.true);",
+                  "pm.test('đã hoàn', () => pm.expect(j.refunds[0].status === 'DA_HOAN' && j.refunds[0].transaction_id.startsWith('RF-')).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Webhook báo lại lần hai → không hoàn thêm lần nữa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payments/webhook",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payments",
+                "webhook"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"transaction_id\":\"{{l_txn}}\",\"status\":\"SUCCESS\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.add({key: 'X-Gateway-Key', value: 'mock-gateway-key'});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('vẫn 1 thanh toán hủy→thành công', () => pm.expect(j.payments.length === 2).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chi tiết đơn: vẫn chỉ 1 lệnh hoàn",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/orders/{{l_order}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "orders",
+                "{{l_order}}"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('1 lệnh', () => pm.expect(j.refunds.length === 1).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chuẩn bị p: tạo chuyến",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/trips",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "trips"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"route_id\":{{route_id}},\"vehicle_id\":{{veh_big}},\"departure_date\":\"{{p_date}}\",\"departure_time\":\"08:00\",\"price\":400000,\"pickup_points\":[\"Bến A\",\"Bến B\"],\"dropoff_points\":[\"Bến Đích\"]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date(Date.now() + 7*3600*1000 + 30*86400*1000);",
+                  "pm.collectionVariables.set('p_date', d.toISOString().slice(0,10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('p_trip', j.id);",
+                  "pm.collectionVariables.set('p_pick', j.stops.find(s => s.kind === 'DON').id);",
+                  "pm.collectionVariables.set('p_drop', j.stops.find(s => s.kind === 'TRA').id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chuẩn bị p: lấy ghế",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/trips/{{p_trip}}/seats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "trips",
+                "{{p_trip}}",
+                "seats"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('p_s1', j[0].seat_id);",
+                  "pm.collectionVariables.set('p_s2', j[1].seat_id);",
+                  "pm.collectionVariables.set('p_s3', j[2].seat_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chuẩn bị: giữ ghế",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_cust}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/trips/{{p_trip}}/hold",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "trips",
+                "{{p_trip}}",
+                "hold"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"seat_ids\":[{{p_s1}}]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chuẩn bị: tạo đơn",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_cust}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"trip_id\":{{p_trip}},\"items\":[{\"seat_id\":{{p_s1}},\"passenger_name\":\"Khách A\",\"passenger_phone\":\"0911111111\",\"pickup_stop_id\":{{p_pick}},\"dropoff_stop_id\":{{p_drop}}}]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('p_order', j.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chuẩn bị: thanh toán",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_cust}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders/{{p_order}}/pay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "{{p_order}}",
+                "pay"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"method\":\"MOMO\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('thanh toán thành công', () => pm.expect(j.result === 'THANH_CONG').to.be.true);",
+                  "pm.collectionVariables.set('p_ticket', j.order.tickets[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tham số hệ thống: Admin xem danh sách → 200",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/settings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "settings"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('đủ tham số', () => pm.expect(['THOI_GIAN_GIU_CHO_PHUT','PHI_HUY_PHAN_TRAM','DANG_NHAP_SAI_TOI_DA','OTP_HIEU_LUC_GIAY'].every(n => j.some(s => s.name === n))).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Báo giá hủy với phí 15% → 60.000",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_cust}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tickets/{{p_ticket}}/cancel-quote",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets",
+                "{{p_ticket}}",
+                "cancel-quote"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('phí 60.000', () => pm.expect(j.fee === 60000).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin đổi phí hủy sang 20% → 200",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/settings/PHI_HUY_PHAN_TRAM",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "settings",
+                "PHI_HUY_PHAN_TRAM"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"value\":20}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('giá trị mới', () => pm.expect(j.value === '20').to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Báo giá hủy lại → phí 20% = 80.000 (áp dụng ngay)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_cust}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tickets/{{p_ticket}}/cancel-quote",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets",
+                "{{p_ticket}}",
+                "cancel-quote"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('phí 80.000', () => pm.expect(j.fee_percent === 20 && j.fee === 80000).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Khôi phục phí hủy 15% → 200",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/settings/PHI_HUY_PHAN_TRAM",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "settings",
+                "PHI_HUY_PHAN_TRAM"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"value\":15}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tham số ngoài khoảng cho phép → 400",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/settings/PHI_HUY_PHAN_TRAM",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "settings",
+                "PHI_HUY_PHAN_TRAM"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"value\":101}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tham số không tồn tại → 404",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/settings/KHONG_CO",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "settings",
+                "KHONG_CO"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"value\":1}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Khách không xem được tham số → 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_cust}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/settings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "settings"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đổi SĐT: số mới trùng số hiện tại → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_acc}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/phone/otp",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "phone",
+                "otp"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"new_phone\":\"{{ph_acc}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đổi SĐT: số mới đã có tài khoản khác → 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_acc}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/phone/otp",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "phone",
+                "otp"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"new_phone\":\"{{ph_cust}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đổi SĐT: không đăng nhập → 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/phone/otp",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "phone",
+                "otp"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"new_phone\":\"{{ph_acc_new}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đổi SĐT: gửi OTP tới số mới → 200",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_acc}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/phone/otp",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "phone",
+                "otp"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"new_phone\":\"{{ph_acc_new}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('otp_phone', j.mock_otp);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đổi SĐT: sai mật khẩu → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_acc}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/phone/change",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "phone",
+                "change"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"new_phone\":\"{{ph_acc_new}}\",\"otp\":\"{{otp_phone}}\",\"password\":\"saimatkhau1\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đổi SĐT: OTP sai → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_acc}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/phone/change",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "phone",
+                "change"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"new_phone\":\"{{ph_acc_new}}\",\"otp\":\"000000\",\"password\":\"matkhaumoi8\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đổi SĐT: thành công → 200, cấp token mới",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_acc}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/phone/change",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "phone",
+                "change"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"new_phone\":\"{{ph_acc_new}}\",\"otp\":\"{{otp_phone}}\",\"password\":\"matkhaumoi8\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('tok_acc_old', pm.collectionVariables.get('tok_acc'));",
+                  "pm.collectionVariables.set('tok_acc', j.access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đổi SĐT: phiên cũ bị thu hồi → 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_acc_old}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đổi SĐT: token mới thấy số mới",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_acc}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('số mới', () => pm.expect(j.phone === pm.collectionVariables.get('ph_acc_new')).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đổi SĐT: số cũ không đăng nhập được nữa → 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"phone\":\"{{ph_acc}}\",\"password\":\"matkhaumoi8\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đổi SĐT: đăng nhập bằng số mới → 200",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"phone\":\"{{ph_acc_new}}\",\"password\":\"matkhaumoi8\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));"
                 ]
               }
             }

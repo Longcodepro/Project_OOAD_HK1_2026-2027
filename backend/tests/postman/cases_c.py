@@ -1138,3 +1138,65 @@ def f_system():
         Req("Route không tồn tại → 404", "GET", "/khong-co-route", expect=404),
     )
     return f
+
+
+# ---------- 16. Bổ sung: đổi lịch/đổi xe, hoàn tiền muộn, tham số hệ thống, đổi SĐT ----------
+def f_extras():
+    f = Folder("16. Đổi lịch & đổi xe, hoàn tiền muộn, tham số hệ thống, đổi SĐT")
+    f.add(
+        # --- đổi lịch / đổi xe khi đã bán vé ---
+        *mk_trip("e", 26, 8, 300000, n_seats=6),
+        *buy_online("e", [1, 6], "tok_cust", "e_order", "e_ticket"),
+        Req("Đổi giờ chuyến đã bán vé → 200, báo SMS 2 vé", "PATCH", "/admin/trips/@{e_trip}", tok="tok_admin", body='{"departure_time":"09:30"}', expect=200,
+            tests=[js("báo 2 hành khách", "j.notified_passengers === 2"), js("giờ mới", "j.departure_time === '09:30:00'")]),
+        Req("Chỉ đổi ghi chú → không báo ai", "PATCH", "/admin/trips/@{e_trip}", tok="tok_admin", body='{"note":"Đón sớm 15 phút"}', expect=200, tests=[js("không báo", "j.notified_passengers === 0")]),
+        Req("Đổi sang xe nhỏ (4 ghế) khi ghế A06 đang bán → 400 nêu ghế thiếu", "PATCH", "/admin/trips/@{e_trip}", tok="tok_admin", body='{"vehicle_id":@{veh_small}}', expect=400,
+            tests=[js("nêu ghế A06", "j.detail.includes('A06')")]),
+        Req("Tạo xe lớn thứ hai (24 ghế) để đổi", "POST", "/admin/vehicles", tok="tok_admin", expect=201,
+            body='{"plate":"T@{rid}X","vehicle_type_id":@{vtype_id},"layout":{"floors":1,"rows":6,"seats_per_row":4}}', tests=[setv("veh_big2", "j.id")]),
+        Req("Đổi sang xe lớn thứ hai khi đã bán vé → 200, báo SMS", "PATCH", "/admin/trips/@{e_trip}", tok="tok_admin", body='{"vehicle_id":@{veh_big2}}', expect=200,
+            tests=[js("báo 2 vé, vẫn 22 ghế trống", "j.notified_passengers === 2 && j.available_seats === 22")]),
+        Req("Vé vẫn giữ đúng mã ghế trên xe mới", "GET", "/orders/@{e_order}", tok="tok_cust", expect=200,
+            tests=[js("ghế A01 và A06, biển số mới", "j.tickets.map(t => t.seat_code).sort().join() === 'A01,A06' && j.tickets[0].plate === 'T' + pm.collectionVariables.get('rid') + 'X'")]),
+        # --- hoàn tiền khi tiền về muộn ---
+        *mk_trip("l", 28, 8, 250000, n_seats=3),
+        hold("Quầy giữ ghế cho khách quét VietQR", "tok_clerk", "l", [1], expect=200),
+        Req("Lập phiếu quầy", "POST", "/counter/orders", tok="tok_clerk", body=order_body("l", [1], name="Khách", phone="0922222222"), expect=201, tests=[setv("l_order", "j.id")]),
+        Req("Chọn VietQR → chờ thanh toán", "POST", "/orders/@{l_order}/pay", tok="tok_clerk", body='{"method":"VIETQR"}', expect=200,
+            tests=[setv("l_txn", "j.order.payments[0].transaction_id")]),
+        Req("Khách đổi ý trả tiền mặt → đơn thanh toán xong, mã VietQR bị hủy", "POST", "/orders/@{l_order}/pay", tok="tok_clerk", body='{"method":"TIEN_MAT"}', expect=200, tests=[js("thành công", "j.result === 'THANH_CONG'")]),
+        Req("Cổng báo tiền VietQR về muộn → đơn vẫn hợp lệ, tự hoàn khoản VietQR", "POST", "/payments/webhook", body='{"transaction_id":"@{l_txn}","status":"SUCCESS"}', expect=200,
+            pre=HDR, tests=[js("đơn vẫn đã thanh toán", "j.status === 'DA_THANH_TOAN'")]),
+        Req("Admin thấy lệnh hoàn THANH_TOAN_QUA_HAN đã hoàn xong", "GET", "/admin/orders/@{l_order}", tok="tok_admin", expect=200,
+            tests=[js("1 lệnh hoàn 250.000, không phí", "j.refunds.length === 1 && j.refunds[0].reason === 'THANH_TOAN_QUA_HAN' && j.refunds[0].amount === 250000 && j.refunds[0].fee === 0"),
+                   js("đã hoàn", "j.refunds[0].status === 'DA_HOAN' && j.refunds[0].transaction_id.startsWith('RF-')")]),
+        Req("Webhook báo lại lần hai → không hoàn thêm lần nữa", "POST", "/payments/webhook", body='{"transaction_id":"@{l_txn}","status":"SUCCESS"}', expect=200, pre=HDR,
+            tests=[js("vẫn 1 thanh toán hủy→thành công", "j.payments.length === 2")]),
+        Req("Chi tiết đơn: vẫn chỉ 1 lệnh hoàn", "GET", "/admin/orders/@{l_order}", tok="tok_admin", expect=200, tests=[js("1 lệnh", "j.refunds.length === 1")]),
+        # --- tham số hệ thống ---
+        *mk_trip("p", 30, 8, 400000, n_seats=3),
+        *buy_online("p", [1], "tok_cust", "p_order", "p_ticket"),
+        Req("Tham số hệ thống: Admin xem danh sách → 200", "GET", "/admin/settings", tok="tok_admin", expect=200,
+            tests=[js("đủ tham số", "['THOI_GIAN_GIU_CHO_PHUT','PHI_HUY_PHAN_TRAM','DANG_NHAP_SAI_TOI_DA','OTP_HIEU_LUC_GIAY'].every(n => j.some(s => s.name === n))")]),
+        Req("Báo giá hủy với phí 15% → 60.000", "GET", "/tickets/@{p_ticket}/cancel-quote", tok="tok_cust", expect=200, tests=[js("phí 60.000", "j.fee === 60000")]),
+        Req("Admin đổi phí hủy sang 20% → 200", "PATCH", "/admin/settings/PHI_HUY_PHAN_TRAM", tok="tok_admin", body='{"value":20}', expect=200, tests=[js("giá trị mới", "j.value === '20'")]),
+        Req("Báo giá hủy lại → phí 20% = 80.000 (áp dụng ngay)", "GET", "/tickets/@{p_ticket}/cancel-quote", tok="tok_cust", expect=200, tests=[js("phí 80.000", "j.fee_percent === 20 && j.fee === 80000")]),
+        Req("Khôi phục phí hủy 15% → 200", "PATCH", "/admin/settings/PHI_HUY_PHAN_TRAM", tok="tok_admin", body='{"value":15}', expect=200),
+        Req("Tham số ngoài khoảng cho phép → 400", "PATCH", "/admin/settings/PHI_HUY_PHAN_TRAM", tok="tok_admin", body='{"value":101}', expect=400),
+        Req("Tham số không tồn tại → 404", "PATCH", "/admin/settings/KHONG_CO", tok="tok_admin", body='{"value":1}', expect=404),
+        Req("Khách không xem được tham số → 403", "GET", "/admin/settings", tok="tok_cust", expect=403),
+        # --- đổi số điện thoại ---
+        Req("Đổi SĐT: số mới trùng số hiện tại → 400", "POST", "/auth/phone/otp", tok="tok_acc", body='{"new_phone":"@{ph_acc}"}', expect=400),
+        Req("Đổi SĐT: số mới đã có tài khoản khác → 409", "POST", "/auth/phone/otp", tok="tok_acc", body='{"new_phone":"@{ph_cust}"}', expect=409),
+        Req("Đổi SĐT: không đăng nhập → 401", "POST", "/auth/phone/otp", body='{"new_phone":"@{ph_acc_new}"}', expect=401),
+        Req("Đổi SĐT: gửi OTP tới số mới → 200", "POST", "/auth/phone/otp", tok="tok_acc", body='{"new_phone":"@{ph_acc_new}"}', expect=200, tests=[setv("otp_phone", "j.mock_otp")]),
+        Req("Đổi SĐT: sai mật khẩu → 400", "POST", "/auth/phone/change", tok="tok_acc", body='{"new_phone":"@{ph_acc_new}","otp":"@{otp_phone}","password":"saimatkhau1"}', expect=400),
+        Req("Đổi SĐT: OTP sai → 400", "POST", "/auth/phone/change", tok="tok_acc", body='{"new_phone":"@{ph_acc_new}","otp":"000000","password":"matkhaumoi8"}', expect=400),
+        Req("Đổi SĐT: thành công → 200, cấp token mới", "POST", "/auth/phone/change", tok="tok_acc", body='{"new_phone":"@{ph_acc_new}","otp":"@{otp_phone}","password":"matkhaumoi8"}', expect=200,
+            tests=[setv("tok_acc_old", "pm.collectionVariables.get('tok_acc')"), setv("tok_acc", "j.access_token")]),
+        Req("Đổi SĐT: phiên cũ bị thu hồi → 401", "GET", "/auth/me", tok="tok_acc_old", expect=401),
+        Req("Đổi SĐT: token mới thấy số mới", "GET", "/auth/me", tok="tok_acc", expect=200, tests=[js("số mới", "j.phone === pm.collectionVariables.get('ph_acc_new')")]),
+        Req("Đổi SĐT: số cũ không đăng nhập được nữa → 401", "POST", "/auth/login", body='{"phone":"@{ph_acc}","password":"matkhaumoi8"}', expect=401),
+        Req("Đổi SĐT: đăng nhập bằng số mới → 200", "POST", "/auth/login", body='{"phone":"@{ph_acc_new}","password":"matkhaumoi8"}', expect=200),
+    )
+    return f

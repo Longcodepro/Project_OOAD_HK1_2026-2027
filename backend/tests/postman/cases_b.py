@@ -203,14 +203,10 @@ pm.collectionVariables.set('tr_date_empty', day(11));
             body='{"departure_time":"12:10"}',
             expect=409,
         ),
-        Req(
-            "Sửa chuyến: đổi xe → 400",
-            "PATCH",
-            "/admin/trips/@{tr_trip}",
-            tok="tok_admin",
-            body='{"vehicle_id":@{veh_small}}',
-            expect=400,
-        ),
+        Req("Sửa chuyến: đổi sang xe nhỏ (chưa bán vé) → 200, sơ đồ ghế dựng lại còn 4 ghế", "PATCH", "/admin/trips/@{tr_trip}", tok="tok_admin", body='{"vehicle_id":@{veh_small}}', expect=200,
+            tests=[js("4 ghế, biển số xe nhỏ", "j.total_seats === 4 && j.plate === 'T' + pm.collectionVariables.get('rid') + 'B'"), js("chưa có vé nên không báo ai", "j.notified_passengers === 0")]),
+        Req("Sửa chuyến: đổi lại xe lớn → 200, 24 ghế", "PATCH", "/admin/trips/@{tr_trip}", tok="tok_admin", body='{"vehicle_id":@{veh_big}}', expect=200, tests=[js("24 ghế", "j.total_seats === 24")]),
+        Req("Sửa chuyến: xe không tồn tại → 404", "PATCH", "/admin/trips/@{tr_trip}", tok="tok_admin", body='{"vehicle_id":999999}', expect=404),
         Req(
             "Cập nhật giá chuyến → 200",
             "PATCH",

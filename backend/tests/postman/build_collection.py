@@ -211,6 +211,7 @@ FOLDERS = [
     f_adminusers,
     f_reports,
     f_system,
+    f_extras,
 ]  # noqa: F821
 
 DESC = """Bộ test API cho backend đặt vé xe khách. Mỗi thư mục = một chức năng (use case), mỗi request = một trường hợp.

@@ -1,6 +1,6 @@
 # Bộ test API cho Postman
 
-`OOAD_API_Tests.postman_collection.json`: **349 request, 536 khẳng định**, chia 16 thư mục (mỗi chức năng một thư mục, mỗi request là một trường hợp test, tên request ghi rõ kết quả mong đợi, ví dụ "Hủy vé còn > 24 giờ → hoàn 340.000, phí 60.000").
+`OOAD_API_Tests.postman_collection.json`: **396 request, 605 khẳng định**, chia 17 thư mục (mỗi chức năng một thư mục, mỗi request là một trường hợp test, tên request ghi rõ kết quả mong đợi, ví dụ "Hủy vé còn > 24 giờ → hoàn 340.000, phí 60.000").
 
 ## Dùng trong Postman
 1. Chạy backend kèm dữ liệu mẫu: `docker compose up -d --build mysql backend` (tự tạo bảng và nạp dữ liệu, xem `backend/README.md`).
@@ -39,5 +39,6 @@ Biến trong chuỗi viết `@{ten_bien}` (thành `{{ten_bien}}` của Postman).
 | 13 | UC16: tài khoản, phân quyền | 28 |
 | 14 | UC17: thống kê | 11 |
 | 15 | Hệ thống: health, Swagger, phân trang | 9 |
+| 16 | Đổi lịch/đổi xe, hoàn tiền muộn, tham số hệ thống, đổi SĐT | 38 |
 
 (Một phần request mỗi thư mục là bước chuẩn bị dữ liệu, tên bắt đầu bằng "Chuẩn bị".)
