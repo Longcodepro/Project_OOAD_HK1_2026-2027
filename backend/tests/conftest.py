@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -15,11 +17,21 @@ from app.presentation.deps import get_db
 PASSWORD = "matkhau123"
 
 
-@pytest.fixture
-def client():
-    engine = create_engine(
+def _engine():
+    """Mặc định chạy trên SQLite trong RAM. Đặt TEST_DATABASE_URL để chạy cùng bộ test trên MySQL thật."""
+    url = os.environ.get("TEST_DATABASE_URL")
+    if url:
+        engine = create_engine(url)
+        Base.metadata.drop_all(engine)
+        return engine
+    return create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
+
+
+@pytest.fixture
+def client():
+    engine = _engine()
     Base.metadata.create_all(engine)
     Session = sessionmaker(engine, expire_on_commit=False)
     with Session() as db:
@@ -35,6 +47,8 @@ def client():
     c.session_factory = Session  # để test chuẩn bị/đọc dữ liệu trực tiếp
     yield c
     app.dependency_overrides.clear()
+    if os.environ.get("TEST_DATABASE_URL"):
+        engine.dispose()
 
 
 _hasher = Argon2Hasher()

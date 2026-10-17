@@ -42,6 +42,19 @@ Hoặc từ gốc project: `docker compose up --build` (cần file `.env`, xem `
 
 Xuất OpenAPI để import vào Postman: `http://localhost:8000/openapi.json`.
 
+## Chạy thử với dữ liệu mẫu
+
+```bash
+docker compose up -d mysql backend            # từ thư mục gốc project
+docker compose exec backend alembic upgrade head
+docker compose exec backend python -m app.seed   # tài khoản + xe + tuyến + chuyến 7 ngày tới + mã giảm giá
+```
+
+Swagger: http://localhost:8000/docs. Tài khoản mẫu: Admin `0900000000 / Admin12345`, nhân viên quầy `0900000001 / Staff12345`, khách `0900000002 / Khach12345`.
+
+Chạy bộ test trên MySQL thật (mặc định chạy SQLite trong RAM, nhanh hơn): tạo DB rỗng `ooad_test` rồi
+`TEST_DATABASE_URL="mysql+pymysql://user:pass@127.0.0.1:3306/ooad_test?charset=utf8mb4" pytest`.
+
 ## Database và migration
 
 ```bash
@@ -56,6 +69,11 @@ Tên trong code là tiếng Anh, ánh xạ với `docs/rdm/RDM.md`:
 | `roles` | VaiTro |
 | `accounts` | TaiKhoan (`phone`=SDT, `token_version`=PhienBanToken, `failed_login_count`=SoLanDangNhapSai, `locked_until`=KhoaDangNhapDen) |
 | `otp_codes` | OtpXacThuc (`code_hash`=MaXacThucBam, `wrong_count`=SoLanSai) |
+| `vehicle_types`, `vehicles`, `seats` | LoaiXe, Xe, Ghe |
+| `routes`, `trips`, `stops`, `trip_seats` | TuyenXe, ChuyenXe, DiemDonTra, GheChuyen |
+| `coupons`, `settings` | MaGiamGia, ThamSo |
+| `orders`, `counter_sales`, `tickets`, `payments`, `refunds` | DonDatVe, BanVeQuay, VeXe, ThanhToan, HoanTien |
+| `activity_logs` | NhatKyHoatDong |
 
 ## Chức năng đã có
 
