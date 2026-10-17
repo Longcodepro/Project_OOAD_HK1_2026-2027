@@ -1,34 +1,36 @@
 # Backend — OOAD Bus Ticket API
 
-Đây mới là **khung thư mục** (setup trước khi code) — CHƯA có code thật. Mỗi thư mục con trong `app/` chỉ có 1 file ví dụ, nội dung chỉ là comment mô tả sau này thư mục đó sẽ chứa những file gì. Chưa chạy được (`docker compose up` sẽ lỗi vì `app/main.py` chưa có `app = FastAPI(...)` thật).
+FastAPI + SQLAlchemy 2 + Alembic + MySQL 8, theo Clean Architecture. Hiện mới có khung 4 tầng và endpoint `GET /health`.
 
 ## Cấu trúc
 
 ```
 backend/
 ├── Dockerfile
-├── requirements.txt
-├── .dockerignore
-└── app/
-    ├── main.py              # entry point — sẽ tạo FastAPI app + đăng ký router ở đây
-    ├── core/
-    │   └── config.py        # sẽ có: config.py (đọc .env), database.py (engine, session)
-    ├── models/
-    │   └── example_entity.py  # mỗi entity 1 file, ví dụ: bus_route.py, trip.py, seat.py, booking.py...
-    ├── api/
-    │   ├── deps.py           # dependency dùng chung (session DB, auth...)
-    │   └── routers/
-    │       └── example_router.py  # mỗi resource 1 file, ví dụ: customers.py, trips.py, bookings.py...
-    └── services/
-        └── example_service.py  # business logic thật (BR01 tạm khóa ghế, BR04 hủy vé...)
-tests/
-└── test_example.py           # sẽ có: test_health.py, test_bookings.py...
+├── requirements.txt         # chạy production
+├── requirements-dev.txt     # thêm pytest, httpx, ruff
+├── app/
+│   ├── main.py              # tạo FastAPI app, đăng ký router
+│   ├── config.py            # Settings đọc .env (DB, JWT)
+│   ├── domain/              # entity (dataclass thuần), quy tắc nghiệp vụ, không phụ thuộc framework
+│   ├── application/         # use case (UC01..UC23), cổng (interface) repository
+│   ├── infrastructure/      # SQLAlchemy, repository, Alembic, JWT, mock thanh toán/SMS
+│   └── presentation/        # router, schema request/response, dependency
+└── tests/
 ```
 
-## Công nghệ đã chốt (chưa cài đặt/code)
-FastAPI + SQLModel + MySQL (qua `pymysql`) — xem `requirements.txt`, `Dockerfile`, `../docker-compose.yml`, `../.env.example`.
+Quy ước: tầng trong không import tầng ngoài (`domain` ← `application` ← `infrastructure`/`presentation`).
 
-## Bước tiếp theo (khi bắt đầu code thật)
-1. Vẽ xong Class Diagram / RDM (`../Insight/06_Class_Diagram/`, `../Insight/07_Database_Design_RDM/`) để chốt tên entity/field — tránh đoán rồi phải sửa lại.
-2. Viết task cụ thể vào `../tasks/` (xem `../AGENTS.md`) cho từng phần: models, routers, services...
-3. Sau khi có code thật, chạy `docker compose up --build` từ gốc project để test, rồi export `contracts/openapi.json` (xem `../contracts/README.md`).
+## Chạy thử
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt
+pytest
+ruff check . && ruff format --check .
+uvicorn app.main:app --reload    # Swagger: http://localhost:8000/docs
+```
+
+Hoặc từ gốc project: `docker compose up --build` (cần file `.env`, xem `../.env.example`).
+
+Xuất OpenAPI để import vào Postman: `http://localhost:8000/openapi.json`.
