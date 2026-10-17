@@ -115,6 +115,7 @@ def get_booking_service(db: Session = Depends(get_db)) -> BookingService:
         SqlCouponRepository(db),
         MockPaymentGateway(),
         MockSmsSender(),
+        SqlRefundRepository(db),
     )
 
 

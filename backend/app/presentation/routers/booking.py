@@ -121,4 +121,4 @@ def payment_webhook(
     """Cổng thanh toán (giả) báo kết quả giao dịch đang xử lý. Gọi lại nhiều lần vẫn an toàn."""
     if x_gateway_key != settings.gateway_key:
         raise Forbidden("Sai khóa cổng thanh toán")
-    return order_out(svc, svc.handle_webhook(body.transaction_id, body.status))
+    return order_out(svc, svc.handle_webhook(body.transaction_id, body.status, body.simulate))

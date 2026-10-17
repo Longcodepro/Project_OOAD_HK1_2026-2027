@@ -163,6 +163,7 @@ def seed_bookings(db: Session) -> int:
         SqlCouponRepository(db),
         MockPaymentGateway(),
         MockSmsSender(),
+        SqlRefundRepository(db),
     )
     refunds = RefundService(
         SqlBookingRepository(db),

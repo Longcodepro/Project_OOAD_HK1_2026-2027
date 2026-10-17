@@ -8,6 +8,7 @@ from app.application.ports.auth import SmsSender
 from app.application.ports.booking import BookingRepository
 from app.application.ports.coupons import CouponRepository
 from app.application.ports.payments import PaymentGateway
+from app.application.ports.refunds import RefundRepository
 from app.application.ports.trips import TripRepository
 from app.domain.clock import now_vn, utcnow
 from app.domain.entities.account import Account, Role
@@ -22,6 +23,7 @@ from app.domain.entities.booking import (
     Ticket,
     TicketStatus,
 )
+from app.domain.entities.refund import Refund, RefundMethod, RefundReason, RefundStatus
 from app.domain.entities.trip import StopKind, TripStatus
 from app.domain.rules.pricing import allocate_discount
 
@@ -53,7 +55,9 @@ class BookingService:
         coupons: CouponRepository,
         gateway: PaymentGateway,
         sms: SmsSender,
+        refunds: RefundRepository | None = None,
     ):
+        self.refunds = refunds
         self.repo = repo
         self.trips = trips
         self.coupons = coupons
@@ -261,12 +265,25 @@ class BookingService:
                 f"Ve #{t.id} {t.origin}-{t.destination} {t.departure_at:%d/%m %H:%M} ghe {t.seat_code}. Ma QR: {t.qr_code}",
             )
 
-    def handle_webhook(self, transaction_id: str, status: str) -> OrderAggregate:
-        """Cổng thanh toán báo kết quả muộn. Idempotent theo mã giao dịch: gọi lại không phát vé lần hai."""
+    def handle_webhook(
+        self, transaction_id: str, status: str, simulate: str | None = None
+    ) -> OrderAggregate:
+        """Cổng thanh toán báo kết quả muộn. Idempotent theo mã giao dịch: gọi lại không phát vé lần hai.
+
+        Tiền về khi đơn đã hết hạn (hoặc giao dịch đã bị hủy do đổi phương thức) thì tự tạo lệnh hoàn 100%.
+        """
         p = self.repo.find_payment(transaction_id)
         if p is None:
             raise NotFound("Không có giao dịch này")
         agg = self.repo.get_order(p.order_id)
+        if p.status == PaymentStatus.CANCELLED and status == "SUCCESS":
+            self.repo.set_payment(
+                p.id,
+                PaymentStatus.SUCCESS,
+                "Giao dịch đã bị hủy trước khi tiền về: tự động hoàn tiền",
+            )
+            self._refund_late_payment(agg, p, simulate)
+            return self.repo.get_order(p.order_id)
         if p.status != PaymentStatus.PROCESSING:
             return agg  # đã xử lý xong trước đó
         if status == "SUCCESS":
@@ -277,11 +294,33 @@ class BookingService:
                 self.repo.set_payment(
                     p.id,
                     PaymentStatus.SUCCESS,
-                    "Đơn đã hết hạn giữ chỗ trước khi tiền về: cần hoàn tiền thủ công",
+                    "Đơn đã hết hạn giữ chỗ trước khi tiền về: tự động hoàn tiền",
                 )
+                self._refund_late_payment(agg, p, simulate)
         else:
             self.repo.set_payment(p.id, PaymentStatus.FAILED, "Cổng báo thất bại")
         return self.repo.get_order(p.order_id)
+
+    def _refund_late_payment(self, agg: OrderAggregate, p: Payment, simulate: str | None) -> None:
+        """Hoàn 100% khoản tiền không còn đơn nào để gán. Cổng từ chối thì vào hàng đợi Admin (UC18)."""
+        if self.refunds is None or not agg.tickets:
+            return
+        res = self.gateway.refund(p.transaction_id or "", p.amount, simulate)
+        ok = res.status == "SUCCESS"
+        self.refunds.add(
+            Refund(
+                ticket_id=agg.tickets[0].id,
+                amount=p.amount,
+                fee=Decimal("0.00"),
+                method=RefundMethod.GATEWAY,
+                status=RefundStatus.DONE if ok else RefundStatus.MANUAL,
+                reason=RefundReason.LATE_PAYMENT,
+                created_at=utcnow(),
+                transaction_id=res.transaction_id if ok else None,
+                error_note=None if ok else res.message,
+                source_transaction_id=p.transaction_id,
+            )
+        )
 
     def my_orders(self, account: Account) -> list[OrderAggregate]:
         out = []

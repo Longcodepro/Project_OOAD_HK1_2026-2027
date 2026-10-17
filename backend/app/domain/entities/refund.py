@@ -17,6 +17,7 @@ class RefundStatus(StrEnum):
 class RefundReason(StrEnum):
     CUSTOMER = "KHACH_HUY_VE"
     OPERATOR = "NHA_XE_HUY_CHUYEN"
+    LATE_PAYMENT = "THANH_TOAN_QUA_HAN"  # tiền về sau khi đơn đã hết hạn hoặc giao dịch đã bị hủy
 
 
 @dataclass
@@ -31,4 +32,5 @@ class Refund:
     processed_by: int | None = None
     transaction_id: str | None = None
     error_note: str | None = None
+    source_transaction_id: str | None = None  # mã giao dịch thu tiền gốc cần hoàn
     id: int | None = None

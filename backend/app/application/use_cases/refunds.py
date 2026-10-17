@@ -142,6 +142,7 @@ class RefundService:
                 r.error_note = "Hoàn tiền mặt: chờ chi tại quầy"
         else:
             pay = self.bookings.last_success_payment(rec.ticket.order_id)
+            r.source_transaction_id = pay.transaction_id
             res = self.gateway.refund(pay.transaction_id or "", amount, simulate)
             if res.status == "SUCCESS":
                 r.transaction_id = res.transaction_id
@@ -217,9 +218,11 @@ class RefundService:
                 None,
             )  # đã chi tiền mặt
         else:
-            rec = self.bookings.get_ticket(r.ticket_id)
-            pay = self.bookings.last_success_payment(rec.ticket.order_id)
-            res = self.gateway.refund(pay.transaction_id or "", r.amount, simulate)
+            source = r.source_transaction_id
+            if source is None:  # lệnh cũ chưa ghi nguồn: lấy giao dịch thu tiền gần nhất của đơn
+                rec = self.bookings.get_ticket(r.ticket_id)
+                source = self.bookings.last_success_payment(rec.ticket.order_id).transaction_id
+            res = self.gateway.refund(source or "", r.amount, simulate)
             if res.status == "SUCCESS":
                 r.status, r.transaction_id, r.processed_by, r.error_note = (
                     RefundStatus.DONE,

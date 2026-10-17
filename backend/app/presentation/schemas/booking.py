@@ -90,3 +90,6 @@ class PayOut(BaseModel):
 class WebhookIn(BaseModel):
     transaction_id: str
     status: Literal["SUCCESS", "FAILED"]
+    simulate: Literal["fail_refund"] | None = Field(
+        default=None, description="Chỉ cho cổng giả: ép lệnh hoàn tự động bị từ chối"
+    )

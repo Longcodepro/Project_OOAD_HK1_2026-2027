@@ -190,3 +190,88 @@ def test_cancel_pending_releases_seats_and_coupon(client, make_user):
     assert client.get(f"/trips/{trip['id']}").json()["available_seats"] == 4
     with client.session_factory() as db:
         assert db.query(CouponModel).one().used == 0  # lượt dùng được trả lại
+
+
+def expire_all_holds(client):
+    with client.session_factory() as db:
+        db.execute(update(TripSeatModel).values(hold_until=utcnow() - timedelta(seconds=1)))
+        db.commit()
+
+
+def test_late_payment_after_expiry_is_refunded_automatically(client, make_user):
+    admin, trip, seats = world(client, make_user)
+    _, h = make_user(Role.CUSTOMER)
+    hold(client, h, trip["id"], seats[:1])
+    oid = order(client, h, trip, seats[:1]).json()["id"]
+    txn = client.post(f"/orders/{oid}/pay", headers=h, json={"method": "VIETQR"}).json()["order"][
+        "payments"
+    ][0]["transaction_id"]
+    expire_all_holds(client)  # khách quét QR quá chậm: giữ chỗ đã hết hạn
+    key = {"X-Gateway-Key": "mock-gateway-key"}
+    r = client.post(
+        "/payments/webhook", headers=key, json={"transaction_id": txn, "status": "SUCCESS"}
+    ).json()
+    assert r["status"] == "THAT_BAI" and r["tickets"][0]["status"] == "DA_HUY"  # không phát vé
+    detail = client.get(f"/admin/orders/{oid}", headers=admin).json()
+    refund = detail["refunds"][0]
+    assert (
+        refund["reason"] == "THANH_TOAN_QUA_HAN"
+        and refund["amount"] == 300000
+        and refund["fee"] == 0
+    )
+    assert refund["status"] == "DA_HOAN" and refund["transaction_id"].startswith("RF-")
+    again = client.post(
+        "/payments/webhook", headers=key, json={"transaction_id": txn, "status": "SUCCESS"}
+    ).json()
+    assert again["id"] == oid
+    assert (
+        len(client.get(f"/admin/orders/{oid}", headers=admin).json()["refunds"]) == 1
+    )  # gọi lại không hoàn hai lần
+
+
+def test_late_payment_refund_rejected_goes_to_admin_queue_and_retries_original_txn(
+    client, make_user
+):
+    admin, trip, seats = world(client, make_user)
+    _, h = make_user(Role.CUSTOMER)
+    hold(client, h, trip["id"], seats[:1])
+    oid = order(client, h, trip, seats[:1]).json()["id"]
+    txn = client.post(f"/orders/{oid}/pay", headers=h, json={"method": "VIETQR"}).json()["order"][
+        "payments"
+    ][0]["transaction_id"]
+    expire_all_holds(client)
+    client.post(
+        "/payments/webhook",
+        headers={"X-Gateway-Key": "mock-gateway-key"},
+        json={"transaction_id": txn, "status": "SUCCESS", "simulate": "fail_refund"},
+    )
+    queue = client.get("/admin/refunds", headers=admin).json()
+    assert queue[0]["status"] == "CHO_XU_LY_THU_CONG" and queue[0]["reason"] == "THANH_TOAN_QUA_HAN"
+    done = client.post(f"/admin/refunds/{queue[0]['id']}/retry", headers=admin).json()
+    assert done["status"] == "DA_HOAN" and done["transaction_id"].startswith("RF-")
+
+
+def test_late_payment_on_cancelled_vietqr_after_switching_to_cash_is_refunded(client, make_user):
+    admin, trip, seats = world(client, make_user)
+    _, clerk = make_user(Role.TICKET_CLERK)
+    hold(client, clerk, trip["id"], seats[:1])
+    oid = client.post(
+        "/counter/orders", headers=clerk, json={"trip_id": trip["id"], "items": [item(seats[0])]}
+    ).json()["id"]
+    qr = client.post(f"/orders/{oid}/pay", headers=clerk, json={"method": "VIETQR"}).json()
+    txn = qr["order"]["payments"][0]["transaction_id"]
+    client.post(
+        f"/orders/{oid}/pay", headers=clerk, json={"method": "TIEN_MAT"}
+    )  # khách đổi sang tiền mặt, mã QR cũ bị hủy
+    r = client.post(
+        "/payments/webhook",
+        headers={"X-Gateway-Key": "mock-gateway-key"},
+        json={"transaction_id": txn, "status": "SUCCESS"},
+    ).json()
+    assert r["status"] == "DA_THANH_TOAN"  # đơn vẫn hợp lệ nhờ tiền mặt
+    refund = client.get(f"/admin/orders/{oid}", headers=admin).json()["refunds"][0]
+    assert (
+        refund["reason"] == "THANH_TOAN_QUA_HAN"
+        and refund["amount"] == 300000
+        and refund["status"] == "DA_HOAN"
+    )

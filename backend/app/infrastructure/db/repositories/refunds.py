@@ -15,6 +15,7 @@ def _r(m: RefundModel) -> Refund:
         reason=RefundReason(m.reason),
         created_at=m.created_at,
         processed_by=m.processed_by,
+        source_transaction_id=m.source_transaction_id,
         transaction_id=m.transaction_id,
         error_note=m.error_note,
         id=m.id,
@@ -36,6 +37,7 @@ class SqlRefundRepository:
             reason=r.reason,
             transaction_id=r.transaction_id,
             error_note=r.error_note,
+            source_transaction_id=r.source_transaction_id,
             created_at=r.created_at,
         )
         self.db.add(m)

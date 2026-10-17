@@ -20,4 +20,5 @@ class RefundModel(Base):
     reason: Mapped[str] = mapped_column(String(30))
     transaction_id: Mapped[str | None] = mapped_column(String(100))
     error_note: Mapped[str | None] = mapped_column(String(255))
+    source_transaction_id: Mapped[str | None] = mapped_column(String(100))
     created_at: Mapped[datetime] = mapped_column(index=True)
