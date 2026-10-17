@@ -25,7 +25,7 @@ class TripModel(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     route_id: Mapped[int] = mapped_column(ForeignKey("routes.id"))
     vehicle_id: Mapped[int] = mapped_column(ForeignKey("vehicles.id"))
-    departure_date: Mapped[date]
+    departure_date: Mapped[date] = mapped_column(index=True)  # tra cứu theo ngày
     departure_time: Mapped[time]
     price: Mapped[Decimal] = mapped_column(Numeric(15, 2))
     status: Mapped[str] = mapped_column(String(20))

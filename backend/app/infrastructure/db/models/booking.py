@@ -14,7 +14,7 @@ class OrderModel(Base):
     account_id: Mapped[int | None] = mapped_column(ForeignKey("accounts.id"))
     coupon_id: Mapped[int | None] = mapped_column(ForeignKey("coupons.id"))
     channel: Mapped[str] = mapped_column(String(20))
-    created_at: Mapped[datetime]
+    created_at: Mapped[datetime] = mapped_column(index=True)
     total: Mapped[Decimal] = mapped_column(Numeric(15, 2))
     discount: Mapped[Decimal] = mapped_column(Numeric(15, 2))
     status: Mapped[str] = mapped_column(String(30))
@@ -52,7 +52,7 @@ class TicketModel(Base):
     pickup_stop_id: Mapped[int | None] = mapped_column(ForeignKey("stops.id"))
     dropoff_stop_id: Mapped[int | None] = mapped_column(ForeignKey("stops.id"))
     passenger_name: Mapped[str] = mapped_column(String(100))
-    passenger_phone: Mapped[str] = mapped_column(String(15))
+    passenger_phone: Mapped[str] = mapped_column(String(15), index=True)  # tra cứu vé theo SĐT
     qr_code: Mapped[str | None] = mapped_column(String(100), unique=True)
     original_price: Mapped[Decimal] = mapped_column(Numeric(15, 2))
     discount: Mapped[Decimal] = mapped_column(Numeric(15, 2))
@@ -70,7 +70,7 @@ class PaymentModel(Base):
     method: Mapped[str] = mapped_column(String(50))
     amount: Mapped[Decimal] = mapped_column(Numeric(15, 2))
     transaction_id: Mapped[str | None] = mapped_column(String(100), index=True)
-    paid_at: Mapped[datetime]
+    paid_at: Mapped[datetime] = mapped_column(index=True)  # báo cáo theo kỳ
     status: Mapped[str] = mapped_column(String(30))
     note: Mapped[str | None] = mapped_column(String(255))
 
