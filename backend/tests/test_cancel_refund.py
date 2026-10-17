@@ -150,7 +150,7 @@ def test_operator_cancels_trip_refunds_everyone_100_percent(client, make_user):
     assert client.get(f"/orders/{online['id']}", headers=cust).json()["status"] == "DA_HUY"
     assert (
         client.post(
-            "/trips/%d/hold" % trip["id"], headers=cust, json={"seat_ids": [seats[0]]}
+            f"/trips/{trip['id']}/hold", headers=cust, json={"seat_ids": [seats[0]]}
         ).status_code
         == 400
     )  # ngừng bán
