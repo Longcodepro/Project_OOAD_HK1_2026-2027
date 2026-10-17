@@ -4,6 +4,10 @@ CLAUDE.md
 AGENTS.md
 tasks/
 
+# Claude Code self-managed task/report notes (self-work, not orchestrator/worker split).
+# Local only — not part of the project deliverable, do not push to GitHub.
+MyDocs/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
