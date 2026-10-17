@@ -1,12 +1,15 @@
 # ĐẶC TẢ USE CASE — HỆ THỐNG ĐẶT VÉ XE KHÁCH TRỰC TUYẾN
 
 > Tài liệu này mô tả toàn bộ sơ đồ Use Case của đồ án, viết để AI đọc và sinh code.
-> Nguồn gốc: file `UseCase_DatVeXeKhach.drawio` (17 sơ đồ). Mọi thay đổi phải sửa ở file
+> Nguồn gốc: file `UseCase_DatVeXeKhach.drawio` (18 sơ đồ). Mọi thay đổi phải sửa ở file
 > draw.io trước, rồi cập nhật lại tài liệu này.
 
-- **Phiên bản:** 2026-10-07
-- **Số sơ đồ:** 17 (16 sơ đồ chức năng + 1 sơ đồ tổng quát)
+- **Phiên bản:** 2026-10-17 (rà soát chéo với BFD, Đặc tả, Sequence)
+- **Số sơ đồ:** 18 (17 sơ đồ chức năng + 1 sơ đồ tổng quát)
 - **Phạm vi:** website đặt vé xe khách liên tỉnh, luồng mua vé là trọng tâm
+- **Mã UC:** mã `(UCxx)` ghi sau tên mỗi mục 1–16 khớp đúng với mã dùng ở Class Diagram
+  (`docs/class/*.jpg`) và Sequence Diagram (`docs/sequence/Sequence_diagram.md`). Không có
+  UC03 — use case này đã bị gộp vào UC02 từ trước, chủ ý bỏ số.
 
 ---
 
@@ -47,9 +50,9 @@ Quy ước bổ sung:
 
 ---
 
-## 3. CHI TIẾT 17 SƠ ĐỒ
+## 3. CHI TIẾT 18 SƠ ĐỒ
 
-### 1. Đăng nhập - Đăng xuất
+### 1. Đăng nhập - Đăng xuất (UC09)
 
 **Actor:** `KHÁCH HÀNG`, `NHÂN VIÊN BÁN VÉ`, `ADMIN`
 
@@ -68,7 +71,7 @@ Quy ước bổ sung:
 - `ADMIN` → Đăng xuất
 
 
-### 2. Đăng ký tài khoản
+### 2. Đăng ký tài khoản (UC08)
 
 **Actor:** `KHÁCH HÀNG`, `DỊCH VỤ SMS`
 
@@ -89,7 +92,7 @@ Quy ước bổ sung:
 | Đăng ký tài khoản | `«include»` | Xác thực số điện thoại bằng OTP |
 
 
-### 3. Khôi phục mật khẩu
+### 3. Khôi phục mật khẩu (UC10)
 
 **Actor:** `KHÁCH HÀNG`, `DỊCH VỤ SMS`
 
@@ -110,7 +113,7 @@ Quy ước bổ sung:
 | Khôi phục mật khẩu | `«include»` | Xác thực số điện thoại bằng OTP |
 
 
-### 4. Đổi mật khẩu
+### 4. Đổi mật khẩu (UC12)
 
 **Actor:** `KHÁCH HÀNG`, `NHÂN VIÊN BÁN VÉ`, `ADMIN`
 
@@ -125,7 +128,7 @@ Quy ước bổ sung:
 - `ADMIN` → Đổi mật khẩu
 
 
-### 5. Quản lý thông tin cá nhân
+### 5. Quản lý thông tin cá nhân (UC11)
 
 **Actor:** `KHÁCH HÀNG`, `NHÂN VIÊN BÁN VÉ`, `ADMIN`
 
@@ -147,7 +150,7 @@ Quy ước bổ sung:
 | Cập nhật thông tin cá nhân | `«extend»` | Xem thông tin cá nhân |
 
 
-### 6. Xem lịch sử mua vé
+### 6. Xem lịch sử mua vé (UC07)
 
 **Actor:** `KHÁCH HÀNG`
 
@@ -167,7 +170,7 @@ Quy ước bổ sung:
 | Lọc lịch sử theo trạng thái vé | `«extend»` | Xem lịch sử mua vé |
 
 
-### 7. Tra cứu chuyến xe
+### 7. Tra cứu chuyến xe (UC01)
 
 **Actor:** `KHÁCH HÀNG`, `NHÂN VIÊN BÁN VÉ`
 
@@ -188,7 +191,7 @@ Quy ước bổ sung:
 | Lọc kết quả tra cứu | `«extend»` | Tra cứu chuyến xe |
 
 
-### 8. Đặt vé trực tuyến
+### 8. Đặt vé trực tuyến (UC02)
 
 **Actor:** `KHÁCH HÀNG`, `CỔNG THANH TOÁN`
 
@@ -198,8 +201,8 @@ Quy ước bổ sung:
 - Đặt vé trực tuyến
 - Giữ chỗ tạm thời
 - Thanh toán
-- Thanh toán qua Ví MoMo / ZaloPay
-- Thanh toán qua VietQR / Thẻ
+- Ví MoMo / ZaloPay
+- VietQR / Thẻ
 
 **Actor thực hiện:**
 
@@ -213,11 +216,11 @@ Quy ước bổ sung:
 | Áp dụng mã giảm giá | `«extend»` | Đặt vé trực tuyến |
 | Đặt vé trực tuyến | `«include»` | Giữ chỗ tạm thời |
 | Đặt vé trực tuyến | `«include»` | Thanh toán |
-| Thanh toán qua Ví MoMo / ZaloPay | `«extend»` | Thanh toán |
-| Thanh toán qua VietQR / Thẻ | `«extend»` | Thanh toán |
+| Ví MoMo / ZaloPay | `«extend»` | Thanh toán |
+| VietQR / Thẻ | `«extend»` | Thanh toán |
 
 
-### 9. Bán vé & in vé tại quầy
+### 9. Bán vé & in vé tại quầy (UC04)
 
 **Actor:** `NHÂN VIÊN BÁN VÉ`, `CỔNG THANH TOÁN`
 
@@ -246,7 +249,7 @@ Quy ước bổ sung:
 | Thanh toán qua VietQR | `«extend»` | Thanh toán |
 
 
-### 10. Hủy vé trực tuyến
+### 10. Hủy vé trực tuyến (UC05)
 
 **Actor:** `KHÁCH HÀNG`, `CỔNG THANH TOÁN`
 
@@ -267,7 +270,7 @@ Quy ước bổ sung:
 | Hủy vé trực tuyến | `«include»` | Hoàn tiền |
 
 
-### 11. Hủy vé tại quầy
+### 11. Hủy vé tại quầy (UC06)
 
 **Actor:** `NHÂN VIÊN BÁN VÉ`, `CỔNG THANH TOÁN`
 
@@ -296,7 +299,7 @@ Quy ước bổ sung:
 | Hoàn qua cổng thanh toán | `«extend»` | Hoàn tiền |
 
 
-### 12. Quản lý chuyến xe & lịch trình
+### 12. Quản lý chuyến xe & lịch trình (UC13)
 
 **Actor:** `ADMIN`, `CỔNG THANH TOÁN`
 
@@ -309,6 +312,8 @@ Quy ước bổ sung:
 - Tìm kiếm chuyến xe
 - Xử lý vé của chuyến bị hủy
 - Hoàn tiền
+- Hoàn qua cổng thanh toán
+- Hoàn tiền mặt
 
 **Actor thực hiện:**
 
@@ -316,7 +321,7 @@ Quy ước bổ sung:
 - `ADMIN` → Thêm chuyến xe mới
 - `ADMIN` → Sửa lịch trình chuyến xe
 - `ADMIN` → Hủy chuyến xe
-- Hoàn tiền → `CỔNG THANH TOÁN` (actor phụ)
+- Hoàn qua cổng thanh toán → `CỔNG THANH TOÁN` (actor phụ)
 
 **Quan hệ:**
 
@@ -325,9 +330,11 @@ Quy ước bổ sung:
 | Tìm kiếm chuyến xe | `«extend»` | Xem danh sách chuyến xe |
 | Xử lý vé của chuyến bị hủy | `«extend»` | Hủy chuyến xe |
 | Xử lý vé của chuyến bị hủy | `«include»` | Hoàn tiền |
+| Hoàn qua cổng thanh toán | `«extend»` | Hoàn tiền |
+| Hoàn tiền mặt | `«extend»` | Hoàn tiền |
 
 
-### 13. Quản lý xe & sơ đồ ghế
+### 13. Quản lý xe & sơ đồ ghế (UC14)
 
 **Actor:** `ADMIN`
 
@@ -355,7 +362,7 @@ Quy ước bổ sung:
 | Thêm xe mới | `«include»` | Thiết lập sơ đồ ghế |
 
 
-### 14. Quản lý giá vé & khuyến mãi
+### 14. Quản lý giá vé & khuyến mãi (UC15)
 
 **Actor:** `ADMIN`
 
@@ -381,7 +388,7 @@ Quy ước bổ sung:
 | Bật / Tắt mã giảm giá | `«extend»` | Xem danh sách mã giảm giá |
 
 
-### 15. Quản lý tài khoản & phân quyền
+### 15. Quản lý tài khoản & phân quyền (UC16)
 
 **Actor:** `ADMIN`
 
@@ -414,7 +421,7 @@ Quy ước bổ sung:
 | Cập nhật tài khoản nhân viên | `«include»` | Phân quyền vai trò |
 
 
-### 16. Thống kê & báo cáo doanh thu
+### 16. Thống kê & báo cáo doanh thu (UC17)
 
 **Actor:** `ADMIN`
 
@@ -441,13 +448,39 @@ Quy ước bổ sung:
 | Lọc thống kê | `«extend»` | Thống kê doanh thu |
 | Lọc thống kê | `«extend»` | Thống kê vé bán & vé hủy |
 | Lọc thống kê | `«extend»` | Thống kê tỷ lệ lấp đầy chỗ ngồi |
-| Lọc thống kê | `«extend»` | Xem bảng điều khiển doanh thu tổng quan |
 | Xuất báo cáo | `«extend»` | Thống kê doanh thu |
 | Xuất báo cáo | `«extend»` | Thống kê vé bán & vé hủy |
 | Xuất báo cáo | `«extend»` | Thống kê tỷ lệ lấp đầy chỗ ngồi |
 
 
-### 17. Sơ đồ tổng quát
+### 17. Quản lý đơn đặt vé (UC18)
+
+**Actor:** `ADMIN`, `CỔNG THANH TOÁN`
+
+**Use case:**
+
+- Xem danh sách đơn đặt vé
+- Tìm kiếm / Lọc đơn đặt vé
+- Xem chi tiết đơn đặt vé
+- Xử lý hoàn tiền thủ công
+- Hoàn tiền
+
+**Actor thực hiện:**
+
+- `ADMIN` → Xem danh sách đơn đặt vé
+- `ADMIN` → Xử lý hoàn tiền thủ công
+- Hoàn tiền → `CỔNG THANH TOÁN` (actor phụ)
+
+**Quan hệ:**
+
+| Từ | Quan hệ | Tới |
+|---|---|---|
+| Tìm kiếm / Lọc đơn đặt vé | `«extend»` | Xem danh sách đơn đặt vé |
+| Xem chi tiết đơn đặt vé | `«extend»` | Xem danh sách đơn đặt vé |
+| Xử lý hoàn tiền thủ công | `«include»` | Hoàn tiền |
+
+
+### 18. Sơ đồ tổng quát
 
 **Actor:** `KHÁCH HÀNG`, `NHÂN VIÊN BÁN VÉ`, `ADMIN`, `CỔNG THANH TOÁN`, `DỊCH VỤ SMS`
 
@@ -470,6 +503,7 @@ Quy ước bổ sung:
 - Quản lý giá vé & khuyến mãi
 - Quản lý tài khoản & phân quyền
 - Thống kê & báo cáo doanh thu
+- Quản lý đơn đặt vé
 - Xác thực số điện thoại bằng OTP
 - Giữ chỗ tạm thời
 - Thanh toán
@@ -504,6 +538,7 @@ Quy ước bổ sung:
 - `ADMIN` → Quản lý giá vé & khuyến mãi
 - `ADMIN` → Quản lý tài khoản & phân quyền
 - `ADMIN` → Thống kê & báo cáo doanh thu
+- `ADMIN` → Quản lý đơn đặt vé
 - Xác thực số điện thoại bằng OTP → `DỊCH VỤ SMS` (actor phụ)
 - Thanh toán → `CỔNG THANH TOÁN` (actor phụ)
 - Hoàn tiền → `CỔNG THANH TOÁN` (actor phụ)
@@ -521,6 +556,7 @@ Quy ước bổ sung:
 | Hủy vé trực tuyến | `«include»` | Hoàn tiền |
 | Hủy vé tại quầy | `«include»` | Tra cứu vé |
 | Hủy vé tại quầy | `«include»` | Hoàn tiền |
+| Quản lý đơn đặt vé | `«include»` | Hoàn tiền |
 
 ---
 
@@ -531,11 +567,11 @@ tái sử dụng, không viết trùng.
 
 | Use case | Xuất hiện ở sơ đồ | Ghi chú |
 |---|---|---|
-| Xác thực số điện thoại bằng OTP | 2, 3, 17 | Gọi `DỊCH VỤ SMS`. Dùng chung cho đăng ký và khôi phục mật khẩu |
-| Giữ chỗ tạm thời | 8, 9, 17 | Khóa ghế ~10 phút trước khi thanh toán. Dùng chung cho bán online và tại quầy |
-| Thanh toán | 8, 9, 17 | Luồng mở rộng khác nhau: online có Ví/VietQR, tại quầy có tiền mặt/VietQR |
-| Tra cứu vé | 11, 17 | Nhân viên tìm vé của khách theo mã vé / số điện thoại |
-| Hoàn tiền | 10, 11, 12, 17 | Dùng chung cho hủy vé online, hủy tại quầy, và hủy chuyến xe |
+| Xác thực số điện thoại bằng OTP | 2, 3, 18 | Gọi `DỊCH VỤ SMS`. Dùng chung cho đăng ký và khôi phục mật khẩu |
+| Giữ chỗ tạm thời | 8, 9, 18 | Khóa ghế **5 phút** trước khi thanh toán. Dùng chung cho bán online và tại quầy |
+| Thanh toán | 8, 9, 18 | Luồng mở rộng khác nhau: online có Ví/VietQR, tại quầy có tiền mặt/VietQR |
+| Tra cứu vé | 11, 18 | Nhân viên tìm vé của khách theo mã vé / số điện thoại |
+| Hoàn tiền | 10, 11, 12, 17, 18 | Dùng chung cho hủy vé online, hủy tại quầy, hủy chuyến xe và xử lý hoàn tiền thủ công của Admin |
 | Áp dụng mã giảm giá | 8, 9 | `«extend»` ở cả hai kênh bán vé |
 
 ---
@@ -590,10 +626,20 @@ Những quy tắc này đã được quyết định trong quá trình phân tí
     quản lý tài xế.
 20. Điểm đón/trả được khai báo ngay trong use case "Thêm chuyến xe mới".
 
+### Giữ chỗ, thanh toán và hủy vé (chốt 17/10/2026)
+
+21. **Giữ chỗ tạm thời = 5 phút.** Thanh toán thất bại trong thời gian giữ chỗ → cho khách thử lại hoặc đổi phương thức; hết 5 phút mà chưa trả xong → nhả ghế và hủy đơn.
+22. **Chính sách hủy vé** (online và tại quầy): chỉ hủy được khi còn **≥ 24 giờ** trước giờ khởi hành, phí **15% trên số tiền thực trả**; dưới 24 giờ hệ thống từ chối.
+23. Lệnh hoàn tiền bị từ chối → trạng thái "Chờ xử lý thủ công"; việc hủy vé vẫn có hiệu lực; Admin xử lý ở UC18.
+
+### Tài khoản
+24. **Đăng nhập bằng số điện thoại**; hệ thống **không dùng email** ở bất kỳ chức năng nào.
+25. Đổi mật khẩu: cả 3 vai trò. Khôi phục mật khẩu bằng OTP: chỉ Khách hàng; nhân viên/Admin mất mật khẩu thì Admin đặt lại (UC16).
+26. Khách vãng lai mua tại quầy: nhân viên chỉ nhập **họ tên + số điện thoại**, không tạo tài khoản; hệ thống ghi lại nhân viên bán và thời gian bán.
+27. Thanh toán tại quầy: nhân viên được **quay lại đổi phương thức** trước khi chốt đơn. Đang chọn chuyển khoản (VietQR) mà đổi sang tiền mặt thì thanh toán VietQR cũ và mã QR của nó chuyển sang "Đã hủy".
+
 ---
 
 ## 6. ĐIỂM CHƯA CHỐT
 
-| Vấn đề | Trạng thái |
-|---|---|
-| Use case "Quản lý đơn đặt vé" cho ADMIN | **Chưa quyết định** có làm hay không. Hiện chưa có trong 17 sơ đồ. |
+Hiện không còn điểm chưa chốt. *Quản lý đơn đặt vé* cho Admin đã quyết định **có làm** (UC18, sơ đồ 17): xem danh sách + tìm kiếm/lọc, xem chi tiết, xử lý hoàn tiền thủ công; không hủy đơn/vé ở use case này.
