@@ -1118,3 +1118,23 @@ pm.collectionVariables.set('rp_to', d(40));
         Req("Xuất CSV: không đăng nhập → 401", "GET", f"/admin/reports/export.csv?{q}", expect=401),
     )
     return f
+
+
+# ---------- 15. Hệ thống ----------
+def f_system():
+    f = Folder("15. Hệ thống: sức khỏe, tài liệu API, phân trang")
+    f.add(
+        Req("Health check → 200, DB đang chạy", "GET", "/health", expect=200, tests=[js("DB up", "j.status === 'ok' && j.database === 'up'")]),
+        Req("Swagger UI → 200", "GET", "/docs", expect=200),
+        Req("OpenAPI → 200, có đủ nhóm endpoint", "GET", "/openapi.json", expect=200,
+            tests=[js("có login, orders, reports", "!!j.paths['/auth/login'] && !!j.paths['/orders'] && !!j.paths['/admin/reports']"), js("nhiều endpoint", "Object.keys(j.paths).length >= 40")]),
+        Req("Phân trang: limit=2 → đúng 2 dòng, header X-Total-Count", "GET", "/admin/users?limit=2&offset=0", tok="tok_admin", expect=200,
+            tests=[js("2 dòng", "j.length === 2"), js("có tổng số", "parseInt(pm.response.headers.get('X-Total-Count')) >= 3"), setv("pg_first", "j[0].id")]),
+        Req("Phân trang: offset=1 → dòng đầu đổi", "GET", "/admin/users?limit=2&offset=1", tok="tok_admin", expect=200,
+            tests=[js("khác trang trước", "j[0].id !== pm.collectionVariables.get('pg_first')")]),
+        Req("Phân trang: limit=0 → 422", "GET", "/admin/users?limit=0", tok="tok_admin", expect=422),
+        Req("Phân trang: limit=501 → 422", "GET", "/admin/users?limit=501", tok="tok_admin", expect=422),
+        Req("Đơn quản trị có tổng số khớp bộ lọc", "GET", "/admin/orders?limit=1", tok="tok_admin", expect=200, tests=[js("1 dòng, total ≥ 1", "j.items.length === 1 && j.total >= 1")]),
+        Req("Route không tồn tại → 404", "GET", "/khong-co-route", expect=404),
+    )
+    return f

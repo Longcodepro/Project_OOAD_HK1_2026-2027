@@ -15770,6 +15770,389 @@
           ]
         }
       ]
+    },
+    {
+      "name": "15. Hệ thống: sức khỏe, tài liệu API, phân trang",
+      "description": "",
+      "item": [
+        {
+          "name": "Health check → 200, DB đang chạy",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('DB up', () => pm.expect(j.status === 'ok' && j.database === 'up').to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Swagger UI → 200",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/docs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "docs"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "OpenAPI → 200, có đủ nhóm endpoint",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/openapi.json",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "openapi.json"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('có login, orders, reports', () => pm.expect(!!j.paths['/auth/login'] && !!j.paths['/orders'] && !!j.paths['/admin/reports']).to.be.true);",
+                  "pm.test('nhiều endpoint', () => pm.expect(Object.keys(j.paths).length >= 40).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Phân trang: limit=2 → đúng 2 dòng, header X-Total-Count",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/users?limit=2&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('2 dòng', () => pm.expect(j.length === 2).to.be.true);",
+                  "pm.test('có tổng số', () => pm.expect(parseInt(pm.response.headers.get('X-Total-Count')) >= 3).to.be.true);",
+                  "pm.collectionVariables.set('pg_first', j[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Phân trang: offset=1 → dòng đầu đổi",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/users?limit=2&offset=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2"
+                },
+                {
+                  "key": "offset",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('khác trang trước', () => pm.expect(j[0].id !== pm.collectionVariables.get('pg_first')).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Phân trang: limit=0 → 422",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/users?limit=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Phân trang: limit=501 → 422",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/users?limit=501",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "501"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đơn quản trị có tổng số khớp bộ lọc",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tok_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/orders?limit=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "orders"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
+                  "pm.test('1 dòng, total ≥ 1', () => pm.expect(j.items.length === 1 && j.total >= 1).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Route không tồn tại → 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/khong-co-route",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "khong-co-route"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
+                  "pm.test('Mã HTTP là 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [
