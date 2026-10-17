@@ -16,6 +16,7 @@ from app.application.errors import (
 )
 from app.application.ports.auth import (
     AccountRepository,
+    ActivityLogger,
     OtpRepository,
     PasswordHasher,
     SmsSender,
@@ -51,6 +52,7 @@ class AuthService:
         tokens: TokenService,
         sms: SmsSender,
         rules: AuthRules,
+        logs: ActivityLogger | None = None,
     ):
         self.accounts = accounts
         self.otps = otps
@@ -58,6 +60,7 @@ class AuthService:
         self.tokens = tokens
         self.sms = sms
         self.rules = rules
+        self.logs = logs
 
     # ---- UC19: OTP dùng chung ----
     def _issue_otp(self, phone: str, purpose: OtpPurpose) -> str:
@@ -130,11 +133,15 @@ class AuthService:
             raise InvalidCredentials
         account.record_successful_login()
         self.accounts.save(account)
+        if self.logs:
+            self.logs.log(account.id, "DANG_NHAP")
         return LoginResult(self.tokens.issue(account), account.must_change_password)
 
     def logout(self, account: Account) -> None:
         account.revoke_tokens()
         self.accounts.save(account)
+        if self.logs:
+            self.logs.log(account.id, "DANG_XUAT")
 
     def authenticate(self, token: str) -> Account:
         claims = self.tokens.decode(token)

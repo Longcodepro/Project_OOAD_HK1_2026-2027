@@ -4,6 +4,7 @@ from app.config import settings
 from app.presentation.errors import register_error_handlers
 from app.presentation.routers import (
     admin_orders,
+    admin_users,
     auth,
     booking,
     cancellations,
@@ -29,6 +30,7 @@ app.include_router(counter.router)
 app.include_router(tickets.router)
 app.include_router(cancellations.router)
 app.include_router(admin_orders.router)
+app.include_router(admin_users.router)
 
 
 @app.get("/health")

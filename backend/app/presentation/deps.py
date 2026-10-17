@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.application.errors import Forbidden, InvalidToken
 from app.application.use_cases.admin_orders import AdminOrderService
+from app.application.use_cases.admin_users import AdminUserService
 from app.application.use_cases.auth import AuthRules, AuthService
 from app.application.use_cases.booking import BookingService
 from app.application.use_cases.coupons import CouponService
@@ -18,6 +19,7 @@ from app.config import settings
 from app.domain.entities.account import Account, Role
 from app.infrastructure.db.repositories.auth import (
     SqlAccountRepository,
+    SqlActivityLogger,
     SqlOtpRepository,
 )
 from app.infrastructure.db.repositories.booking import SqlBookingRepository
@@ -54,6 +56,7 @@ def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
             login_max_failures=settings.login_max_failures,
             login_lock_minutes=settings.login_lock_minutes,
         ),
+        SqlActivityLogger(db),
     )
 
 
@@ -122,3 +125,9 @@ def get_refund_service(db: Session = Depends(get_db)) -> RefundService:
 
 def get_admin_order_service(db: Session = Depends(get_db)) -> AdminOrderService:
     return AdminOrderService(SqlBookingRepository(db))
+
+
+def get_admin_user_service(db: Session = Depends(get_db)) -> AdminUserService:
+    return AdminUserService(
+        SqlAccountRepository(db), SqlActivityLogger(db), Argon2Hasher(), SqlBookingRepository(db)
+    )

@@ -59,6 +59,8 @@ Tên trong code là tiếng Anh, ánh xạ với `docs/rdm/RDM.md`:
 
 ## Chức năng đã có
 
+Tài khoản & phân quyền (UC16, Admin): `/admin/users` (danh sách + tìm kiếm, tạo nhân viên với mật khẩu tạm, đổi vai trò, `reset-password`, `lock`, `unlock`, chi tiết kèm nhật ký hoạt động). Đăng nhập/đăng xuất cũng được ghi vào nhật ký (bảng `activity_logs`).
+
 Quản lý đơn (UC18, Admin): `GET /admin/orders` (lọc theo trạng thái, kênh, ngày, SĐT, mã đơn, mã vé), `GET /admin/orders/{id}`, `GET /admin/refunds` (mặc định lệnh chờ xử lý thủ công), `POST /admin/refunds/{id}/retry`.
 
 Hủy vé & hoàn tiền (UC05, UC06, UC22, và hủy chuyến của UC13): `GET /tickets/{id}/cancel-quote`, `POST /tickets/{id}/cancel` (khách, còn ≥ 24 giờ, phí 15%), `POST /counter/tickets/{id}/cancel` (nhân viên quầy), `POST /admin/trips/{id}/cancel` (hoàn 100%). Lệnh hoàn bị cổng từ chối nằm ở trạng thái `CHO_XU_LY_THU_CONG` để Admin xử lý.

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Protocol
 
-from app.domain.entities.account import Account
+from app.domain.entities.account import Account, AccountStatus, Role
 from app.domain.entities.otp import Otp, OtpPurpose
 
 
@@ -10,6 +10,9 @@ class AccountRepository(Protocol):
     def get_by_phone(self, phone: str) -> Account | None: ...
     def add(self, account: Account) -> Account: ...
     def save(self, account: Account) -> None: ...
+    def list(
+        self, q: str | None, role: Role | None, status: AccountStatus | None
+    ) -> list[Account]: ...
 
 
 class OtpRepository(Protocol):
@@ -37,3 +40,15 @@ class TokenService(Protocol):
 class SmsSender(Protocol):
     def send_otp(self, phone: str, code: str) -> None: ...
     def send_text(self, phone: str, text: str) -> None: ...
+
+
+class ActivityLogger(Protocol):
+    def log(
+        self,
+        account_id: int,
+        action: str,
+        object_type: str | None = None,
+        object_id: int | None = None,
+        detail: str | None = None,
+    ) -> None: ...
+    def of_account(self, account_id: int, limit: int = 50): ...

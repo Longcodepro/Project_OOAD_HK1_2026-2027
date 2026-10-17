@@ -37,6 +37,20 @@ class SqlAccountRepository:
         m = self.db.scalar(select(AccountModel).where(AccountModel.phone == phone))
         return _to_entity(m) if m else None
 
+    def list(self, q, role, status) -> list[Account]:
+        stmt = (
+            select(AccountModel)
+            .join(RoleModel, RoleModel.id == AccountModel.role_id)
+            .order_by(AccountModel.id)
+        )
+        if q:
+            stmt = stmt.where(AccountModel.phone.contains(q) | AccountModel.full_name.contains(q))
+        if role:
+            stmt = stmt.where(RoleModel.name == role)
+        if status:
+            stmt = stmt.where(AccountModel.status == status)
+        return [_to_entity(m) for m in self.db.scalars(stmt).unique()]
+
     def add(self, account: Account) -> Account:
         role_id = self.db.scalar(select(RoleModel.id).where(RoleModel.name == account.role))
         m = AccountModel(
@@ -61,6 +75,7 @@ class SqlAccountRepository:
     def save(self, account: Account) -> None:
         m = self.db.get(AccountModel, account.id)
         m.password_hash = account.password_hash
+        m.role_id = self.db.scalar(select(RoleModel.id).where(RoleModel.name == account.role))
         m.full_name = account.full_name
         m.birth_date = account.birth_date
         m.address = account.address
@@ -113,3 +128,44 @@ class SqlOtpRepository:
         m.used = otp.used
         m.wrong_count = otp.wrong_count
         self.db.commit()
+
+
+class SqlActivityLogger:
+    def __init__(self, db: Session):
+        self.db = db
+
+    def log(self, account_id, action, object_type=None, object_id=None, detail=None) -> None:
+        from app.infrastructure.db.models import ActivityLogModel
+
+        self.db.add(
+            ActivityLogModel(
+                account_id=account_id,
+                action=action,
+                object_type=object_type,
+                object_id=object_id,
+                detail=detail,
+                at=utcnow(),
+            )
+        )
+        self.db.commit()
+
+    def of_account(self, account_id: int, limit: int = 50):
+        from app.domain.entities.activity import ActivityLog
+        from app.infrastructure.db.models import ActivityLogModel
+
+        stmt = (
+            select(ActivityLogModel)
+            .where(
+                (ActivityLogModel.account_id == account_id)
+                | (
+                    (ActivityLogModel.object_type == "TAI_KHOAN")
+                    & (ActivityLogModel.object_id == account_id)
+                )
+            )
+            .order_by(ActivityLogModel.id.desc())
+            .limit(limit)
+        )
+        return [
+            ActivityLog(m.account_id, m.action, m.at, m.object_type, m.object_id, m.detail, m.id)
+            for m in self.db.scalars(stmt)
+        ]
