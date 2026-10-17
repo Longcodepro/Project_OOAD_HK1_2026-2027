@@ -6,3 +6,5 @@ sqlalchemy==2.1.5
 alembic==1.20.0
 pyjwt==2.15.1
 argon2-cffi==25.1.0
+openpyxl==3.1.5
+fpdf2==2.8.9

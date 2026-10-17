@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Response
 from app.application.use_cases.reports import Report, ReportService
 from app.domain.entities.account import Role
 from app.domain.entities.booking import Channel
+from app.infrastructure.export.reports import to_pdf, to_xlsx
 from app.presentation.deps import get_report_service, require_roles
 from app.presentation.schemas.reports import ReportOut, RouteFillOut, RouteRevenueOut, TripFillOut
 
@@ -89,3 +90,40 @@ def export_csv(
             "Content-Disposition": f'attachment; filename="bao-cao-{date_from}-{date_to}.csv"'
         },
     )
+
+
+XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def _file(content: bytes, media: str, name: str) -> Response:
+    return Response(
+        content=content,
+        media_type=media,
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+    )
+
+
+@router.get("/export.xlsx")
+def export_xlsx(
+    date_from: date_type,
+    date_to: date_type,
+    route_id: int | None = None,
+    channel: Channel | None = None,
+    svc: ReportService = Depends(get_report_service),
+):
+    """Xuất báo cáo ra Excel (2 trang tính: doanh thu theo tuyến, tỷ lệ lấp đầy)."""
+    rep = svc.build(date_from, date_to, route_id, channel)
+    return _file(to_xlsx(rep), XLSX, f"bao-cao-{date_from}-{date_to}.xlsx")
+
+
+@router.get("/export.pdf")
+def export_pdf(
+    date_from: date_type,
+    date_to: date_type,
+    route_id: int | None = None,
+    channel: Channel | None = None,
+    svc: ReportService = Depends(get_report_service),
+):
+    """Xuất báo cáo ra PDF (khổ A4 ngang, tiếng Việt có dấu)."""
+    rep = svc.build(date_from, date_to, route_id, channel)
+    return _file(to_pdf(rep), "application/pdf", f"bao-cao-{date_from}-{date_to}.pdf")
