@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.application.errors import Forbidden, InvalidToken
 from app.application.use_cases.auth import AuthRules, AuthService
+from app.application.use_cases.booking import BookingService
 from app.application.use_cases.coupons import CouponService
 from app.application.use_cases.fleet import FleetService
 from app.application.use_cases.holds import SeatHoldService
@@ -16,11 +17,13 @@ from app.infrastructure.db.repositories.auth import (
     SqlAccountRepository,
     SqlOtpRepository,
 )
+from app.infrastructure.db.repositories.booking import SqlBookingRepository
 from app.infrastructure.db.repositories.coupons import SqlCouponRepository
 from app.infrastructure.db.repositories.fleet import SqlFleetRepository
 from app.infrastructure.db.repositories.holds import SqlSeatHoldRepository, SqlSettingsRepository
 from app.infrastructure.db.repositories.trips import SqlTripRepository
 from app.infrastructure.db.session import SessionLocal
+from app.infrastructure.mock.payment_gateway import MockPaymentGateway
 from app.infrastructure.mock.sms import MockSmsSender
 from app.infrastructure.security.jwt_service import JwtService
 from app.infrastructure.security.passwords import Argon2Hasher
@@ -86,3 +89,13 @@ def get_hold_service(db: Session = Depends(get_db)) -> SeatHoldService:
 
 def get_coupon_service(db: Session = Depends(get_db)) -> CouponService:
     return CouponService(SqlCouponRepository(db))
+
+
+def get_booking_service(db: Session = Depends(get_db)) -> BookingService:
+    return BookingService(
+        SqlBookingRepository(db),
+        SqlTripRepository(db),
+        SqlCouponRepository(db),
+        MockPaymentGateway(),
+        MockSmsSender(),
+    )

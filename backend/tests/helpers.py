@@ -60,3 +60,17 @@ def mk_trip(client, h, route_id, vehicle_id, day=None, at="08:00", price=350000)
     )
     assert r.status_code == 201, r.text
     return r.json()
+
+
+def hold(client, h, trip_id, seat_ids):
+    r = client.post(f"/trips/{trip_id}/hold", headers=h, json={"seat_ids": seat_ids})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def seat_ids(client, trip_id):
+    return [s["seat_id"] for s in client.get(f"/trips/{trip_id}/seats").json()]
+
+
+def item(seat_id, name="Nguyễn Văn A", phone="0912345678", **kw):
+    return {"seat_id": seat_id, "passenger_name": name, "passenger_phone": phone, **kw}

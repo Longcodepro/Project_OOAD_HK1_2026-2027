@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     mysql_port: int = 3306
     mysql_database: str = "ooad_busticket"
 
+    gateway_key: str = "mock-gateway-key"  # khóa xác thực webhook cổng thanh toán giả
     jwt_secret: str = "change-me"
     jwt_expire_minutes: int = 60  # access token sống 1 giờ
 

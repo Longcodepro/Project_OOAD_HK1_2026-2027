@@ -71,3 +71,11 @@ class SqlCouponRepository:
         )
         self.db.commit()
         return res.rowcount == 1
+
+    def release_one(self, coupon_id: int) -> None:
+        self.db.execute(
+            update(CouponModel)
+            .where(CouponModel.id == coupon_id, CouponModel.used > 0)
+            .values(used=CouponModel.used - 1)
+        )
+        self.db.commit()
