@@ -25,6 +25,7 @@ services:
       - .env
     volumes:
       - ./backend/app:/app/app
+      - ./backend/alembic:/app/alembic
     ports:
       - "8000:8000"
     depends_on:
