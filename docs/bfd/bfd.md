@@ -1,9 +1,9 @@
 ---
 tai_lieu: Sơ đồ phân rã chức năng (BFD — Business Function Diagram)
 du_an: Hệ thống đặt vé xe khách trực tuyến (đồ án OOAD)
-phien_ban: 3.0 — đồng bộ với bộ 17 sơ đồ Use Case cuối cùng
-cap_nhat: 2026-10-07
-lien_quan: [../USECASE (Markdown)/USECASE.md, ../RDM (Markdown)/rdm.md, ../RDM (Markdown)/schema.sql]
+phien_ban: 3.1 — đồng bộ với bộ 18 sơ đồ Use Case (thêm 4.6 Quản lý đơn đặt vé)
+cap_nhat: 2026-10-17
+lien_quan: [../use-case/USECASE.md, ../specs/DacTaUseCase.md, ../sequence/Sequence_diagram.md, ../rdm/RDM.md]
 ---
 
 # Sơ đồ phân rã chức năng (BFD)
@@ -26,7 +26,7 @@ Website đặt vé xe khách liên tỉnh, phục vụ 3 nhóm người dùng:
 |----------|---------|
 | Khách hàng | Tra cứu chuyến, đặt vé online, tự quản lý tài khoản và lịch sử vé, hủy vé online |
 | Nhân viên bán vé | Bán vé và in vé tại quầy, tra cứu và hủy vé hộ khách vãng lai |
-| Quản trị viên (Admin) | Quản lý xe, chuyến, giá vé, khuyến mãi, tài khoản, xem thống kê |
+| Quản trị viên (Admin) | Quản lý xe, chuyến, giá vé, khuyến mãi, tài khoản, đơn đặt vé, xem thống kê |
 
 Hai hệ thống ngoài:
 
@@ -67,7 +67,8 @@ HỆ THỐNG ĐẶT VÉ XE KHÁCH TRỰC TUYẾN
 │   ├── 4.2 Tra cứu vé
 │   ├── 4.3 Hủy vé trực tuyến
 │   ├── 4.4 Hủy vé tại quầy
-│   └── 4.5 Hoàn tiền
+│   ├── 4.5 Hoàn tiền
+│   └── 4.6 Quản lý đơn đặt vé
 │
 └── 5. Thống kê & Báo cáo
     ├── 5.1 Thống kê doanh thu
@@ -77,7 +78,7 @@ HỆ THỐNG ĐẶT VÉ XE KHÁCH TRỰC TUYẾN
     └── 5.5 Xuất báo cáo
 ```
 
-**5 nhóm chức năng — 25 chức năng lá.**
+**5 nhóm chức năng — 26 chức năng lá.**
 
 ---
 
@@ -140,11 +141,13 @@ flowchart TB
     N4_3["4.3 Hủy vé trực tuyến"]
     N4_4["4.4 Hủy vé tại quầy"]
     N4_5["4.5 Hoàn tiền"]
+    N4_6["4.6 Quản lý đơn đặt vé"]
     N4 --- N4_1
     N4 --- N4_2
     N4 --- N4_3
     N4 --- N4_4
     N4 --- N4_5
+    N4 --- N4_6
 
     N5_1["5.1 Thống kê doanh thu"]
     N5_2["5.2 Thống kê vé bán<br/>& vé hủy"]
@@ -167,35 +170,38 @@ flowchart TB
 ## 4. Bảng ánh xạ BFD ↔ Use Case ↔ Bảng CSDL
 
 Mọi chức năng lá đều có ít nhất một sơ đồ use case chịu trách nhiệm — **độ phủ 100%**.
-Số sơ đồ tham chiếu theo thứ tự tab trong `UseCase_DatVeXeKhach.drawio`.
+Số sơ đồ tham chiếu theo thứ tự tab trong `UseCase_DatVeXeKhach.drawio` (18 tab: 1–17 là sơ đồ chức năng, 18 là sơ đồ tổng quát).
 
 | BFD | Chức năng | Sơ đồ Use Case | Tác nhân | Bảng CSDL chính |
 |-----|-----------|----------------|----------|-----------------|
-| 1.1 | Đăng ký tài khoản | Sơ đồ 2 | Khách hàng | `NGUOI_DUNG`, `VAI_TRO`, `MA_XAC_THUC` |
-| 1.2 | Đăng nhập & Đăng xuất | Sơ đồ 1 | Cả 3 | `NGUOI_DUNG`, `NHAT_KY_HOAT_DONG` |
-| 1.3 | Khôi phục mật khẩu | Sơ đồ 3 | Khách hàng | `NGUOI_DUNG`, `MA_XAC_THUC` |
-| 1.4 | Đổi mật khẩu | Sơ đồ 4 | Cả 3 | `NGUOI_DUNG` |
-| 1.5 | Quản lý thông tin cá nhân | Sơ đồ 5 | Cả 3 | `NGUOI_DUNG` |
-| 1.6 | Quản lý tài khoản & Phân quyền | Sơ đồ 15 | Admin | `NGUOI_DUNG`, `VAI_TRO`, `NHAT_KY_HOAT_DONG` |
-| 2.1 | Quản lý xe & Sơ đồ ghế | Sơ đồ 13 | Admin | `XE`, `LOAI_XE`, `GHE` |
-| 2.2 | Quản lý chuyến xe & Lịch trình | Sơ đồ 12 | Admin | `CHUYEN_XE`, `TUYEN_XE`, `XE`, `DIEM_DUNG`, `VE` |
-| 2.3 | Quản lý giá vé & Khuyến mãi | Sơ đồ 14 | Admin | `CHUYEN_XE`, `MA_GIAM_GIA` |
-| 2.4 | Tra cứu chuyến xe | Sơ đồ 7 | Khách hàng, Nhân viên | `CHUYEN_XE`, `TUYEN_XE`, `GHE`, `CHI_TIET_VE` |
-| 3.1 | Đặt vé trực tuyến | Sơ đồ 8 | Khách hàng | `VE`, `CHI_TIET_VE`, `CHUYEN_XE` |
-| 3.2 | Bán vé & In vé tại quầy | Sơ đồ 9 | Nhân viên | `VE`, `CHI_TIET_VE`, `NGUOI_DUNG` |
-| 3.3 | Giữ chỗ tạm thời | Sơ đồ 8, 9 | (dùng chung) | `CHI_TIET_VE`, `GHE`, `THAM_SO` |
-| 3.4 | Thanh toán | Sơ đồ 8, 9 | (dùng chung) | `THANH_TOAN`, `VE` |
-| 3.5 | Áp dụng mã giảm giá | Sơ đồ 8, 9 | Khách hàng, Nhân viên | `MA_GIAM_GIA`, `VE` |
-| 4.1 | Xem lịch sử mua vé | Sơ đồ 6 | Khách hàng | `VE`, `CHI_TIET_VE`, `CHUYEN_XE` |
-| 4.2 | Tra cứu vé | Sơ đồ 11 | Nhân viên | `VE`, `CHI_TIET_VE` |
-| 4.3 | Hủy vé trực tuyến | Sơ đồ 10 | Khách hàng | `VE`, `THANH_TOAN` |
-| 4.4 | Hủy vé tại quầy | Sơ đồ 11 | Nhân viên | `VE`, `THANH_TOAN`, `NHAT_KY_HOAT_DONG` |
-| 4.5 | Hoàn tiền | Sơ đồ 10, 11, 12 | (dùng chung) | `THANH_TOAN`, `THAM_SO` |
-| 5.1 | Thống kê doanh thu | Sơ đồ 16 | Admin | `VE`, `CHI_TIET_VE`, `THANH_TOAN`, `TUYEN_XE` |
-| 5.2 | Thống kê vé bán & vé hủy | Sơ đồ 16 | Admin | `VE` |
-| 5.3 | Thống kê tỷ lệ lấp đầy chỗ ngồi | Sơ đồ 16 | Admin | `CHUYEN_XE`, `GHE`, `CHI_TIET_VE` |
+| 1.1 | Đăng ký tài khoản | Sơ đồ 2 | Khách hàng | `TaiKhoan`, `VaiTro`, `OtpXacThuc` |
+| 1.2 | Đăng nhập & Đăng xuất | Sơ đồ 1 | Cả 3 | `TaiKhoan`, `NhatKyHoatDong`, `ThamSo` |
+| 1.3 | Khôi phục mật khẩu | Sơ đồ 3 | Khách hàng | `TaiKhoan`, `OtpXacThuc` |
+| 1.4 | Đổi mật khẩu | Sơ đồ 4 | Cả 3 | `TaiKhoan` |
+| 1.5 | Quản lý thông tin cá nhân | Sơ đồ 5 | Cả 3 | `TaiKhoan` |
+| 1.6 | Quản lý tài khoản & Phân quyền | Sơ đồ 15 | Admin | `TaiKhoan`, `VaiTro`, `NhatKyHoatDong` |
+| 2.1 | Quản lý xe & Sơ đồ ghế | Sơ đồ 13 | Admin | `Xe`, `LoaiXe`, `Ghe` |
+| 2.2 | Quản lý chuyến xe & Lịch trình | Sơ đồ 12 | Admin | `ChuyenXe`, `TuyenXe`, `Xe`, `DiemDonTra`, `VeXe`, `HoanTien` |
+| 2.3 | Quản lý giá vé & Khuyến mãi | Sơ đồ 14 | Admin | `ChuyenXe`, `MaGiamGia` |
+| 2.4 | Tra cứu chuyến xe | Sơ đồ 7 | Khách hàng, Nhân viên | `ChuyenXe`, `TuyenXe`, `GheChuyen` |
+| 3.1 | Đặt vé trực tuyến | Sơ đồ 8 | Khách hàng | `DonDatVe`, `VeXe`, `ChuyenXe`, `GheChuyen`, `DiemDonTra` |
+| 3.2 | Bán vé & In vé tại quầy | Sơ đồ 9 | Nhân viên | `DonDatVe`, `VeXe`, `BanVeQuay` |
+| 3.3 | Giữ chỗ tạm thời | Sơ đồ 8, 9 | (dùng chung) | `GheChuyen`, `ThamSo` |
+| 3.4 | Thanh toán | Sơ đồ 8, 9 | (dùng chung) | `ThanhToan`, `DonDatVe` |
+| 3.5 | Áp dụng mã giảm giá | Sơ đồ 8, 9 | Khách hàng, Nhân viên | `MaGiamGia`, `DonDatVe`, `VeXe` |
+| 4.1 | Xem lịch sử mua vé | Sơ đồ 6 | Khách hàng | `DonDatVe`, `VeXe`, `ChuyenXe` |
+| 4.2 | Tra cứu vé | Sơ đồ 11 | Nhân viên | `VeXe`, `DonDatVe` |
+| 4.3 | Hủy vé trực tuyến | Sơ đồ 10 | Khách hàng | `VeXe`, `HoanTien`, `ThanhToan`, `ThamSo` |
+| 4.4 | Hủy vé tại quầy | Sơ đồ 11 | Nhân viên | `VeXe`, `HoanTien`, `NhatKyHoatDong` |
+| 4.5 | Hoàn tiền | Sơ đồ 10, 11, 12, 17 | (dùng chung) | `HoanTien`, `ThanhToan`, `ThamSo` |
+| 4.6 | Quản lý đơn đặt vé | Sơ đồ 17 | Admin | `DonDatVe`, `VeXe`, `ThanhToan`, `HoanTien` |
+| 5.1 | Thống kê doanh thu | Sơ đồ 16 | Admin | `VeXe`, `DonDatVe`, `ThanhToan`, `HoanTien`, `TuyenXe` |
+| 5.2 | Thống kê vé bán & vé hủy | Sơ đồ 16 | Admin | `VeXe` |
+| 5.3 | Thống kê tỷ lệ lấp đầy chỗ ngồi | Sơ đồ 16 | Admin | `ChuyenXe`, `Ghe`, `VeXe` |
 | 5.4 | Bảng điều khiển tổng quan | Sơ đồ 16 | Admin | (tổng hợp từ 5.1–5.3) |
 | 5.5 | Xuất báo cáo | Sơ đồ 16 | Admin | (xuất file từ 5.1–5.3) |
+
+Tên bảng khớp `docs/rdm/RDM.md` (đặt theo tên thực thể trong Sequence).
 
 ### Ghi chú về chênh lệch giữa BFD và Use Case
 
@@ -227,9 +233,7 @@ Không sinh code, không tạo màn hình, không thêm API cho các mục dư�
 
 ## 6. Chưa chốt
 
-| Vấn đề | Trạng thái |
-|--------|------------|
-| Chức năng **Quản lý đơn đặt vé** cho Admin | **Chưa quyết định** có làm hay không. Hiện chưa có trong BFD và chưa có sơ đồ use case. Hỏi trước khi cài đặt. |
+Không còn mục chưa chốt. **Quản lý đơn đặt vé** cho Admin đã quyết định **có làm** (lá 4.6, UC18, sơ đồ 17): xem danh sách + tìm kiếm/lọc, xem chi tiết, xử lý hoàn tiền thủ công. Không hủy đơn/vé ở chức năng này.
 
 ---
 
@@ -240,6 +244,7 @@ Không sinh code, không tạo màn hình, không thêm API cho các mục dư�
 | 1.0 | 2026-09-30 | Bản vẽ tay ban đầu (17 lá) |
 | 2.0 | 2026-10-03 | Rà soát chéo với Use Case. Bỏ "Quản lý Tuyến xe & Trạm dừng"; "Đổi vé & Hủy vé" → "Hủy vé"; "Thanh toán trực tuyến & Tiền mặt" → "Thanh toán trực tuyến"; "Thống kê Tỷ lệ hủy vé & Hoàn tiền" → "Thống kê Tỷ lệ hủy vé". Bổ sung bảng ánh xạ và mục ngoài phạm vi. (16 lá) |
 | 3.0 | 2026-10-07 | Dựng lại toàn bộ cho khớp bộ 17 sơ đồ Use Case cuối cùng. **16 lá → 25 lá.** Chi tiết bên dưới. |
+| 3.1 | 2026-10-17 | Rà soát chéo BFD–Use Case–Đặc tả–Sequence: thêm lá **4.6 Quản lý đơn đặt vé** (**25 → 26 lá**); cột "Bảng CSDL chính" đổi sang tên bảng trong `RDM.md`; bỏ mục chưa chốt. (`BFD.pdf` chưa được xuất lại.) |
 
 ### Chi tiết thay đổi 2.0 → 3.0
 
