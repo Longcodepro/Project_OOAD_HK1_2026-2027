@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Protocol
 
 from app.domain.entities.booking import (
+    Channel,
     Order,
     OrderAggregate,
     OrderStatus,
@@ -57,3 +58,15 @@ class BookingRepository(Protocol):
     def paid_tickets_of_trip(self, trip_id: int) -> list[TicketRecord]: ...
     def pending_orders_of_trip(self, trip_id: int) -> list[OrderAggregate]: ...
     def order_tickets(self, order_id: int) -> list[Ticket]: ...
+
+    # quản lý đơn (UC18)
+    def search_orders(
+        self,
+        status: OrderStatus | None,
+        channel: Channel | None,
+        date_from,
+        date_to,
+        phone: str | None,
+        order_id: int | None,
+        ticket_id: int | None,
+    ) -> list[OrderAggregate]: ...

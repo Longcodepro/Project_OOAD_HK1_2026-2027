@@ -357,3 +357,33 @@ class SqlBookingRepository:
     def order_tickets(self, order_id: int) -> list[Ticket]:
         m = self.db.get(OrderModel, order_id)
         return [self._ticket(t) for t in m.tickets]
+
+    def search_orders(
+        self, status, channel, date_from, date_to, phone, order_id, ticket_id
+    ) -> list[OrderAggregate]:
+        from app.infrastructure.db.models import AccountModel
+
+        stmt = select(OrderModel).order_by(OrderModel.id.desc())
+        if status:
+            stmt = stmt.where(OrderModel.status == status)
+        if channel:
+            stmt = stmt.where(OrderModel.channel == channel)
+        if date_from:
+            stmt = stmt.where(func.date(OrderModel.created_at) >= date_from.isoformat())
+        if date_to:
+            stmt = stmt.where(func.date(OrderModel.created_at) <= date_to.isoformat())
+        if order_id:
+            stmt = stmt.where(OrderModel.id == order_id)
+        if ticket_id:
+            stmt = stmt.where(
+                OrderModel.id.in_(select(TicketModel.order_id).where(TicketModel.id == ticket_id))
+            )
+        if phone:
+            by_ticket = select(TicketModel.order_id).where(TicketModel.passenger_phone == phone)
+            by_owner = select(OrderModel.id).where(
+                OrderModel.account_id.in_(
+                    select(AccountModel.id).where(AccountModel.phone == phone)
+                )
+            )
+            stmt = stmt.where(or_(OrderModel.id.in_(by_ticket), OrderModel.id.in_(by_owner)))
+        return [self._agg(m) for m in self.db.scalars(stmt)]

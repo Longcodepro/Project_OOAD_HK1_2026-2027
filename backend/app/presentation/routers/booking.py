@@ -20,7 +20,7 @@ router = APIRouter(tags=["đặt vé & thanh toán"])
 customer_only = require_roles(Role.CUSTOMER)
 
 
-def order_out(svc: BookingService, agg: OrderAggregate) -> OrderOut:
+def order_out(svc: BookingService | None, agg: OrderAggregate) -> OrderOut:
     o = agg.order
     return OrderOut(
         id=o.id,
@@ -31,7 +31,7 @@ def order_out(svc: BookingService, agg: OrderAggregate) -> OrderOut:
         discount=o.discount,
         coupon_code=o.coupon_code,
         account_id=o.account_id,
-        hold_until=svc.hold_deadline(agg),
+        hold_until=svc.hold_deadline(agg) if svc else None,
         tickets=[TicketOut(**t.__dict__) for t in agg.tickets],
         payments=[
             PaymentOut(

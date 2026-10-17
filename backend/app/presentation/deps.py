@@ -5,6 +5,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.application.errors import Forbidden, InvalidToken
+from app.application.use_cases.admin_orders import AdminOrderService
 from app.application.use_cases.auth import AuthRules, AuthService
 from app.application.use_cases.booking import BookingService
 from app.application.use_cases.coupons import CouponService
@@ -117,3 +118,7 @@ def get_refund_service(db: Session = Depends(get_db)) -> RefundService:
         MockPaymentGateway(),
         MockSmsSender(),
     )
+
+
+def get_admin_order_service(db: Session = Depends(get_db)) -> AdminOrderService:
+    return AdminOrderService(SqlBookingRepository(db))
