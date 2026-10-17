@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.domain.entities.booking import (
@@ -107,6 +107,18 @@ class SqlBookingRepository:
         stmt = (
             select(OrderModel)
             .where(OrderModel.account_id == account_id)
+            .order_by(OrderModel.id.desc())
+        )
+        return [self._agg(m) for m in self.db.scalars(stmt)]
+
+    def list_counter_orders(self, clerk_id: int, day) -> list[OrderAggregate]:
+        stmt = (
+            select(OrderModel)
+            .join(CounterSaleModel, CounterSaleModel.order_id == OrderModel.id)
+            .where(
+                CounterSaleModel.clerk_id == clerk_id,
+                func.date(CounterSaleModel.sold_at) == day.isoformat(),
+            )
             .order_by(OrderModel.id.desc())
         )
         return [self._agg(m) for m in self.db.scalars(stmt)]

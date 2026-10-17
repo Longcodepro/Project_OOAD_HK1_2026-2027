@@ -289,3 +289,36 @@ class BookingService:
             self.expire_if_needed(agg)
             out.append(self.repo.get_order(agg.order.id))
         return out
+
+    # ---- UC04: bán vé tại quầy ----
+    def create_counter_order(
+        self, trip_id: int, items: list[ItemIn], coupon_code: str | None, clerk: Account
+    ):
+        """Khách vãng lai không cần tài khoản: đơn không gắn tài khoản, chỉ ghi nhân viên bán + thời điểm."""
+        return self.create_order(
+            trip_id,
+            items,
+            coupon_code,
+            channel=Channel.COUNTER,
+            holder_id=clerk.id,
+            buyer_id=None,
+            clerk_id=clerk.id,
+        )
+
+    def counter_sales(self, clerk: Account, day):
+        out = []
+        for agg in self.repo.list_counter_orders(clerk.id, day):
+            self.expire_if_needed(agg)
+            out.append(self.repo.get_order(agg.order.id))
+        return out
+
+    def receipts(self, order_id: int, actor: Account) -> list[str]:
+        """In (hoặc in lại, E2) vé giấy của đơn đã thanh toán."""
+        agg = self.load(order_id, actor)
+        if agg.order.channel != Channel.COUNTER:
+            raise BusinessRule("Chỉ in vé giấy cho đơn bán tại quầy")
+        if agg.order.status != OrderStatus.PAID:
+            raise Conflict("Đơn chưa thanh toán, chưa thể in vé")
+        from app.domain.rules.receipt import ticket_receipt
+
+        return [ticket_receipt(t) for t in agg.tickets if t.status != TicketStatus.CANCELLED]

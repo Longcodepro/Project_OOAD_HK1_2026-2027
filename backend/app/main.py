@@ -2,7 +2,7 @@ from fastapi import FastAPI
 
 from app.config import settings
 from app.presentation.errors import register_error_handlers
-from app.presentation.routers import auth, booking, coupons, fleet, holds, trips
+from app.presentation.routers import auth, booking, counter, coupons, fleet, holds, trips
 
 app = FastAPI(title=settings.app_name, debug=settings.debug)
 register_error_handlers(app)
@@ -14,6 +14,7 @@ app.include_router(holds.router)
 app.include_router(coupons.admin)
 app.include_router(coupons.public)
 app.include_router(booking.router)
+app.include_router(counter.router)
 
 
 @app.get("/health")

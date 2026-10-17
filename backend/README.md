@@ -59,6 +59,8 @@ Tên trong code là tiếng Anh, ánh xạ với `docs/rdm/RDM.md`:
 
 ## Chức năng đã có
 
+Bán vé tại quầy (UC04, nhân viên bán vé): `POST /counter/orders`, thanh toán qua `POST /orders/{id}/pay` (tiền mặt hoặc VietQR, đổi phương thức được), `GET /counter/orders/{id}/receipts` (in và in lại vé), `GET /counter/orders` (đối soát doanh thu trong ngày).
+
 Đặt vé trực tuyến & thanh toán (UC02, UC21, khách hàng): `POST /orders` (ghế phải đã giữ chỗ), `POST /orders/{id}/pay`, `GET /orders`, `GET /orders/{id}`, `POST /orders/{id}/cancel-pending`, `POST /payments/webhook`. Cổng thanh toán đang mock: tham số `simulate` = `success` / `fail` / `pending` để ép kết quả.
 
 Khuyến mãi & giá vé (UC15, Admin): `/admin/coupons` (chỉ thêm và bật/tắt), `PATCH /admin/trips/{id}/price`. Kiểm tra mã khi đặt vé: `POST /coupons/validate`.
