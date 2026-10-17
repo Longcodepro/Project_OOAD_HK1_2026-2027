@@ -312,7 +312,7 @@ sequenceDiagram
 - **Thành phần:**
   - `Boundary / External`: `:CongThanhToan`
   - `Control`: `:DieuKhienThanhToan`, `:DichVuVe`, `:DichVuThongBao`
-  - `Entity`: `:DonDatVe`, `:VeXe`, `:Ghe`
+  - `Entity`: `:DonDatVe`, `:VeXe`, `:Ghe`, `:HoanTien`
   - `Actor`: `:KhachHang`
 
 ```mermaid
@@ -325,6 +325,7 @@ sequenceDiagram
     participant VE as :VeXe
     participant GHE as :Ghe
     participant DV_TB as :DichVuThongBao
+    participant HT as :HoanTien
     actor KH as :KhachHang
 
     activate CTT
@@ -398,6 +399,16 @@ sequenceDiagram
         activate GHE
         GHE -->> DK_TT: 8a: xacNhanGheDaMoLai()
         deactivate GHE
+    end
+
+    opt [Tiền về muộn: đơn đã THAT_BAI hoặc giao dịch đã bị hủy do đổi phương thức]
+        activate DK_TT
+        CTT ->> DK_TT: 9a: thongBaoGiaoDich(maGiaoDich, 'THANH_CONG')
+        DK_TT ->> CTT: 10a: yeuCauHoanTien(maGiaoDich, soTien)
+        Note right of DK_TT: hoàn 100%, không phí
+        CTT -->> DK_TT: 11a: xacNhanHoanTien() / tuChoiHoanTien(lyDo)
+        DK_TT ->> HT: 12a: ghiNhanHoanTien(maVeDau, soTien, 0, 'DA_HOAN' / 'CHO_XU_LY_THU_CONG', 'THANH_TOAN_QUA_HAN')
+        deactivate DK_TT
     end
 ```
 
@@ -741,12 +752,18 @@ sequenceDiagram
         DK ->> HT: 10b: ghiNhanHoanTien(maVe, soTienHoan, phiHuy, 'TIEN_MAT')
     else [Vé thanh toán qua cổng]
         DK ->> CTT: 10c: yeuCauHoanTien(maVe, soTienHoan)
-        CTT -->> DK: 10d: xacNhanHoanTienThanhCong()
-        DK ->> HT: 10e: ghiNhanHoanTien(maVe, soTienHoan, phiHuy, 'CONG_THANH_TOAN')
+        alt [Cổng xác nhận]
+            CTT -->> DK: 10d: xacNhanHoanTienThanhCong()
+            DK ->> HT: 10e: ghiNhanHoanTien(maVe, soTienHoan, phiHuy, 'CONG_THANH_TOAN', 'DA_HOAN')
+        else [Cổng từ chối - vé vẫn hủy, chờ Admin xử lý (UC18)]
+            CTT -->> DK: 10f: tuChoiHoanTien(lyDo)
+            DK ->> HT: 10g: ghiNhanHoanTien(maVe, soTienHoan, phiHuy, 'CONG_THANH_TOAN', 'CHO_XU_LY_THU_CONG')
+        end
     end
     
     activate DK
-    DK ->> MI: 11: guiLenhInBienNhanHuy()
+    DK ->> MI: 11: guiLenhInBienNhanHuy(maVe, phiHuy, soTienHoan, hinhThuc)
+    Note right of DK: nội dung trả về trường receipt
     deactivate DK
     activate MI
     MI -->> DK: 12: xacNhanDaIn()
@@ -920,6 +937,7 @@ sequenceDiagram
     participant MH as :ManHinhHoSo
     participant DK as :DieuKhienHoSo
     participant TK as :TaiKhoan
+    participant SMS as :DichVuSMS
 
     %% Luồng 1: Xem hồ sơ cá nhân
     activate ND
@@ -964,6 +982,35 @@ sequenceDiagram
         activate MH
         MH -->> ND: 13: hienThiThongBaoCapNhatThanhCong()
         deactivate MH
+    end
+
+    %% Luồng 3: Đổi số điện thoại (OTP gửi tới số mới)
+    opt Đổi số điện thoại (extend)
+        ND ->> MH: 14: nhapSoMoi(sdtMoi)
+        MH ->> DK: 15: yeuCauOTPDoiSDT(maTK, sdtMoi)
+        DK ->> TK: 16: kiemTraTonTai(sdtMoi)
+        TK -->> DK: 17: traVeKetQua(daTonTai)
+        alt [sdtMoi trùng số hiện tại hoặc đã có tài khoản khác]
+            DK -->> MH: 18a: traVeLoi(sdtKhongHopLe)
+            MH -->> ND: 19a: hienThiThongBaoLoi()
+        else [hợp lệ]
+            DK ->> SMS: 18: guiOTP(sdtMoi, 'DOI_SO_DIEN_THOAI')
+            SMS -->> ND: 19: guiSMSChuaMaOTP()
+            ND ->> MH: 20: nhapOTPVaMatKhau(maOTP, matKhau)
+            MH ->> DK: 21: xuLyDoiSDT(maTK, sdtMoi, maOTP, matKhau)
+            DK ->> TK: 22: kiemTraMatKhau(matKhau)
+            DK ->> DK: 23: xacThucOTP(maOTP)
+            alt [mật khẩu và OTP đúng]
+                DK ->> TK: 24: capNhatSDT(sdtMoi)
+                Note right of DK: tăng PhienBanToken, thu hồi phiên cũ
+                TK -->> DK: 25: xacNhanLuuThanhCong()
+                DK -->> MH: 26: traVeKetQua(thanhCong, tokenMoi)
+                MH -->> ND: 27: hienThiThongBaoDoiSDTThanhCong()
+            else [sai mật khẩu hoặc OTP]
+                DK -->> MH: 26a: traVeLoi()
+                MH -->> ND: 27a: hienThiLoiNhapLai()
+            end
+        end
     end
 ```
 
@@ -1021,7 +1068,7 @@ sequenceDiagram
 ---
 
 ### 2.12. Sơ đồ Tuần tự Chi tiết: Quản lý chuyến xe & lịch trình (UC13)
-*(Admin xem danh sách, thêm chuyến mới và hủy chuyến kèm hoàn tiền (include). Các thao tác sửa/tìm kiếm tương tự luồng xem/thêm nên không vẽ lặp.)*
+*(Admin xem danh sách, thêm chuyến mới, sửa chuyến (đổi giờ/đổi xe, báo SMS hành khách) và hủy chuyến kèm hoàn tiền (include).)*
 
 ```mermaid
 sequenceDiagram
@@ -1033,6 +1080,8 @@ sequenceDiagram
     participant VE as :VeXe
     participant CTT as :CongThanhToan
     participant HT as :HoanTien
+    participant GH as :Ghe
+    participant SMS as :DichVuSMS
 
     %% Luồng 1: Xem danh sách chuyến
     activate AD
@@ -1096,6 +1145,30 @@ sequenceDiagram
         activate MH
         MH -->> AD: 18: hienThiThongBaoThanhCong()
         deactivate MH
+    else Sửa chuyến (đổi giờ / đổi xe)
+        AD ->> MH: 29: nhapThongTinSua(gioMoi / xeMoi)
+        MH ->> DK: 30: xuLySuaChuyen(maChuyen, thongTinSua)
+        DK ->> CX: 31: kiemTraTrungLich(maXe, ngay, gio)
+        CX -->> DK: 32: traVeKetQua(hopLe)
+        opt [đổi xe]
+            DK ->> GH: 33: kiemTraXeMoiDuSoGhe(maXeMoi, danhSachSoGheDangBan)
+            GH -->> DK: 34: traVeKetQua(thieuSoGhe)
+        end
+        alt [hợp lệ]
+            DK ->> CX: 35: capNhat(thongTinSua)
+            Note right of DK: đổi xe: dựng lại GheChuyen, vé giữ nguyên số ghế
+            CX -->> DK: 36: xacNhanCapNhat()
+            DK ->> VE: 37: layDanhSachVeDaThanhToan(maChuyen)
+            VE -->> DK: 38: traVeDanhSachVe()
+            loop Từng hành khách (khi đổi giờ hoặc đổi xe)
+                DK ->> SMS: 39: guiSMSThayDoi(sdtHK, thongTinMoi)
+            end
+            DK -->> MH: 40: traVeKetQua(thanhCong, soHanhKhachDuocBao)
+            MH -->> AD: 41: hienThiThongBaoSuaThanhCong()
+        else [trùng lịch / xe thiếu số ghế]
+            DK -->> MH: 35a: traVeLoi(lyDo)
+            MH -->> AD: 36a: hienThiLoi()
+        end
     else Hủy chuyến xe
         activate AD
         AD ->> MH: 19: chonHuyChuyen(maChuyen, lyDo)
@@ -1557,7 +1630,7 @@ sequenceDiagram
     %% Luồng 3: Xuất báo cáo Excel / PDF
     opt Xuất báo cáo (extend)
         activate AD
-        AD ->> MH: 13: chonXuatBaoCao('EXCEL' / 'PDF')
+        AD ->> MH: 13: chonXuatBaoCao('CSV' / 'EXCEL' / 'PDF')
         deactivate AD
         activate MH
         MH ->> DK: 14: xuLyXuatBaoCao(dinhDang)
@@ -1594,7 +1667,6 @@ sequenceDiagram
     DON -->> DK: 4: traVeDanhSachDon()
     DK -->> MH: 5: traVeDanhSachDon()
     MH -->> AD: 6: hienThiDanhSachDon()
-
     %% Luồng 2: Tìm kiếm / Lọc (extend)
     opt Tìm kiếm / Lọc đơn (extend)
         AD ->> MH: 7: nhapBoLoc(trangThai, tuNgay, denNgay, kenh, soDienThoai, maDon)

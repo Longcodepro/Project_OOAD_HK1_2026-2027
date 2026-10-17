@@ -229,6 +229,7 @@
 | LyDo | varchar(30) | NN |
 | MaGiaoDich | varchar(100) |  |
 | LyDoLoi | varchar(255) |  |
+| MaGiaoDichGoc | varchar(100) |  |
 | ThoiGian | datetime | NN |
 
 ## 4. Quan hệ
@@ -275,10 +276,10 @@
 | MaGiamGia.LoaiGiam | PHAN_TRAM, SO_TIEN |
 | HoanTien.HinhThuc | CONG_THANH_TOAN, TIEN_MAT |
 | HoanTien.TrangThai | DA_HOAN, CHO_XU_LY_THU_CONG |
-| HoanTien.LyDo | KHACH_HUY_VE, NHA_XE_HUY_CHUYEN |
+| HoanTien.LyDo | KHACH_HUY_VE, NHA_XE_HUY_CHUYEN, THANH_TOAN_QUA_HAN |
 | DiemDonTra.LoaiDiem | DON, TRA |
-| OtpXacThuc.MucDich | DANG_KY, KHOI_PHUC_MAT_KHAU |
-| ThamSo.TenThamSo | THOI_GIAN_GIU_CHO_PHUT=5, HAN_HUY_VE_GIO=24, PHI_HUY_PHAN_TRAM=15, OTP_HIEU_LUC_GIAY, OTP_SO_LAN_THU_TOI_DA, DANG_NHAP_SAI_TOI_DA |
+| OtpXacThuc.MucDich | DANG_KY, KHOI_PHUC_MAT_KHAU, DOI_SO_DIEN_THOAI |
+| ThamSo.TenThamSo | THOI_GIAN_GIU_CHO_PHUT=5, HAN_HUY_VE_GIO=24, PHI_HUY_PHAN_TRAM=15, OTP_HIEU_LUC_GIAY=120, OTP_SO_LAN_THU_TOI_DA=5, OTP_GUI_LAI_GIAY=60, DANG_NHAP_SAI_TOI_DA=5, DANG_NHAP_KHOA_PHUT=15 (Admin chỉnh được, áp dụng ngay) |
 
 *(Các giá trị enum do tài liệu chuẩn gợi ý; chỉ các giá trị trong Đặc tả/Sequence/BFD là bắt buộc — còn lại là thiết kế bổ sung.)*
 
@@ -301,6 +302,9 @@
 16. **Đối soát thanh toán:** webhook cổng thanh toán xử lý idempotent theo `MaGiaoDich` (cùng mã giao dịch gửi lại không tạo thêm `ThanhToan` hay phát vé lần hai); `ThanhToan.TrangThai=DANG_XU_LY` khi cổng phản hồi chậm.
 17. **Hoàn tiền:** mỗi vé hủy có đúng một `HoanTien` (kể cả hoàn 0đ nếu có); hủy chuyến hoàn 100% ghi `PhiHuy=0`, `LyDo=NHA_XE_HUY_CHUYEN`.
 18. **Đổi phương thức tại quầy:** nhân viên được quay lại chọn lại phương thức trước khi chốt. Đổi từ `VIETQR` (đang `DANG_XU_LY`) sang `TIEN_MAT` thì `ThanhToan` VietQR cũ → `DA_HUY`, mã QR thanh toán của nó bị vô hiệu; tạo `ThanhToan` mới `TIEN_MAT`.
+19. **Tiền về muộn:** webhook báo `THANH_CONG` khi đơn đã hết hạn (`THAT_BAI`) hoặc `ThanhToan` đã `DA_HUY` (do đổi phương thức) → tự tạo `HoanTien` hoàn 100% (`PhiHuy=0`, `LyDo=THANH_TOAN_QUA_HAN`, `MaGiaoDichGoc` = mã giao dịch thu tiền), gắn vào vé đầu của đơn. Cổng từ chối → `CHO_XU_LY_THU_CONG` cho Admin (UC18).
+20. **Đổi số điện thoại** (UC11): OTP `DOI_SO_DIEN_THOAI` gửi tới **số mới** + nhập lại mật khẩu; thành công thì `SDT` đổi, tăng `PhienBanToken` (thu hồi phiên), ghi `NhatKyHoatDong`.
+21. **Sửa chuyến** (UC13): đổi giờ hoặc đổi xe đều báo SMS cho hành khách có vé đã thanh toán. Đổi xe khi đã bán vé: dựng lại `GheChuyen` theo xe mới, vé chuyển sang **ghế cùng `SoGhe`**; xe mới thiếu `SoGhe` đang bán/giữ thì từ chối.
 
 ## 7. Ánh xạ lớp BCE (Class/Sequence) → bảng
 | Lớp trong Class/Sequence | Bảng RDM |
