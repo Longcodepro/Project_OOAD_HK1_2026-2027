@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import func, select, update
+from sqlalchemy import exists, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.domain.entities.booking import (
@@ -12,6 +12,7 @@ from app.domain.entities.booking import (
     PaymentMethod,
     PaymentStatus,
     Ticket,
+    TicketRecord,
     TicketStatus,
 )
 from app.domain.entities.trip import SeatState
@@ -270,3 +271,60 @@ class SqlBookingRepository:
             )
         )
         return min(rows, default=None)
+
+    # ---- tra cứu vé ----
+    def _record(self, m: TicketModel) -> TicketRecord:
+        o = m.order
+        pm = self.db.scalar(
+            select(PaymentModel.method)
+            .where(PaymentModel.order_id == o.id, PaymentModel.status == PaymentStatus.SUCCESS)
+            .order_by(PaymentModel.id.desc())
+            .limit(1)
+        )
+        return TicketRecord(
+            self._ticket(m),
+            Channel(o.channel),
+            OrderStatus(o.status),
+            o.account_id,
+            PaymentMethod(pm) if pm else None,
+        )
+
+    def _was_paid(self):
+        return exists().where(
+            PaymentModel.order_id == TicketModel.order_id,
+            PaymentModel.status == PaymentStatus.SUCCESS,
+        )
+
+    def paid_tickets_of_account(self, account_id: int) -> list[TicketRecord]:
+        stmt = (
+            select(TicketModel)
+            .join(OrderModel, OrderModel.id == TicketModel.order_id)
+            .where(OrderModel.account_id == account_id, self._was_paid())
+            .order_by(TicketModel.id.desc())
+        )
+        return [self._record(m) for m in self.db.scalars(stmt)]
+
+    def find_tickets(self, qr, ticket_id, phone) -> list[TicketRecord]:
+        stmt = (
+            select(TicketModel)
+            .join(OrderModel, OrderModel.id == TicketModel.order_id)
+            .where(self._was_paid())
+        )
+        conds = []
+        if qr:
+            conds.append(TicketModel.qr_code == qr)
+        if ticket_id:
+            conds.append(TicketModel.id == ticket_id)
+        if phone:
+            from app.infrastructure.db.models import AccountModel
+
+            owner = select(AccountModel.id).where(AccountModel.phone == phone)
+            conds.append(
+                or_(TicketModel.passenger_phone == phone, OrderModel.account_id.in_(owner))
+            )
+        stmt = stmt.where(or_(*conds)).order_by(TicketModel.id.desc())
+        return [self._record(m) for m in self.db.scalars(stmt)]
+
+    def get_ticket(self, ticket_id: int) -> TicketRecord | None:
+        m = self.db.get(TicketModel, ticket_id)
+        return self._record(m) if m else None

@@ -10,6 +10,7 @@ from app.application.use_cases.booking import BookingService
 from app.application.use_cases.coupons import CouponService
 from app.application.use_cases.fleet import FleetService
 from app.application.use_cases.holds import SeatHoldService
+from app.application.use_cases.tickets import TicketService
 from app.application.use_cases.trips import TripService
 from app.config import settings
 from app.domain.entities.account import Account, Role
@@ -99,3 +100,7 @@ def get_booking_service(db: Session = Depends(get_db)) -> BookingService:
         MockPaymentGateway(),
         MockSmsSender(),
     )
+
+
+def get_ticket_service(db: Session = Depends(get_db)) -> TicketService:
+    return TicketService(SqlBookingRepository(db))

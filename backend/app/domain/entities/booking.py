@@ -102,3 +102,14 @@ class OrderAggregate:
     tickets: list[Ticket] = field(default_factory=list)
     payments: list[Payment] = field(default_factory=list)
     holder_id: int | None = None  # người đang giữ ghế (khách hoặc nhân viên quầy)
+
+
+@dataclass
+class TicketRecord:
+    """Một vé kèm bối cảnh đơn: dùng cho lịch sử mua vé và tra cứu vé."""
+
+    ticket: Ticket
+    channel: Channel
+    order_status: OrderStatus
+    account_id: int | None
+    payment_method: PaymentMethod | None

@@ -8,6 +8,7 @@ from app.domain.entities.booking import (
     Payment,
     PaymentStatus,
     Ticket,
+    TicketRecord,
     TicketStatus,
 )
 
@@ -43,3 +44,10 @@ class BookingRepository(Protocol):
     def now_held_by(
         self, trip_id: int, seat_ids: list[int], holder_id: int, now: datetime
     ) -> bool: ...
+
+    # tra cứu vé (UC07, UC23)
+    def paid_tickets_of_account(self, account_id: int) -> list[TicketRecord]: ...
+    def find_tickets(
+        self, qr: str | None, ticket_id: int | None, phone: str | None
+    ) -> list[TicketRecord]: ...
+    def get_ticket(self, ticket_id: int) -> TicketRecord | None: ...
