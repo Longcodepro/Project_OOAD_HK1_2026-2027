@@ -328,3 +328,32 @@ class SqlBookingRepository:
     def get_ticket(self, ticket_id: int) -> TicketRecord | None:
         m = self.db.get(TicketModel, ticket_id)
         return self._record(m) if m else None
+
+    # ---- hủy vé / hoàn tiền ----
+    def last_success_payment(self, order_id: int) -> Payment | None:
+        m = self.db.scalar(
+            select(PaymentModel)
+            .where(PaymentModel.order_id == order_id, PaymentModel.status == PaymentStatus.SUCCESS)
+            .order_by(PaymentModel.id.desc())
+            .limit(1)
+        )
+        return _payment(m) if m else None
+
+    def paid_tickets_of_trip(self, trip_id: int) -> list[TicketRecord]:
+        stmt = select(TicketModel).where(
+            TicketModel.trip_id == trip_id, TicketModel.status == TicketStatus.UNUSED
+        )
+        return [self._record(m) for m in self.db.scalars(stmt)]
+
+    def pending_orders_of_trip(self, trip_id: int) -> list[OrderAggregate]:
+        stmt = (
+            select(OrderModel)
+            .join(TicketModel, TicketModel.order_id == OrderModel.id)
+            .where(TicketModel.trip_id == trip_id, OrderModel.status == OrderStatus.PENDING)
+            .distinct()
+        )
+        return [self._agg(m) for m in self.db.scalars(stmt)]
+
+    def order_tickets(self, order_id: int) -> list[Ticket]:
+        m = self.db.get(OrderModel, order_id)
+        return [self._ticket(t) for t in m.tickets]

@@ -59,6 +59,8 @@ Tên trong code là tiếng Anh, ánh xạ với `docs/rdm/RDM.md`:
 
 ## Chức năng đã có
 
+Hủy vé & hoàn tiền (UC05, UC06, UC22, và hủy chuyến của UC13): `GET /tickets/{id}/cancel-quote`, `POST /tickets/{id}/cancel` (khách, còn ≥ 24 giờ, phí 15%), `POST /counter/tickets/{id}/cancel` (nhân viên quầy), `POST /admin/trips/{id}/cancel` (hoàn 100%). Lệnh hoàn bị cổng từ chối nằm ở trạng thái `CHO_XU_LY_THU_CONG` để Admin xử lý.
+
 Vé (UC07 lịch sử, UC23 tra cứu): `GET /me/tickets?status=`, `GET /tickets/lookup?qr=|ticket_id=|phone=` (nhân viên/Admin), `GET /tickets/{id}`.
 
 Bán vé tại quầy (UC04, nhân viên bán vé): `POST /counter/orders`, thanh toán qua `POST /orders/{id}/pay` (tiền mặt hoặc VietQR, đổi phương thức được), `GET /counter/orders/{id}/receipts` (in và in lại vé), `GET /counter/orders` (đối soát doanh thu trong ngày).

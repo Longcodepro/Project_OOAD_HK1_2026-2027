@@ -10,6 +10,7 @@ from app.application.use_cases.booking import BookingService
 from app.application.use_cases.coupons import CouponService
 from app.application.use_cases.fleet import FleetService
 from app.application.use_cases.holds import SeatHoldService
+from app.application.use_cases.refunds import RefundService
 from app.application.use_cases.tickets import TicketService
 from app.application.use_cases.trips import TripService
 from app.config import settings
@@ -22,6 +23,7 @@ from app.infrastructure.db.repositories.booking import SqlBookingRepository
 from app.infrastructure.db.repositories.coupons import SqlCouponRepository
 from app.infrastructure.db.repositories.fleet import SqlFleetRepository
 from app.infrastructure.db.repositories.holds import SqlSeatHoldRepository, SqlSettingsRepository
+from app.infrastructure.db.repositories.refunds import SqlRefundRepository
 from app.infrastructure.db.repositories.trips import SqlTripRepository
 from app.infrastructure.db.session import SessionLocal
 from app.infrastructure.mock.payment_gateway import MockPaymentGateway
@@ -104,3 +106,14 @@ def get_booking_service(db: Session = Depends(get_db)) -> BookingService:
 
 def get_ticket_service(db: Session = Depends(get_db)) -> TicketService:
     return TicketService(SqlBookingRepository(db))
+
+
+def get_refund_service(db: Session = Depends(get_db)) -> RefundService:
+    return RefundService(
+        SqlBookingRepository(db),
+        SqlRefundRepository(db),
+        SqlTripRepository(db),
+        SqlSettingsRepository(db),
+        MockPaymentGateway(),
+        MockSmsSender(),
+    )
