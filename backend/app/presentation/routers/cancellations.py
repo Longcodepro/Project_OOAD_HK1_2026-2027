@@ -5,6 +5,7 @@ from app.domain.entities.account import Account, Role
 from app.presentation.deps import get_refund_service, require_roles
 from app.presentation.schemas.refunds import (
     CancelIn,
+    CounterRefundOut,
     QuoteOut,
     RefundOut,
     TripCancelIn,
@@ -43,7 +44,7 @@ def cancel_my_ticket(
     return _refund(svc.cancel_ticket(ticket_id, actor, body.simulate if body else None))
 
 
-@router.post("/counter/tickets/{ticket_id}/cancel", response_model=RefundOut)
+@router.post("/counter/tickets/{ticket_id}/cancel", response_model=CounterRefundOut)
 def cancel_at_counter(
     ticket_id: int,
     body: CancelIn | None = None,
@@ -51,7 +52,8 @@ def cancel_at_counter(
     svc: RefundService = Depends(get_refund_service),
 ):
     """UC06: nhân viên hủy vé tại quầy; tiền mặt chi trực tiếp, vé trực tuyến hoàn về cổng thanh toán."""
-    return _refund(svc.cancel_ticket(ticket_id, actor, body.simulate if body else None))
+    r = svc.cancel_ticket(ticket_id, actor, body.simulate if body else None)
+    return CounterRefundOut(**r.__dict__, receipt=svc.cancel_receipt(ticket_id, actor, r))
 
 
 @router.post(

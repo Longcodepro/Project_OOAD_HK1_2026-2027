@@ -106,6 +106,7 @@ def test_cash_ticket_cannot_be_cancelled_online_but_can_at_counter(client, make_
     r = client.post(f"/counter/tickets/{tid}/cancel", headers=clerk)
     assert r.status_code == 200
     ref = r.json()
+    assert f"Mã vé: {tid}" in ref["receipt"] and "Tiền mặt tại quầy" in ref["receipt"]
     assert (
         ref["method"] == "TIEN_MAT"
         and ref["status"] == "DA_HOAN"

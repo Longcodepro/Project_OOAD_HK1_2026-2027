@@ -113,6 +113,11 @@ class RefundService:
         )
         return refund
 
+    def cancel_receipt(self, ticket_id: int, actor: Account, refund: Refund) -> str:
+        from app.domain.rules.receipt import cancel_receipt
+
+        return cancel_receipt(self._record(ticket_id, actor).ticket, refund)
+
     # ---- UC22: tạo lệnh hoàn ----
     def _refund(
         self,
