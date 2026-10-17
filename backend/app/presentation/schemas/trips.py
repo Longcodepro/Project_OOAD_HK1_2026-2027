@@ -92,3 +92,7 @@ class SeatOut(BaseModel):
     col_no: int
     state: SeatState
     hold_until: datetime | None = None
+
+
+class PriceUpdate(BaseModel):
+    price: Decimal = Field(gt=0, examples=[380000])

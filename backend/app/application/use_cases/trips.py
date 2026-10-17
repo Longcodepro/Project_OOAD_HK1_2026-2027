@@ -124,6 +124,15 @@ class TripService:
         self.repo.save_trip(t)
         return t
 
+    def update_price(self, trip_id: int, price: Decimal) -> Trip:
+        """UC15: giá mới chỉ áp cho giao dịch sau đó; vé đã bán giữ giá cũ (vé lưu giá gốc riêng)."""
+        t = self.get_trip(trip_id)
+        if t.status == TripStatus.CANCELLED or t.has_departed(now_vn()):
+            raise BusinessRule("Chuyến đã hủy hoặc đã khởi hành, không đổi giá được")
+        t.price = price
+        self.repo.save_trip(t)
+        return t
+
     # ---- tra cứu ----
     def search(
         self,

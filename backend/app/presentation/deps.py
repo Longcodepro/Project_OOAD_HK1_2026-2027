@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.application.errors import Forbidden, InvalidToken
 from app.application.use_cases.auth import AuthRules, AuthService
+from app.application.use_cases.coupons import CouponService
 from app.application.use_cases.fleet import FleetService
 from app.application.use_cases.holds import SeatHoldService
 from app.application.use_cases.trips import TripService
@@ -15,6 +16,7 @@ from app.infrastructure.db.repositories.auth import (
     SqlAccountRepository,
     SqlOtpRepository,
 )
+from app.infrastructure.db.repositories.coupons import SqlCouponRepository
 from app.infrastructure.db.repositories.fleet import SqlFleetRepository
 from app.infrastructure.db.repositories.holds import SqlSeatHoldRepository, SqlSettingsRepository
 from app.infrastructure.db.repositories.trips import SqlTripRepository
@@ -80,3 +82,7 @@ def get_hold_service(db: Session = Depends(get_db)) -> SeatHoldService:
     return SeatHoldService(
         SqlSeatHoldRepository(db), SqlTripRepository(db), SqlSettingsRepository(db)
     )
+
+
+def get_coupon_service(db: Session = Depends(get_db)) -> CouponService:
+    return CouponService(SqlCouponRepository(db))

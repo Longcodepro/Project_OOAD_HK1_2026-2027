@@ -9,6 +9,7 @@ from app.domain.entities.account import Role
 from app.domain.entities.trip import RouteStatus, TripStatus, TripView
 from app.presentation.deps import get_trip_service, require_roles
 from app.presentation.schemas.trips import (
+    PriceUpdate,
     RouteIn,
     RouteOut,
     RouteUpdate,
@@ -148,4 +149,10 @@ def create_trip(body: TripCreate, svc: TripService = Depends(get_trip_service)):
 @admin.patch("/trips/{trip_id}", response_model=TripDetail)
 def update_trip(trip_id: int, body: TripUpdate, svc: TripService = Depends(get_trip_service)):
     svc.update_trip(trip_id, body.model_dump(exclude_unset=True))
+    return _detail(svc, trip_id)
+
+
+@admin.patch("/trips/{trip_id}/price", response_model=TripDetail)
+def update_price(trip_id: int, body: PriceUpdate, svc: TripService = Depends(get_trip_service)):
+    svc.update_price(trip_id, body.price)
     return _detail(svc, trip_id)
