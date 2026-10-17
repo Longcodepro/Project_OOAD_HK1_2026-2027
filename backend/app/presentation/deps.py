@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.application.errors import Forbidden, InvalidToken
 from app.application.use_cases.auth import AuthRules, AuthService
 from app.application.use_cases.fleet import FleetService
+from app.application.use_cases.holds import SeatHoldService
 from app.application.use_cases.trips import TripService
 from app.config import settings
 from app.domain.entities.account import Account, Role
@@ -15,6 +16,7 @@ from app.infrastructure.db.repositories.auth import (
     SqlOtpRepository,
 )
 from app.infrastructure.db.repositories.fleet import SqlFleetRepository
+from app.infrastructure.db.repositories.holds import SqlSeatHoldRepository, SqlSettingsRepository
 from app.infrastructure.db.repositories.trips import SqlTripRepository
 from app.infrastructure.db.session import SessionLocal
 from app.infrastructure.mock.sms import MockSmsSender
@@ -72,3 +74,9 @@ def get_fleet_service(db: Session = Depends(get_db)) -> FleetService:
 
 def get_trip_service(db: Session = Depends(get_db)) -> TripService:
     return TripService(SqlTripRepository(db), SqlFleetRepository(db))
+
+
+def get_hold_service(db: Session = Depends(get_db)) -> SeatHoldService:
+    return SeatHoldService(
+        SqlSeatHoldRepository(db), SqlTripRepository(db), SqlSettingsRepository(db)
+    )

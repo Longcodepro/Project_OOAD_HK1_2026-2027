@@ -25,6 +25,6 @@ _MAP = {
 def register_error_handlers(app: FastAPI) -> None:
     async def handle(_: Request, exc: e.AppError) -> JSONResponse:
         status, default = _MAP.get(type(exc), (400, "Yêu cầu không hợp lệ"))
-        return JSONResponse({"detail": exc.message or default}, status_code=status)
+        return JSONResponse({"detail": exc.message or default, **exc.extra}, status_code=status)
 
     app.add_exception_handler(e.AppError, handle)

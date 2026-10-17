@@ -4,7 +4,7 @@ from decimal import Decimal
 from app.application.errors import BusinessRule, Conflict, NotFound
 from app.application.ports.fleet import FleetRepository
 from app.application.ports.trips import TripRepository
-from app.domain.clock import now_vn
+from app.domain.clock import now_vn, utcnow
 from app.domain.entities.fleet import VehicleStatus
 from app.domain.entities.trip import (
     DEFAULT_TRIP_MINUTES,
@@ -136,7 +136,7 @@ class TripService:
         max_price=None,
     ):
         now = now_vn()
-        self.repo.release_expired_holds(now)
+        self.repo.release_expired_holds(utcnow())  # hạn giữ chỗ lưu theo UTC
         rows = self.repo.search(
             origin, destination, day, now, part, vehicle_type_id, min_price, max_price
         )
@@ -152,7 +152,7 @@ class TripService:
         return rows, suggestions
 
     def view(self, trip_id: int) -> TripView:
-        self.repo.release_expired_holds(now_vn())
+        self.repo.release_expired_holds(utcnow())
         v = self.repo.view(trip_id)
         if v is None:
             raise NotFound("Không tìm thấy chuyến")
@@ -160,5 +160,5 @@ class TripService:
 
     def seat_map(self, trip_id: int):
         self.get_trip(trip_id)
-        self.repo.release_expired_holds(now_vn())
+        self.repo.release_expired_holds(utcnow())
         return self.repo.seat_map(trip_id)

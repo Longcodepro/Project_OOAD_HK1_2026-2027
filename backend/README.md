@@ -59,6 +59,8 @@ Tên trong code là tiếng Anh, ánh xạ với `docs/rdm/RDM.md`:
 
 ## Chức năng đã có
 
+Giữ chỗ (UC20, khách hoặc nhân viên quầy): `POST /trips/{id}/hold` (mặc định 5 phút theo bảng `settings`), `GET /trips/{id}/hold`, `POST /trips/{id}/release`.
+
 Xe & sơ đồ ghế (UC14, Admin): `/admin/vehicle-types`, `/admin/vehicles` (kèm `PUT /admin/vehicles/{id}/seats`).
 Tuyến & chuyến (UC13, Admin): `/admin/routes`, `/admin/trips`. Tra cứu (UC01, công khai): `GET /trips/search`, `GET /trips/{id}`, `GET /trips/{id}/seats`.
 
