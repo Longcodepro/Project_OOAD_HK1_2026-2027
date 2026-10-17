@@ -1,3 +1,10 @@
-# Entry point cua FastAPI app.
-# Se tao app = FastAPI(...), dang ky cac router trong app/api/routers/, va khoi tao ket noi DB o day.
-# Chua code - chi la placeholder cau truc thu muc.
+from fastapi import FastAPI
+
+from app.config import settings
+
+app = FastAPI(title=settings.app_name, debug=settings.debug)
+
+
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok"}
