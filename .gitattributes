@@ -1,0 +1,2 @@
+# Script shell phải giữ LF để chạy được trong container Linux, kể cả khi clone trên Windows
+*.sh text eol=lf

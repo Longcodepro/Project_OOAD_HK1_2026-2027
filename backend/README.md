@@ -42,18 +42,34 @@ Hoặc từ gốc project: `docker compose up --build` (cần file `.env`, xem `
 
 Xuất OpenAPI để import vào Postman: `http://localhost:8000/openapi.json`.
 
-## Chạy thử với dữ liệu mẫu
+## Chạy bằng Docker (có sẵn dữ liệu mẫu)
 
 ```bash
-docker compose up -d mysql backend            # từ thư mục gốc project
-docker compose exec backend alembic upgrade head
-docker compose exec backend python -m app.seed   # tài khoản + xe + tuyến + chuyến 7 ngày tới + mã giảm giá
+git clone <repo> && cd <repo>
+docker compose up -d --build mysql backend   # lần đầu mất vài phút để build và nạp dữ liệu
 ```
 
-Swagger: http://localhost:8000/docs. Tài khoản mẫu: Admin `0900000000 / Admin12345`, nhân viên quầy `0900000001 / Staff12345`, khách `0900000002 / Khach12345`.
+Không cần tạo `.env`. Khi khởi động, container backend tự: chờ MySQL → `alembic upgrade head` → `python -m app.seed` → bật API.
+Xong thì mở Swagger: http://localhost:8000/docs (xem log: `docker compose logs -f backend`).
+
+Dữ liệu mẫu nằm ở `app/seed_data.json` (sửa file này để đổi): 11 tài khoản, 8 xe, 10 tuyến, ~170 chuyến trong 14 ngày tới,
+5 mã giảm giá (có mã hết hạn / đang tắt / chưa tới hạn để thử lỗi), 20 đơn mẫu (online, quầy, có hủy, có một lệnh hoàn chờ Admin)
+và 24 chuyến đã chạy trong 6 ngày qua (để báo cáo, lịch sử, trạng thái `DA_HOAN_THANH` có số liệu ngay). Chạy lại không tạo trùng.
+
+| Vai trò | SĐT | Mật khẩu |
+|---|---|---|
+| Admin | 0900000000 | Admin12345 |
+| Nhân viên quầy | 0900000001, 0900000003 | Staff12345 |
+| Khách hàng | 0900000002, 0900000010 → 0900000016 | Khach12345 |
+
+Mã giảm giá: `CHAOBAN`, `GIAM30K` dùng được; `HETHAN`, `DANGTAT`, `TET2027` để thử trường hợp lỗi.
+Tắt dữ liệu mẫu: đặt `SEED_DEMO_DATA=false`. Xóa sạch làm lại từ đầu: `docker compose down -v`.
+
+Không dùng Docker: `alembic upgrade head` rồi `python -m app.seed` (cần MySQL và các biến trong `.env.example`).
 
 Chạy bộ test trên MySQL thật (mặc định chạy SQLite trong RAM, nhanh hơn): tạo DB rỗng `ooad_test` rồi
 `TEST_DATABASE_URL="mysql+pymysql://user:pass@127.0.0.1:3306/ooad_test?charset=utf8mb4" pytest`.
+Test API bằng Postman: xem `tests/postman/README.md`.
 
 ## Database và migration
 
