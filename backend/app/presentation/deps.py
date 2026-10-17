@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.application.errors import Forbidden, InvalidToken
 from app.application.use_cases.auth import AuthRules, AuthService
 from app.application.use_cases.fleet import FleetService
+from app.application.use_cases.trips import TripService
 from app.config import settings
 from app.domain.entities.account import Account, Role
 from app.infrastructure.db.repositories.auth import (
@@ -14,6 +15,7 @@ from app.infrastructure.db.repositories.auth import (
     SqlOtpRepository,
 )
 from app.infrastructure.db.repositories.fleet import SqlFleetRepository
+from app.infrastructure.db.repositories.trips import SqlTripRepository
 from app.infrastructure.db.session import SessionLocal
 from app.infrastructure.mock.sms import MockSmsSender
 from app.infrastructure.security.jwt_service import JwtService
@@ -66,3 +68,7 @@ def require_roles(*roles: Role):
 
 def get_fleet_service(db: Session = Depends(get_db)) -> FleetService:
     return FleetService(SqlFleetRepository(db))
+
+
+def get_trip_service(db: Session = Depends(get_db)) -> TripService:
+    return TripService(SqlTripRepository(db), SqlFleetRepository(db))

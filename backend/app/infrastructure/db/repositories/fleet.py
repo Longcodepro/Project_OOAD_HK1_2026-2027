@@ -2,7 +2,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.domain.entities.fleet import Seat, Vehicle, VehicleStatus, VehicleType
-from app.infrastructure.db.models import SeatModel, VehicleModel, VehicleTypeModel
+from app.infrastructure.db.models import SeatModel, TripModel, VehicleModel, VehicleTypeModel
 
 
 def _seat(m: SeatModel) -> Seat:
@@ -110,3 +110,21 @@ class SqlFleetRepository:
             SeatModel(code=s.code, floor=s.floor, row_no=s.row_no, col_no=s.col_no) for s in seats
         ]
         self.db.commit()
+
+    def has_open_trips(self, vehicle_id: int, now) -> bool:
+        stmt = (
+            select(TripModel.id)
+            .where(
+                TripModel.vehicle_id == vehicle_id,
+                TripModel.status != "DA_HUY",
+                TripModel.departure_date >= now.date(),
+            )
+            .limit(1)
+        )
+        return self.db.scalar(stmt) is not None
+
+    def has_any_trips(self, vehicle_id: int) -> bool:
+        return (
+            self.db.scalar(select(TripModel.id).where(TripModel.vehicle_id == vehicle_id).limit(1))
+            is not None
+        )

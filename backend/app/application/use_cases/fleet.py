@@ -1,5 +1,6 @@
-from app.application.errors import Conflict, NotFound
+from app.application.errors import BusinessRule, Conflict, NotFound
 from app.application.ports.fleet import FleetRepository
+from app.domain.clock import now_vn
 from app.domain.entities.fleet import Vehicle, VehicleStatus, VehicleType
 from app.domain.rules.seat_layout import generate_layout
 
@@ -59,11 +60,19 @@ class FleetService:
 
     def set_status(self, vehicle_id: int, status: VehicleStatus) -> Vehicle:
         v = self.get_vehicle(vehicle_id)
+        if status == VehicleStatus.INACTIVE and self.repo.has_open_trips(vehicle_id, now_vn()):
+            # E2: phải xử lý các chuyến đang mở bán trước (đổi xe hoặc hủy chuyến)
+            raise BusinessRule(
+                "Xe đang có chuyến chưa chạy: hãy hủy hoặc đổi xe các chuyến đó trước"
+            )
         v.status = status
         self.repo.save_vehicle(v)
         return v
 
     def replace_layout(self, vehicle_id: int, floors: int, rows: int, per_row: int) -> Vehicle:
         self.get_vehicle(vehicle_id)
+        if self.repo.has_any_trips(vehicle_id):
+            # E3: chỉ sửa được khi xe chưa gắn chuyến nào, tránh làm hỏng vé đã phát hành
+            raise BusinessRule("Xe đã có chuyến, không thể sửa sơ đồ ghế")
         self.repo.replace_seats(vehicle_id, generate_layout(floors, rows, per_row))
         return self.get_vehicle(vehicle_id, with_seats=True)

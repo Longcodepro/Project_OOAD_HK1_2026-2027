@@ -59,6 +59,9 @@ Tên trong code là tiếng Anh, ánh xạ với `docs/rdm/RDM.md`:
 
 ## Chức năng đã có
 
+Xe & sơ đồ ghế (UC14, Admin): `/admin/vehicle-types`, `/admin/vehicles` (kèm `PUT /admin/vehicles/{id}/seats`).
+Tuyến & chuyến (UC13, Admin): `/admin/routes`, `/admin/trips`. Tra cứu (UC01, công khai): `GET /trips/search`, `GET /trips/{id}`, `GET /trips/{id}/seats`.
+
 Tài khoản (UC10, UC11, UC12): `POST /auth/password/forgot/otp`, `POST /auth/password/reset`, `POST /auth/password/change`, `PATCH /auth/me`.
 
 Xác thực (UC08, UC09, UC19): `POST /auth/register/otp`, `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`.
