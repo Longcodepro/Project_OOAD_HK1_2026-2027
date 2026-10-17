@@ -1,0 +1,23 @@
+class AppError(Exception):
+    """Lỗi nghiệp vụ; tầng presentation đổi thành mã HTTP."""
+
+
+class PhoneAlreadyRegistered(AppError): ...
+
+
+class InvalidCredentials(AppError): ...
+
+
+class AccountDisabled(AppError): ...
+
+
+class LoginTemporarilyLocked(AppError): ...
+
+
+class InvalidOtp(AppError): ...
+
+
+class OtpRequestedTooSoon(AppError): ...
+
+
+class InvalidToken(AppError): ...

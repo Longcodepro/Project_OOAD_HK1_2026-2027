@@ -16,6 +16,13 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me"
     jwt_expire_minutes: int = 60  # access token sống 1 giờ
 
+    sms_mock: bool = True  # true: API trả luôn mã OTP vì không gửi SMS thật
+    otp_ttl_seconds: int = 120
+    otp_resend_seconds: int = 60
+    otp_max_attempts: int = 5
+    login_max_failures: int = 5
+    login_lock_minutes: int = 15
+
     @property
     def database_url(self) -> str:
         return (

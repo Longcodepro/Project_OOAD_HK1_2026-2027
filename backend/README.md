@@ -21,6 +21,13 @@ backend/
 
 Quy ước: tầng trong không import tầng ngoài (`domain` ← `application` ← `infrastructure`/`presentation`).
 
+## Clean Architecture bản gọn (đã chốt)
+
+- **Giữ 4 tầng**, nhưng CRUD đơn giản (xem danh sách tuyến, xe, loại xe...) cho router gọi thẳng repository, không viết use case.
+- **Use case đầy đủ** chỉ cho phần có nghiệp vụ thật: đặt và giữ ghế (5 phút), thanh toán, hủy vé và hoàn tiền (phí 15%), đăng nhập và OTP.
+- **Repository interface** (ở `application`) chỉ tạo khi use case cần mock lúc test. Không tạo interface cho mọi bảng.
+- **Luật bắt buộc duy nhất:** `domain` không import gì từ framework hay tầng ngoài (FastAPI, SQLAlchemy, Pydantic).
+
 ## Chạy thử
 
 ```bash
@@ -34,3 +41,23 @@ uvicorn app.main:app --reload    # Swagger: http://localhost:8000/docs
 Hoặc từ gốc project: `docker compose up --build` (cần file `.env`, xem `../.env.example`).
 
 Xuất OpenAPI để import vào Postman: `http://localhost:8000/openapi.json`.
+
+## Database và migration
+
+```bash
+alembic upgrade head                         # tạo bảng + seed 3 vai trò (cần MySQL đang chạy, đọc .env)
+alembic revision --autogenerate -m "tên"     # sinh migration mới sau khi sửa model
+```
+
+Tên trong code là tiếng Anh, ánh xạ với `docs/rdm/RDM.md`:
+
+| Code (bảng) | RDM |
+|---|---|
+| `roles` | VaiTro |
+| `accounts` | TaiKhoan (`phone`=SDT, `token_version`=PhienBanToken, `failed_login_count`=SoLanDangNhapSai, `locked_until`=KhoaDangNhapDen) |
+| `otp_codes` | OtpXacThuc (`code_hash`=MaXacThucBam, `wrong_count`=SoLanSai) |
+
+## Chức năng đã có
+
+Xác thực (UC08, UC09, UC19): `POST /auth/register/otp`, `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`.
+OTP đang mock: với `SMS_MOCK=true` (mặc định) API trả mã trong trường `mock_otp`. Các ngưỡng (OTP 120 giây, khóa đăng nhập sau 5 lần sai trong 15 phút) đang để trong `app/config.py`, chưa đọc từ bảng `ThamSo`.
