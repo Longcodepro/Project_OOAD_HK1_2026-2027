@@ -6,6 +6,7 @@ from enum import StrEnum
 class OtpPurpose(StrEnum):
     REGISTER = "DANG_KY"
     RESET_PASSWORD = "KHOI_PHUC_MAT_KHAU"
+    CHANGE_PHONE = "DOI_SO_DIEN_THOAI"
 
 
 @dataclass

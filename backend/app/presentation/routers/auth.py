@@ -7,6 +7,8 @@ from app.presentation.deps import get_auth_service, get_current_account
 from app.presentation.schemas.auth import (
     AccountResponse,
     ChangePasswordRequest,
+    ChangePhoneOtpRequest,
+    ChangePhoneRequest,
     LoginRequest,
     OtpRequest,
     OtpResponse,
@@ -91,6 +93,27 @@ def change_password(
     auth: AuthService = Depends(get_auth_service),
 ):
     return _token(auth.change_password(account, body.current_password, body.new_password))
+
+
+@router.post("/phone/otp", response_model=OtpResponse)
+def request_change_phone_otp(
+    body: ChangePhoneOtpRequest,
+    account: Account = Depends(get_current_account),
+    auth: AuthService = Depends(get_auth_service),
+):
+    """Gửi OTP tới SỐ MỚI để xác nhận bạn sở hữu số đó."""
+    return _otp_out(
+        auth.request_change_phone_otp(account, body.new_phone), auth.rules.otp_ttl_seconds
+    )
+
+
+@router.post("/phone/change", response_model=TokenResponse)
+def change_phone(
+    body: ChangePhoneRequest,
+    account: Account = Depends(get_current_account),
+    auth: AuthService = Depends(get_auth_service),
+):
+    return _token(auth.change_phone(account, body.new_phone, body.otp, body.password))
 
 
 @router.get("/me", response_model=AccountResponse)

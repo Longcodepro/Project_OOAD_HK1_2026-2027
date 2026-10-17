@@ -68,3 +68,45 @@ def test_update_profile(client):
     me = client.get("/auth/me", headers=h).json()
     assert (me["full_name"], me["birth_date"], me["address"]) == ("Tên Mới", "2000-05-20", "Hà Nội")
     assert me["phone"] == PHONE  # số điện thoại không đổi được ở đây
+
+
+def test_change_phone_with_otp_flow(client):
+    register(client)
+    h = auth_header(client)
+    new = "0977777777"
+    otp = client.post("/auth/phone/otp", headers=h, json={"new_phone": new}).json()["mock_otp"]
+    bad_pw = client.post(
+        "/auth/phone/change",
+        headers=h,
+        json={"new_phone": new, "otp": otp, "password": "saimatkhau1"},
+    )
+    assert bad_pw.status_code == 400
+    bad_otp = client.post(
+        "/auth/phone/change",
+        headers=h,
+        json={"new_phone": new, "otp": "000000", "password": PASSWORD},
+    )
+    assert bad_otp.status_code == 400
+    ok = client.post(
+        "/auth/phone/change", headers=h, json={"new_phone": new, "otp": otp, "password": PASSWORD}
+    )
+    assert ok.status_code == 200
+    assert client.get("/auth/me", headers=h).status_code == 401  # phiên cũ bị thu hồi
+    fresh = {"Authorization": f"Bearer {ok.json()['access_token']}"}
+    assert client.get("/auth/me", headers=fresh).json()["phone"] == new
+    assert (
+        client.post("/auth/login", json={"phone": PHONE, "password": PASSWORD}).status_code == 401
+    )  # số cũ hết dùng
+    assert client.post("/auth/login", json={"phone": new, "password": PASSWORD}).status_code == 200
+
+
+def test_change_phone_rejects_same_or_taken_number(client, make_user):
+    register(client)
+    h = auth_header(client)
+    other, _ = make_user()
+    assert client.post("/auth/phone/otp", headers=h, json={"new_phone": PHONE}).status_code == 400
+    assert (
+        client.post("/auth/phone/otp", headers=h, json={"new_phone": other.phone}).status_code
+        == 409
+    )
+    assert client.post("/auth/phone/otp", json={"new_phone": "0977777777"}).status_code == 401

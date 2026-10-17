@@ -4,6 +4,7 @@ from datetime import date, timedelta
 
 from app.application.errors import (
     AccountDisabled,
+    BusinessRule,
     InvalidCredentials,
     InvalidOtp,
     InvalidToken,
@@ -177,6 +178,27 @@ class AuthService:
         account.locked_until = None
         account.revoke_tokens()  # thu hồi mọi phiên cũ
         self.accounts.save(account)
+
+    # ---- UC11: đổi số điện thoại (SĐT là định danh đăng nhập nên phải xác thực OTP ở số mới) ----
+    def request_change_phone_otp(self, account: Account, new_phone: str) -> str:
+        if new_phone == account.phone:
+            raise BusinessRule("Số điện thoại mới trùng số hiện tại")
+        if self.accounts.get_by_phone(new_phone):
+            raise PhoneAlreadyRegistered
+        return self._issue_otp(new_phone, OtpPurpose.CHANGE_PHONE)
+
+    def change_phone(self, account: Account, new_phone: str, otp_code: str, password: str) -> str:
+        if not self.hasher.verify(password, account.password_hash):
+            raise WrongCurrentPassword
+        if self.accounts.get_by_phone(new_phone):
+            raise PhoneAlreadyRegistered
+        self._consume_otp(new_phone, OtpPurpose.CHANGE_PHONE, otp_code)
+        old, account.phone = account.phone, new_phone
+        account.revoke_tokens()  # định danh đăng nhập đổi nên các phiên cũ phải đăng nhập lại
+        self.accounts.save(account)
+        if self.logs:
+            self.logs.log(account.id, "DOI_SDT", "TAI_KHOAN", account.id, f"{old} → {new_phone}")
+        return self.tokens.issue(account)
 
     # ---- UC12: đổi mật khẩu ----
     def change_password(self, account: Account, current: str, new: str) -> str:

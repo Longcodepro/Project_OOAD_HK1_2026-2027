@@ -74,6 +74,7 @@ class SqlAccountRepository:
 
     def save(self, account: Account) -> None:
         m = self.db.get(AccountModel, account.id)
+        m.phone = account.phone
         m.password_hash = account.password_hash
         m.role_id = self.db.scalar(select(RoleModel.id).where(RoleModel.name == account.role))
         m.full_name = account.full_name

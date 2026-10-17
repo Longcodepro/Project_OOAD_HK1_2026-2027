@@ -55,6 +55,16 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(min_length=8, max_length=72)
 
 
+class ChangePhoneOtpRequest(BaseModel):
+    new_phone: str = Phone
+
+
+class ChangePhoneRequest(BaseModel):
+    new_phone: str = Phone
+    otp: str = Field(pattern=r"^\d{6}$")
+    password: str
+
+
 class ProfileUpdate(BaseModel):
     full_name: str | None = Field(default=None, min_length=1, max_length=100)
     birth_date: date | None = None
