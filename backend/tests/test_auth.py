@@ -66,3 +66,12 @@ def test_logout_revokes_token(client):
 
 def test_me_requires_token(client):
     assert client.get("/auth/me").status_code == 401
+
+
+def test_register_weak_password_rejected(client):
+    otp = client.post("/auth/register/otp", json={"phone": PHONE}).json()["mock_otp"]
+    r = client.post(
+        "/auth/register",
+        json={"full_name": "A", "phone": PHONE, "password": "chiconchu", "otp": otp},
+    )
+    assert r.status_code == 422

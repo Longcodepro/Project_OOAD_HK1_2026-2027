@@ -59,5 +59,7 @@ Tên trong code là tiếng Anh, ánh xạ với `docs/rdm/RDM.md`:
 
 ## Chức năng đã có
 
+Tài khoản (UC10, UC11, UC12): `POST /auth/password/forgot/otp`, `POST /auth/password/reset`, `POST /auth/password/change`, `PATCH /auth/me`.
+
 Xác thực (UC08, UC09, UC19): `POST /auth/register/otp`, `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`.
 OTP đang mock: với `SMS_MOCK=true` (mặc định) API trả mã trong trường `mock_otp`. Các ngưỡng (OTP 120 giây, khóa đăng nhập sau 5 lần sai trong 15 phút) đang để trong `app/config.py`, chưa đọc từ bảng `ThamSo`.

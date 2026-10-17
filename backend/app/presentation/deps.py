@@ -4,10 +4,10 @@ from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from app.application.errors import InvalidToken
+from app.application.errors import Forbidden, InvalidToken
 from app.application.use_cases.auth import AuthRules, AuthService
 from app.config import settings
-from app.domain.entities.account import Account
+from app.domain.entities.account import Account, Role
 from app.infrastructure.db.repositories.auth import (
     SqlAccountRepository,
     SqlOtpRepository,
@@ -49,3 +49,14 @@ def get_current_account(
     if cred is None:
         raise InvalidToken
     return auth.authenticate(cred.credentials)
+
+
+def require_roles(*roles: Role):
+    """Dependency chặn theo vai trò: Depends(require_roles(Role.ADMIN))."""
+
+    def check(account: Account = Depends(get_current_account)) -> Account:
+        if account.role not in roles:
+            raise Forbidden
+        return account
+
+    return check
