@@ -79,6 +79,9 @@ class SqlBookingRepository:
         )
 
     def _agg(self, m: OrderModel) -> OrderAggregate:
+        self.db.expire(
+            m
+        )  # đọc lại từ DB: các cập nhật hàng loạt/thêm thanh toán không làm dữ liệu cũ nằm lại trong phiên
         coupon = self.db.get(CouponModel, m.coupon_id) if m.coupon_id else None
         clerk = m.counter_sale.clerk_id if m.counter_sale else None
         order = Order(
