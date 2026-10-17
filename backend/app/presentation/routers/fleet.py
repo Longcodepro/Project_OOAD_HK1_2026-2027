@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from app.application.use_cases.fleet import FleetService
 from app.domain.entities.account import Role
 from app.domain.entities.fleet import VehicleStatus
-from app.presentation.deps import get_fleet_service, require_roles
+from app.presentation.deps import Page, get_fleet_service, require_roles
 from app.presentation.schemas.fleet import (
     LayoutIn,
     VehicleCreate,
@@ -36,8 +36,9 @@ def list_vehicles(
     q: str | None = None,
     status: VehicleStatus | None = None,
     svc: FleetService = Depends(get_fleet_service),
+    page: Page = Depends(),
 ):
-    return svc.repo.list_vehicles(q, status)
+    return page.apply(svc.repo.list_vehicles(q, status))
 
 
 @router.post("/vehicles", status_code=201, response_model=VehicleDetail)

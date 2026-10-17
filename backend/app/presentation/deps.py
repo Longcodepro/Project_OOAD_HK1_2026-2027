@@ -1,6 +1,6 @@
 from collections.abc import Iterator
 
-from fastapi import Depends
+from fastapi import Depends, Query, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -137,3 +137,22 @@ def get_admin_user_service(db: Session = Depends(get_db)) -> AdminUserService:
 
 def get_report_service(db: Session = Depends(get_db)) -> ReportService:
     return ReportService(SqlReportRepository(db))
+
+
+class Page:
+    """Phân trang cho các danh sách quản trị: ?limit=100&offset=0, tổng số dòng nằm ở header X-Total-Count.
+
+    ponytail: cắt danh sách sau khi đã truy vấn (đủ cho quy mô đồ án); dữ liệu lớn thì đẩy LIMIT/OFFSET xuống SQL.
+    """
+
+    def __init__(
+        self,
+        response: Response,
+        limit: int = Query(100, ge=1, le=500),
+        offset: int = Query(0, ge=0),
+    ):
+        self.response, self.limit, self.offset = response, limit, offset
+
+    def apply(self, items: list) -> list:
+        self.response.headers["X-Total-Count"] = str(len(items))
+        return items[self.offset : self.offset + self.limit]

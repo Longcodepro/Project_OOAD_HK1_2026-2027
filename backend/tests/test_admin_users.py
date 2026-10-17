@@ -134,3 +134,17 @@ def test_login_and_logout_are_logged(client, make_user):
         a["action"] for a in client.get(f"/admin/users/{acc.id}", headers=admin).json()["activity"]
     ]
     assert actions == ["DANG_XUAT", "DANG_NHAP"]
+
+
+def test_pagination_limit_offset_and_total_header(client, make_user):
+    _, admin = make_user(Role.ADMIN)
+    for _ in range(4):
+        make_user(Role.CUSTOMER)
+    first = client.get("/admin/users?limit=2&offset=0", headers=admin)
+    second = client.get("/admin/users?limit=2&offset=2", headers=admin)
+    assert (
+        first.headers["X-Total-Count"] == "5" and len(first.json()) == 2 and len(second.json()) == 2
+    )
+    assert {u["id"] for u in first.json()}.isdisjoint({u["id"] for u in second.json()})
+    assert client.get("/admin/users?limit=0", headers=admin).status_code == 422
+    assert client.get("/admin/users?limit=501", headers=admin).status_code == 422

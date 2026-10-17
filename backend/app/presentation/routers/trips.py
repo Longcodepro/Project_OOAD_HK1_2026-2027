@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from app.application.use_cases.trips import TripService
 from app.domain.entities.account import Role
 from app.domain.entities.trip import RouteStatus, TripStatus, TripView
-from app.presentation.deps import get_trip_service, require_roles
+from app.presentation.deps import Page, get_trip_service, require_roles
 from app.presentation.schemas.trips import (
     PriceUpdate,
     RouteIn,
@@ -127,8 +127,9 @@ def list_trips(
     status: TripStatus | None = None,
     plate: str | None = None,
     svc: TripService = Depends(get_trip_service),
+    page: Page = Depends(),
 ):
-    return [trip_out(v) for v in svc.repo.list_trips(route_id, date, status, plate)]
+    return [trip_out(v) for v in page.apply(svc.repo.list_trips(route_id, date, status, plate))]
 
 
 @admin.post("/trips", status_code=201, response_model=TripDetail)

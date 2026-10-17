@@ -7,7 +7,7 @@ from app.application.use_cases.refunds import RefundService
 from app.domain.entities.account import Account, Role
 from app.domain.entities.booking import Channel, OrderStatus
 from app.domain.entities.refund import RefundStatus
-from app.presentation.deps import get_admin_order_service, get_refund_service, require_roles
+from app.presentation.deps import Page, get_admin_order_service, get_refund_service, require_roles
 from app.presentation.routers.booking import order_out
 from app.presentation.routers.cancellations import _refund
 from app.presentation.schemas.admin_orders import AdminOrderDetail, OrderListOut, OrderRow
@@ -27,8 +27,10 @@ def list_orders(
     order_id: int | None = None,
     ticket_id: int | None = None,
     svc: AdminOrderService = Depends(get_admin_order_service),
+    page: Page = Depends(),
 ):
-    rows = svc.search(status, channel, date_from, date_to, phone, order_id, ticket_id)
+    all_rows = svc.search(status, channel, date_from, date_to, phone, order_id, ticket_id)
+    rows = page.apply(all_rows)
     items = [
         OrderRow(
             id=a.order.id,
@@ -44,7 +46,9 @@ def list_orders(
         )
         for a in rows
     ]
-    return OrderListOut(items=items, message=None if items else "Không có đơn nào thỏa bộ lọc")
+    return OrderListOut(
+        items=items, total=len(all_rows), message=None if items else "Không có đơn nào thỏa bộ lọc"
+    )
 
 
 @router.get("/orders/{order_id}", response_model=AdminOrderDetail)
@@ -65,9 +69,10 @@ def order_detail(
 def list_refunds(
     status: RefundStatus | None = RefundStatus.MANUAL,
     refunds: RefundService = Depends(get_refund_service),
+    page: Page = Depends(),
 ):
     """Danh sách lệnh hoàn; mặc định chỉ những lệnh đang chờ xử lý thủ công."""
-    return [_refund(r) for r in refunds.refunds.list(status)]
+    return [_refund(r) for r in page.apply(refunds.refunds.list(status))]
 
 
 @router.post("/refunds/{refund_id}/retry", response_model=RefundOut)

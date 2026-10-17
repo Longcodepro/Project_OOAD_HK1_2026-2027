@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 
 from app.application.use_cases.admin_users import AdminUserService
 from app.domain.entities.account import Account, AccountStatus, Role
-from app.presentation.deps import get_admin_user_service, require_roles
+from app.presentation.deps import Page, get_admin_user_service, require_roles
 from app.presentation.schemas.admin_users import (
     ActivityOut,
     LockOut,
@@ -35,8 +35,9 @@ def list_users(
     status: AccountStatus | None = None,
     _: Account = Depends(admin_only),
     svc: AdminUserService = Depends(get_admin_user_service),
+    page: Page = Depends(),
 ):
-    return [UserOut(**_u(a)) for a in svc.accounts.list(q, role, status)]
+    return [UserOut(**_u(a)) for a in page.apply(svc.accounts.list(q, role, status))]
 
 
 @router.post("", status_code=201, response_model=UserWithPassword)

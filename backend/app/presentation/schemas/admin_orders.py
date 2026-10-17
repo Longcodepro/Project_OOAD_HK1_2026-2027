@@ -21,6 +21,7 @@ class OrderRow(BaseModel):
 
 class OrderListOut(BaseModel):
     items: list[OrderRow]
+    total: int = 0  # tổng số đơn khớp bộ lọc (trước khi phân trang)
     message: str | None = None
 
 

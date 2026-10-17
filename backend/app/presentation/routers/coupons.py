@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from app.application.use_cases.coupons import CouponService
 from app.domain.entities.account import Role
 from app.domain.entities.coupon import CouponStatus
-from app.presentation.deps import get_coupon_service, require_roles
+from app.presentation.deps import Page, get_coupon_service, require_roles
 from app.presentation.schemas.coupons import (
     CouponCreate,
     CouponOut,
@@ -24,9 +24,11 @@ public = APIRouter(
 
 @admin.get("", response_model=list[CouponOut])
 def list_coupons(
-    status: CouponStatus | None = None, svc: CouponService = Depends(get_coupon_service)
+    status: CouponStatus | None = None,
+    svc: CouponService = Depends(get_coupon_service),
+    page: Page = Depends(),
 ):
-    return svc.repo.list(status)
+    return page.apply(svc.repo.list(status))
 
 
 @admin.post("", status_code=201, response_model=CouponOut)
