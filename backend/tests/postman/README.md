@@ -1,6 +1,6 @@
 # Bộ test API cho Postman
 
-`OOAD_API_Tests.postman_collection.json`: **396 request, 605 khẳng định**, chia 17 thư mục (mỗi chức năng một thư mục, mỗi request là một trường hợp test, tên request ghi rõ kết quả mong đợi, ví dụ "Hủy vé còn > 24 giờ → hoàn 340.000, phí 60.000").
+`OOAD_API_Tests.postman_collection.json`: **396 request, 607 khẳng định**, chia 17 thư mục (mỗi chức năng một thư mục, mỗi request là một trường hợp test, tên request ghi rõ kết quả mong đợi, ví dụ "Hủy vé còn > 24 giờ → hoàn 340.000, phí 60.000").
 
 ## Dùng trong Postman
 1. Chạy backend kèm dữ liệu mẫu: `docker compose up -d --build mysql backend` (tự tạo bảng và nạp dữ liệu, xem `backend/README.md`).

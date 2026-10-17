@@ -408,6 +408,7 @@ def f_cancel():
                     "j.method === 'TIEN_MAT' && j.status === 'DA_HOAN' && j.processed_by !== null",
                 ),
                 js("340.000", "j.amount === 340000"),
+                js("có biên nhận hủy in cho khách", "j.receipt.includes('BIÊN NHẬN HỦY VÉ') && j.receipt.includes('Tiền mặt tại quầy') && j.receipt.includes('340,000')"),
             ],
         ),
         Req(
@@ -420,7 +421,8 @@ def f_cancel():
                 js(
                     "hoàn qua cổng",
                     "j.method === 'CONG_THANH_TOAN' && j.transaction_id.startsWith('RF-')",
-                )
+                ),
+                js("biên nhận ghi hoàn về cổng", "j.receipt.includes('Hoàn về cổng thanh toán')"),
             ],
         ),
         Req(

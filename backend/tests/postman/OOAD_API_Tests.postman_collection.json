@@ -11727,7 +11727,8 @@
                   "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
                   "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
                   "pm.test('hoàn tiền mặt', () => pm.expect(j.method === 'TIEN_MAT' && j.status === 'DA_HOAN' && j.processed_by !== null).to.be.true);",
-                  "pm.test('340.000', () => pm.expect(j.amount === 340000).to.be.true);"
+                  "pm.test('340.000', () => pm.expect(j.amount === 340000).to.be.true);",
+                  "pm.test('có biên nhận hủy in cho khách', () => pm.expect(j.receipt.includes('BIÊN NHẬN HỦY VÉ') && j.receipt.includes('Tiền mặt tại quầy') && j.receipt.includes('340,000')).to.be.true);"
                 ]
               }
             }
@@ -11769,7 +11770,8 @@
                 "exec": [
                   "const j = (() => { try { return pm.response.json(); } catch (e) { return {}; } })();",
                   "pm.test('Mã HTTP là 200', () => pm.response.to.have.status(200));",
-                  "pm.test('hoàn qua cổng', () => pm.expect(j.method === 'CONG_THANH_TOAN' && j.transaction_id.startsWith('RF-')).to.be.true);"
+                  "pm.test('hoàn qua cổng', () => pm.expect(j.method === 'CONG_THANH_TOAN' && j.transaction_id.startsWith('RF-')).to.be.true);",
+                  "pm.test('biên nhận ghi hoàn về cổng', () => pm.expect(j.receipt.includes('Hoàn về cổng thanh toán')).to.be.true);"
                 ]
               }
             }
