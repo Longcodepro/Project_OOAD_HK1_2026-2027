@@ -14,6 +14,7 @@ from app.application.use_cases.fleet import FleetService
 from app.application.use_cases.holds import SeatHoldService
 from app.application.use_cases.refunds import RefundService
 from app.application.use_cases.reports import ReportService
+from app.application.use_cases.settings import SettingsService
 from app.application.use_cases.tickets import TicketService
 from app.application.use_cases.trips import TripService
 from app.config import settings
@@ -44,6 +45,17 @@ def get_db() -> Iterator[Session]:
         yield db
 
 
+def auth_rules(cfg: SqlSettingsRepository) -> AuthRules:
+    """Ngưỡng OTP/đăng nhập đọc từ bảng settings (Admin chỉnh được); thiếu thì dùng giá trị mặc định ở config."""
+    return AuthRules(
+        otp_ttl_seconds=cfg.get_int("OTP_HIEU_LUC_GIAY", settings.otp_ttl_seconds),
+        otp_resend_seconds=cfg.get_int("OTP_GUI_LAI_GIAY", settings.otp_resend_seconds),
+        otp_max_attempts=cfg.get_int("OTP_SO_LAN_THU_TOI_DA", settings.otp_max_attempts),
+        login_max_failures=cfg.get_int("DANG_NHAP_SAI_TOI_DA", settings.login_max_failures),
+        login_lock_minutes=cfg.get_int("DANG_NHAP_KHOA_PHUT", settings.login_lock_minutes),
+    )
+
+
 def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
     return AuthService(
         SqlAccountRepository(db),
@@ -51,13 +63,7 @@ def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
         Argon2Hasher(),
         JwtService(settings.jwt_secret, settings.jwt_expire_minutes),
         MockSmsSender(),
-        AuthRules(
-            otp_ttl_seconds=settings.otp_ttl_seconds,
-            otp_resend_seconds=settings.otp_resend_seconds,
-            otp_max_attempts=settings.otp_max_attempts,
-            login_max_failures=settings.login_max_failures,
-            login_lock_minutes=settings.login_lock_minutes,
-        ),
+        auth_rules(SqlSettingsRepository(db)),
         SqlActivityLogger(db),
     )
 
@@ -156,3 +162,7 @@ class Page:
     def apply(self, items: list) -> list:
         self.response.headers["X-Total-Count"] = str(len(items))
         return items[self.offset : self.offset + self.limit]
+
+
+def get_settings_service(db: Session = Depends(get_db)) -> SettingsService:
+    return SettingsService(SqlSettingsRepository(db), SqlActivityLogger(db))

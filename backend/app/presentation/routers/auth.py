@@ -40,16 +40,16 @@ def _token(token: str, must_change: bool = False) -> TokenResponse:
     )
 
 
-def _otp_out(code: str | None) -> OtpResponse:
+def _otp_out(code: str | None, ttl: int) -> OtpResponse:
     return OtpResponse(
-        expires_in_seconds=settings.otp_ttl_seconds,
+        expires_in_seconds=ttl,
         mock_otp=code if settings.sms_mock else None,
     )
 
 
 @router.post("/register/otp", response_model=OtpResponse)
 def request_register_otp(body: OtpRequest, auth: AuthService = Depends(get_auth_service)):
-    return _otp_out(auth.request_register_otp(body.phone))
+    return _otp_out(auth.request_register_otp(body.phone), auth.rules.otp_ttl_seconds)
 
 
 @router.post("/register", status_code=201, response_model=AccountResponse)
@@ -75,7 +75,7 @@ def logout(
 @router.post("/password/forgot/otp", response_model=OtpResponse)
 def request_reset_otp(body: OtpRequest, auth: AuthService = Depends(get_auth_service)):
     """Luôn trả 200 như nhau, dù số có tài khoản hay không (không lộ thông tin)."""
-    return _otp_out(auth.request_reset_otp(body.phone))
+    return _otp_out(auth.request_reset_otp(body.phone), auth.rules.otp_ttl_seconds)
 
 
 @router.post("/password/reset", status_code=204)

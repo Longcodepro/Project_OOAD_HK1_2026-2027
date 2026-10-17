@@ -10,6 +10,7 @@ from app.presentation.deps import get_db
 from app.presentation.errors import register_error_handlers
 from app.presentation.routers import (
     admin_orders,
+    admin_settings,
     admin_users,
     auth,
     booking,
@@ -57,6 +58,7 @@ app.include_router(tickets.router)
 app.include_router(cancellations.router)
 app.include_router(admin_orders.router)
 app.include_router(admin_users.router)
+app.include_router(admin_settings.router)
 app.include_router(reports.router)
 
 

@@ -18,6 +18,20 @@ class SqlSettingsRepository:
         except ValueError:
             return default
 
+    def all(self) -> list[tuple[str, str, str | None]]:
+        return [
+            (m.name, m.value, m.description)
+            for m in self.db.scalars(select(SettingModel).order_by(SettingModel.name))
+        ]
+
+    def set(self, name: str, value: str) -> None:
+        m = self.db.get(SettingModel, name)
+        if m is None:
+            self.db.add(SettingModel(name=name, value=value))
+        else:
+            m.value = value
+        self.db.commit()
+
 
 class SqlSeatHoldRepository:
     def __init__(self, db: Session):
