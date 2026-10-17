@@ -59,6 +59,8 @@ Tên trong code là tiếng Anh, ánh xạ với `docs/rdm/RDM.md`:
 
 ## Chức năng đã có
 
+Thống kê (UC17, Admin): `GET /admin/reports?date_from=&date_to=&route_id=&channel=` (doanh thu thực thu = bán − hoàn, vé bán/hủy, tỷ lệ lấp đầy; một bộ lọc cho cả ba), `GET /admin/reports/export.csv` (mở bằng Excel). Chưa xuất PDF/xlsx để khỏi thêm thư viện.
+
 Tài khoản & phân quyền (UC16, Admin): `/admin/users` (danh sách + tìm kiếm, tạo nhân viên với mật khẩu tạm, đổi vai trò, `reset-password`, `lock`, `unlock`, chi tiết kèm nhật ký hoạt động). Đăng nhập/đăng xuất cũng được ghi vào nhật ký (bảng `activity_logs`).
 
 Quản lý đơn (UC18, Admin): `GET /admin/orders` (lọc theo trạng thái, kênh, ngày, SĐT, mã đơn, mã vé), `GET /admin/orders/{id}`, `GET /admin/refunds` (mặc định lệnh chờ xử lý thủ công), `POST /admin/refunds/{id}/retry`.

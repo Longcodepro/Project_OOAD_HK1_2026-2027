@@ -12,6 +12,7 @@ from app.presentation.routers import (
     coupons,
     fleet,
     holds,
+    reports,
     tickets,
     trips,
 )
@@ -31,6 +32,7 @@ app.include_router(tickets.router)
 app.include_router(cancellations.router)
 app.include_router(admin_orders.router)
 app.include_router(admin_users.router)
+app.include_router(reports.router)
 
 
 @app.get("/health")

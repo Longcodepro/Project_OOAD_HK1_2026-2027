@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import exists, func, or_, select, update
 from sqlalchemy.orm import Session
 
+from app.domain.clock import vn_day_range_utc
 from app.domain.entities.booking import (
     Channel,
     Order,
@@ -369,9 +370,9 @@ class SqlBookingRepository:
         if channel:
             stmt = stmt.where(OrderModel.channel == channel)
         if date_from:
-            stmt = stmt.where(func.date(OrderModel.created_at) >= date_from.isoformat())
+            stmt = stmt.where(OrderModel.created_at >= vn_day_range_utc(date_from, date_from)[0])
         if date_to:
-            stmt = stmt.where(func.date(OrderModel.created_at) <= date_to.isoformat())
+            stmt = stmt.where(OrderModel.created_at < vn_day_range_utc(date_to, date_to)[1])
         if order_id:
             stmt = stmt.where(OrderModel.id == order_id)
         if ticket_id:

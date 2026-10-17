@@ -13,6 +13,7 @@ from app.application.use_cases.coupons import CouponService
 from app.application.use_cases.fleet import FleetService
 from app.application.use_cases.holds import SeatHoldService
 from app.application.use_cases.refunds import RefundService
+from app.application.use_cases.reports import ReportService
 from app.application.use_cases.tickets import TicketService
 from app.application.use_cases.trips import TripService
 from app.config import settings
@@ -27,6 +28,7 @@ from app.infrastructure.db.repositories.coupons import SqlCouponRepository
 from app.infrastructure.db.repositories.fleet import SqlFleetRepository
 from app.infrastructure.db.repositories.holds import SqlSeatHoldRepository, SqlSettingsRepository
 from app.infrastructure.db.repositories.refunds import SqlRefundRepository
+from app.infrastructure.db.repositories.reports import SqlReportRepository
 from app.infrastructure.db.repositories.trips import SqlTripRepository
 from app.infrastructure.db.session import SessionLocal
 from app.infrastructure.mock.payment_gateway import MockPaymentGateway
@@ -131,3 +133,7 @@ def get_admin_user_service(db: Session = Depends(get_db)) -> AdminUserService:
     return AdminUserService(
         SqlAccountRepository(db), SqlActivityLogger(db), Argon2Hasher(), SqlBookingRepository(db)
     )
+
+
+def get_report_service(db: Session = Depends(get_db)) -> ReportService:
+    return ReportService(SqlReportRepository(db))
