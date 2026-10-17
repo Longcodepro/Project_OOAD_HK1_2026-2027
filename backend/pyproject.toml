@@ -1,5 +1,6 @@
 [tool.ruff]
 line-length = 100
+extend-exclude = ["tests/postman"]  # bộ sinh collection Postman: script công cụ, không phải code ứng dụng
 
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
