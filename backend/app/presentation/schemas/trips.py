@@ -78,6 +78,10 @@ class TripDetail(TripOut):
     stops: list[StopOut] = []
 
 
+class TripUpdated(TripDetail):
+    notified_passengers: int = 0  # số vé đã nhận SMS báo đổi lịch
+
+
 class SearchResult(BaseModel):
     items: list[TripOut]
     message: str | None = None

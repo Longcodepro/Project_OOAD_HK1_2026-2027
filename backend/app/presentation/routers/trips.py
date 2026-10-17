@@ -20,6 +20,7 @@ from app.presentation.schemas.trips import (
     TripDetail,
     TripOut,
     TripUpdate,
+    TripUpdated,
 )
 
 public = APIRouter(tags=["tra cứu chuyến xe"])
@@ -147,10 +148,11 @@ def create_trip(body: TripCreate, svc: TripService = Depends(get_trip_service)):
     return _detail(svc, t.id)
 
 
-@admin.patch("/trips/{trip_id}", response_model=TripDetail)
+@admin.patch("/trips/{trip_id}", response_model=TripUpdated)
 def update_trip(trip_id: int, body: TripUpdate, svc: TripService = Depends(get_trip_service)):
-    svc.update_trip(trip_id, body.model_dump(exclude_unset=True))
-    return _detail(svc, trip_id)
+    """Đổi giờ hoặc đổi xe; hành khách đã mua vé được báo SMS."""
+    _, notified = svc.update_trip(trip_id, body.model_dump(exclude_unset=True))
+    return TripUpdated(**_detail(svc, trip_id).model_dump(), notified_passengers=notified)
 
 
 @admin.patch("/trips/{trip_id}/price", response_model=TripDetail)

@@ -100,12 +100,7 @@ def test_update_trip_time_and_conflict(client, make_user):
     t = mk_trip(client, h, r, v)
     ok = client.patch(f"/admin/trips/{t['id']}", headers=h, json={"departure_time": "09:30"})
     assert ok.status_code == 200 and ok.json()["departure_time"] == "09:30:00"
-    swap = client.patch(
-        f"/admin/trips/{t['id']}",
-        headers=h,
-        json={"vehicle_id": mk_vehicle(client, h, "51B-333.33")},
-    )
-    assert swap.status_code == 400
+    assert ok.json()["notified_passengers"] == 0  # chưa có vé nào để báo
 
 
 def test_cannot_deactivate_vehicle_with_open_trip(client, make_user):

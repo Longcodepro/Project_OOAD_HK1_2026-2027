@@ -2,6 +2,8 @@ from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
 from app.application.errors import BusinessRule, Conflict, NotFound
+from app.application.ports.auth import SmsSender
+from app.application.ports.booking import BookingRepository
 from app.application.ports.fleet import FleetRepository
 from app.application.ports.trips import TripRepository
 from app.domain.clock import now_vn, utcnow
@@ -22,9 +24,17 @@ from app.domain.rules.scheduling import overlaps
 class TripService:
     """UC13 (thêm/sửa/xem chuyến, tuyến) và UC01 (tra cứu chuyến)."""
 
-    def __init__(self, repo: TripRepository, fleet: FleetRepository):
+    def __init__(
+        self,
+        repo: TripRepository,
+        fleet: FleetRepository,
+        bookings: BookingRepository | None = None,
+        sms: SmsSender | None = None,
+    ):
         self.repo = repo
         self.fleet = fleet
+        self.bookings = bookings  # để biết hành khách nào cần báo khi đổi lịch
+        self.sms = sms
 
     # ---- tuyến ----
     def create_route(self, origin, destination, distance_km, expected_minutes) -> Route:
@@ -96,17 +106,19 @@ class TripService:
             raise NotFound("Không tìm thấy chuyến")
         return t
 
-    def update_trip(self, trip_id: int, changes: dict) -> Trip:
-        """Sửa giờ chạy hoặc đổi xe. Chuyến đã khởi hành/đã hủy thì không sửa được (E1)."""
+    def update_trip(self, trip_id: int, changes: dict) -> tuple[Trip, int]:
+        """Sửa giờ chạy hoặc đổi xe, rồi báo SMS cho hành khách đã mua vé. Trả về (chuyến, số vé đã báo).
+
+        Chuyến đã khởi hành/đã hủy thì không sửa được (E1). Đổi xe chỉ được khi xe mới có đủ mã ghế
+        đang bán/giữ; ghế đang bán được chuyển sang cùng mã ghế trên xe mới.
+        """
         t = self.get_trip(trip_id)
         if t.status == TripStatus.CANCELLED:
             raise BusinessRule("Chuyến đã hủy, không thể sửa")
         if t.has_departed(now_vn()):
             raise BusinessRule("Chuyến đã khởi hành, không thể sửa")
-        if "vehicle_id" in changes and changes["vehicle_id"] != t.vehicle_id:
-            if self.repo.trip_has_sales(trip_id):
-                raise BusinessRule("Chuyến đã có ghế bán/giữ, không thể đổi xe")
-            raise BusinessRule("Đổi xe chưa hỗ trợ: hãy hủy chuyến và tạo chuyến mới")
+        old_when, old_vehicle = t.departure_at, t.vehicle_id
+        new_vehicle = changes.get("vehicle_id", t.vehicle_id)
         if "departure_date" in changes:
             t.departure_date = changes["departure_date"]
         if "departure_time" in changes:
@@ -115,14 +127,52 @@ class TripService:
             t.note = changes["note"]
         if t.departure_at <= now_vn():
             raise BusinessRule("Giờ khởi hành phải ở tương lai")
+        swap = None
+        if new_vehicle != old_vehicle:
+            swap = self._check_swap(trip_id, new_vehicle)
+            t.vehicle_id = new_vehicle
         self._check_vehicle_free(
             t.vehicle_id,
             t.departure_at,
             t.expected_minutes or DEFAULT_TRIP_MINUTES,
             exclude_id=t.id,
         )
+        if swap:
+            self.repo.replace_vehicle(trip_id, new_vehicle, swap)
         self.repo.save_trip(t)
-        return t
+        notified = 0
+        if t.departure_at != old_when or swap:
+            notified = self._notify_passengers(t, swap is not None)
+        return t, notified
+
+    def _check_swap(self, trip_id: int, vehicle_id: int) -> list[tuple[int, str]]:
+        v = self.fleet.get_vehicle(vehicle_id, with_seats=True)
+        if v is None:
+            raise NotFound("Không tìm thấy xe mới")
+        if v.status != VehicleStatus.ACTIVE:
+            raise BusinessRule("Xe mới đã ngừng hoạt động")
+        if not v.seats:
+            raise BusinessRule("Xe mới chưa có sơ đồ ghế")
+        missing = self.repo.used_seat_codes(trip_id) - {s.code for s in v.seats}
+        if missing:
+            raise BusinessRule(
+                f"Xe mới không có các ghế đang bán/giữ: {', '.join(sorted(missing))}"
+            )
+        return [(s.id, s.code) for s in v.seats]
+
+    def _notify_passengers(self, t: Trip, vehicle_changed: bool) -> int:
+        if not (self.bookings and self.sms):
+            return 0
+        n = 0
+        for rec in self.bookings.paid_tickets_of_trip(t.id):
+            tk = rec.ticket
+            extra = " Xe mới đã được phân công." if vehicle_changed else ""
+            self.sms.send_text(
+                tk.passenger_phone,
+                f"Chuyen {tk.origin}-{tk.destination} ve #{tk.id} doi lich: khoi hanh {t.departure_at:%d/%m/%Y %H:%M}.{extra}",
+            )
+            n += 1
+        return n
 
     def update_price(self, trip_id: int, price: Decimal) -> Trip:
         """UC15: giá mới chỉ áp cho giao dịch sau đó; vé đã bán giữ giá cũ (vé lưu giá gốc riêng)."""

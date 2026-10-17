@@ -93,7 +93,9 @@ def get_fleet_service(db: Session = Depends(get_db)) -> FleetService:
 
 
 def get_trip_service(db: Session = Depends(get_db)) -> TripService:
-    return TripService(SqlTripRepository(db), SqlFleetRepository(db))
+    return TripService(
+        SqlTripRepository(db), SqlFleetRepository(db), SqlBookingRepository(db), MockSmsSender()
+    )
 
 
 def get_hold_service(db: Session = Depends(get_db)) -> SeatHoldService:

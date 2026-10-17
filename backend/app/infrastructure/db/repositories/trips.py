@@ -1,6 +1,6 @@
 from datetime import date, datetime, time, timedelta
 
-from sqlalchemy import case, func, or_, select, update
+from sqlalchemy import case, delete, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.domain.entities.trip import (
@@ -18,6 +18,7 @@ from app.domain.rules.text import norm
 from app.infrastructure.db.models import (
     RouteModel,
     StopModel,
+    TicketModel,
     TripModel,
     TripSeatModel,
     VehicleModel,
@@ -118,6 +119,7 @@ class SqlTripRepository:
 
     def save_trip(self, t: Trip) -> None:
         m = self.db.get(TripModel, t.id)
+        m.vehicle_id = t.vehicle_id
         m.departure_date, m.departure_time, m.price = t.departure_date, t.departure_time, t.price
         m.status, m.cancel_reason, m.note = t.status, t.cancel_reason, t.note
         self.db.commit()
@@ -142,6 +144,43 @@ class SqlTripRepository:
             .limit(1)
         )
         return self.db.scalar(stmt) is not None
+
+    def used_seat_codes(self, trip_id: int) -> set[str]:
+        rows = self.db.scalars(
+            select(TripSeatModel).where(
+                TripSeatModel.trip_id == trip_id, TripSeatModel.status != SeatState.FREE
+            )
+        ).unique()
+        return {r.seat.code for r in rows}
+
+    def replace_vehicle(
+        self, trip_id: int, new_vehicle_id: int, new_seats: list[tuple[int, str]]
+    ) -> None:
+        """Đổi xe: ghế của chuyến được dựng lại theo xe mới, ghế đang bán/giữ giữ nguyên trạng thái theo MÃ GHẾ."""
+        old = list(
+            self.db.scalars(select(TripSeatModel).where(TripSeatModel.trip_id == trip_id)).unique()
+        )
+        state = {
+            r.seat.code: (r.status, r.held_by, r.hold_until)
+            for r in old
+            if r.status != SeatState.FREE
+        }
+        old_code = {r.seat_id: r.seat.code for r in old}
+        new_by_code = {code: sid for sid, code in new_seats}
+        self.db.execute(delete(TripSeatModel).where(TripSeatModel.trip_id == trip_id))
+        for sid, code in new_seats:
+            st, by, until = state.get(code, (SeatState.FREE, None, None))
+            self.db.add(
+                TripSeatModel(trip_id=trip_id, seat_id=sid, status=st, held_by=by, hold_until=until)
+            )
+        for t in self.db.scalars(select(TicketModel).where(TicketModel.trip_id == trip_id)):
+            new_sid = new_by_code.get(old_code.get(t.seat_id, ""))
+            if new_sid:  # vé cũ đã hủy mà xe mới không có ghế đó thì giữ nguyên tham chiếu cũ (chỉ để lưu lịch sử)
+                t.seat_id = new_sid
+        trip = self.db.get(TripModel, trip_id)
+        trip.vehicle_id = new_vehicle_id
+        self.db.commit()
+        self.db.expire(trip)
 
     # ---- xem / tra cứu ----
     def release_expired_holds(self, now: datetime) -> None:
