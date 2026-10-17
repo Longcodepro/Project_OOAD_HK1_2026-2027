@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import exists, func, or_, select, update
+from sqlalchemy import exists, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.domain.clock import vn_day_range_utc
@@ -114,12 +114,14 @@ class SqlBookingRepository:
         return [self._agg(m) for m in self.db.scalars(stmt)]
 
     def list_counter_orders(self, clerk_id: int, day) -> list[OrderAggregate]:
+        lo, hi = vn_day_range_utc(day, day)  # "ngày" theo giờ Việt Nam, giờ lưu trong DB là UTC
         stmt = (
             select(OrderModel)
             .join(CounterSaleModel, CounterSaleModel.order_id == OrderModel.id)
             .where(
                 CounterSaleModel.clerk_id == clerk_id,
-                func.date(CounterSaleModel.sold_at) == day.isoformat(),
+                CounterSaleModel.sold_at >= lo,
+                CounterSaleModel.sold_at < hi,
             )
             .order_by(OrderModel.id.desc())
         )

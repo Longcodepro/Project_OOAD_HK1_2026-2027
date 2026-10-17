@@ -98,3 +98,25 @@ def test_counter_endpoints_clerk_only_and_cross_clerk_isolation(client, make_use
         "/counter/orders", headers=c2, json={"trip_id": trip["id"], "items": [item(seats[0])]}
     )
     assert r.status_code == 409
+
+
+def test_counter_summary_uses_vietnam_day_not_utc_day(client, make_user):
+    """Hồi quy: bán lúc 00:30 giờ VN (= 17:30 UTC hôm trước) phải tính vào ngày giờ VN, không phải ngày UTC."""
+    from datetime import datetime
+
+    from sqlalchemy import update
+
+    from app.infrastructure.db.models import CounterSaleModel
+
+    trip, seats = world(client, make_user)
+    _, h = make_user(Role.TICKET_CLERK)
+    hold(client, h, trip["id"], seats[:1])
+    o = counter_order(client, h, trip, seats[:1])
+    client.post(f"/orders/{o['id']}/pay", headers=h, json={"method": "TIEN_MAT"})
+    with (
+        client.session_factory() as db
+    ):  # ép thời điểm bán = 2026-10-17 17:30 UTC = 18/10 00:30 giờ VN
+        db.execute(update(CounterSaleModel).values(sold_at=datetime(2026, 10, 17, 17, 30)))
+        db.commit()
+    assert client.get("/counter/orders?date=2026-10-18", headers=h).json()["paid_orders"] == 1
+    assert client.get("/counter/orders?date=2026-10-17", headers=h).json()["paid_orders"] == 0
