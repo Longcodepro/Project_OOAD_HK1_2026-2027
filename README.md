@@ -126,16 +126,19 @@ Trình duyệt sẽ tự động mở tại `http://localhost:5173`.
 
 ## 🔑 DANH SÁCH TÀI KHOẢN THỬ NGHIỆM (SEEDED ACCOUNTS)
 
-Cơ sở dữ liệu đã có sẵn các tài khoản demo đầy đủ dữ liệu thực tế:
+Cơ sở dữ liệu đã có sẵn các tài khoản demo đầy đủ dữ liệu thực tế (chạy `cd backend && python -m app.seed --reset` nếu muốn làm mới lại từ đầu):
 
 | Số điện thoại | Mật khẩu | Quyền hạn (`Role`) | Họ tên & Vai trò | Giao diện sử dụng |
 | :--- | :--- | :--- | :--- | :--- |
 | `0900000000` | `Admin12345` | **ADMIN** | Quản trị viên hệ thống | `http://localhost:5173/#/admin` |
-| `0900000001` | `Staff12345` | **NHAN_VIEN_BAN_VE** | Nhân viên quầy Mỹ Đình | `http://localhost:5173/#/admin` |
-| `0900000003` | `Staff12345` | **NHAN_VIEN_BAN_VE** | Nhân viên quầy Miền Đông | `http://localhost:5173/#/admin` |
+| `0900000001` | `Staff12345` | **NHAN_VIEN_BAN_VE** | Nhân viên quầy Mỹ Đình (Hà Nội) | `http://localhost:5173/#/admin` |
+| `0900000003` | `Staff12345` | **NHAN_VIEN_BAN_VE** | Nhân viên quầy Miền Đông (TP.HCM) | `http://localhost:5173/#/admin` |
+| `0900000004` | `Staff12345` | **NHAN_VIEN_BAN_VE** | Nhân viên quầy Miền Tây (TP.HCM) | `http://localhost:5173/#/admin` |
+| `0900000005` | `Staff12345` | **NHAN_VIEN_BAN_VE** | Nhân viên quầy Trung tâm Đà Nẵng | `http://localhost:5173/#/admin` |
 | `0900000002` | `Khach12345` | **KHACH_HANG** | Nguyễn Văn An (có lịch sử vé) | `http://localhost:5173` |
 | `0900000010` | `Khach12345` | **KHACH_HANG** | Trần Thị Bình (vé VietQR) | `http://localhost:5173` |
 | `0900000012` | `Khach12345` | **KHACH_HANG** | Phạm Minh Đức (vé lỗi hoàn tiền) | `http://localhost:5173` |
+| `0900000011`–`28` | `Khach12345` | **KHACH_HANG** | 20 khách hàng thành viên thân thiết | `http://localhost:5173` |
 
 ---
 

@@ -35,7 +35,7 @@ def test_seed_loads_rich_demo_data_and_is_idempotent(client):
     assert c1["accounts"] == len(seed.DATA["accounts"]) and c1["vehicles"] == len(
         seed.DATA["vehicles"]
     )
-    assert c1["coupons"] == 5 and c1["orders"] > 100 and c1["refunds"] > 5
+    assert c1["coupons"] == len(seed.DATA["coupons"]) and c1["orders"] > 100 and c1["refunds"] > 5
     with client.session_factory() as db:
         second = seed.run(db)
         c2 = counts(db)

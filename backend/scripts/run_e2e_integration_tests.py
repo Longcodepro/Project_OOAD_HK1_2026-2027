@@ -127,11 +127,16 @@ def main():
     )
 
     # Đảm bảo voucher CHAOBAN đang bật (BAT)
+    try:
+        coupons_resp = runner.session.get(f"{API_BASE}/admin/coupons", headers=admin_auth_header).json()
+        cb_id = next((c["id"] for c in coupons_resp if c["code"] == "CHAOBAN"), 1)
+    except Exception:
+        cb_id = 1
     runner.run_step(
         "Thiết lập tham số",
         "Admin: Kích hoạt voucher CHAOBAN (BAT)",
         "PATCH",
-        "/admin/coupons/1",
+        f"/admin/coupons/{cb_id}",
         lambda r: (r.status_code == 200 and r.json().get("status") == "BAT", f"Status: {r.json().get('status')}"),
         json={"status": "BAT"},
         headers=admin_auth_header
@@ -605,9 +610,22 @@ def main():
         )
 
     # 3.5 Thêm chuyến xe mới (dùng ngày ngẫu nhiên để tránh trùng lịch xe khi chạy test nhiều lần)
+    try:
+        routes_resp = runner.session.get(f"{API_BASE}/admin/routes", headers=admin_auth_header).json()
+        sg_dl_route = next((r for r in routes_resp if "Đà Lạt" in r["destination"] and ("Hồ Chí Minh" in r["origin"] or "Sài Gòn" in r["origin"])), None)
+        sg_dl_id = sg_dl_route["id"] if sg_dl_route else 1
+    except Exception:
+        sg_dl_id = 1
+    try:
+        vehs_resp = runner.session.get(f"{API_BASE}/admin/vehicles", headers=admin_auth_header).json()
+        veh_items = vehs_resp.get("items", vehs_resp) if isinstance(vehs_resp, dict) else vehs_resp
+        veh_id = veh_items[0]["id"] if veh_items else 1
+    except Exception:
+        veh_id = 1
+
     new_trip_day = random.randint(1, 28)
     new_trip_hour = random.randint(5, 20)
-    new_trip_date = f"2026-12-{new_trip_day:02d}"
+    new_trip_date = f"2027-01-{new_trip_day:02d}"
     new_trip_time = f"{new_trip_hour:02d}:00:00"
     trip_create_resp, _ = runner.run_step(
         "Kịch bản 3: Quản trị viên",
@@ -619,8 +637,8 @@ def main():
             f"Mã chuyến: #{r.json().get('id')}, Tuyến: {r.json().get('origin')} -> {r.json().get('destination')}, Khởi hành: {r.json().get('departure_date')} {r.json().get('departure_time')}"
         ),
         json={
-            "route_id": 7,  # TP.HCM - Đà Lạt
-            "vehicle_id": 1,
+            "route_id": sg_dl_id,
+            "vehicle_id": veh_id,
             "departure_date": new_trip_date,
             "departure_time": new_trip_time,
             "price": 320000,
