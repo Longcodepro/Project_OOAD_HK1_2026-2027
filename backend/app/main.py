@@ -22,6 +22,7 @@ from app.presentation.routers import (
     reports,
     tickets,
     trips,
+    websocket,
 )
 
 if settings.jwt_secret in ("change-me", "changeme_jwt") or len(settings.jwt_secret) < 32:
@@ -132,6 +133,7 @@ all_routers = [
     admin_users.router,
     admin_settings.router,
     reports.router,
+    websocket.router,
 ]
 for r in all_routers:
     app.include_router(r)

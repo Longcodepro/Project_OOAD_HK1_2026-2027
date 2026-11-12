@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, Path, Query, Response
 
 from app.application.use_cases.tickets import TicketService
 from app.domain.clock import now_vn
 from app.domain.entities.account import Account, Role
 from app.domain.entities.booking import TicketRecord, TicketStatus
+from app.infrastructure.export.ticket_pdf import generate_ticket_pdf
 from app.presentation.deps import get_current_account, get_ticket_service, require_roles
 from app.presentation.schemas.tickets import HistoryOut, TicketDetail
 
@@ -71,3 +72,24 @@ def get_ticket(
 ):
     """Xem thông tin chi tiết một vé xe."""
     return detail(svc.get(ticket_id, actor))
+
+
+@router.get(
+    "/tickets/{ticket_id}/pdf",
+    summary="Tải phôi vé điện tử PDF",
+    description="Xuất tệp vé điện tử định dạng PDF (khổ A4) có đầy đủ mã vé, thông tin chuyến, số ghế, điểm đón/trả và hướng dẫn lên xe.",
+)
+def download_ticket_pdf(
+    ticket_id: int = Path(..., description="ID vé xe"),
+    actor: Account = Depends(get_current_account),
+    svc: TicketService = Depends(get_ticket_service),
+):
+    """Xuất vé xe khách điện tử ra định dạng PDF phục vụ in ấn hoặc lưu trữ."""
+    rec = svc.get(ticket_id, actor)
+    pdf_bytes = generate_ticket_pdf(rec)
+    code_str = rec.ticket.code or f"VE-{rec.ticket.id}"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="VeXe-{code_str}.pdf"'},
+    )

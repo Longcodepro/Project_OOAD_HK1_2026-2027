@@ -504,6 +504,19 @@ export interface CancelQuote {
 }
 
 export const ticketsApi = {
+  /** Tải file vé điện tử PDF. */
+  downloadPdf: async (ticketId: number, filename?: string) => {
+    const res = await apiClient.get(`/tickets/${ticketId}/pdf`, { responseType: 'blob' })
+    const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', filename || `VeXe-${ticketId}.pdf`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  },
+
   /** Lịch sử vé của khách đang đăng nhập. */
   mine: async (): Promise<Ticket[]> => {
     const res = await apiClient.get<{ items: BackendTicketOut[] }>('/me/tickets')

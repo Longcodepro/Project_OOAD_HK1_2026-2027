@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Path
 
 from app.application.use_cases.holds import HoldResult, SeatHoldService
 from app.domain.entities.account import Account, Role
+from app.infrastructure.websocket.hubs import trip_seat_hub
 from app.presentation.deps import get_hold_service, require_roles
 from app.presentation.schemas.holds import HeldSeat, HoldOut, HoldRequest, ReleaseRequest
 
@@ -24,14 +25,25 @@ def _out(r: HoldResult) -> HoldOut:
     summary="Khóa tạm ghế để giữ chỗ đặt vé",
     description="Khóa tạm một hoặc nhiều ghế (tối đa 10 ghế) trong vòng 15 phút. Ghế đã khóa sẽ không cho tài khoản khác chọn.",
 )
-def hold_seats(
+async def hold_seats(
     trip_id: int = Path(..., description="ID chuyến xe"),
     body: HoldRequest = ...,
     account: Account = Depends(sellers),
     svc: SeatHoldService = Depends(get_hold_service),
 ):
     """Khóa tạm thời các ghế được chỉ định cho tài khoản hiện tại."""
-    return _out(svc.hold(trip_id, account.id, body.seat_ids))
+    res = svc.hold(trip_id, account.id, body.seat_ids)
+    await trip_seat_hub.broadcast(
+        trip_id,
+        {
+            "event": "SEATS_HELD",
+            "trip_id": trip_id,
+            "seat_ids": [s[0] for s in res.seats],
+            "status": "held",
+            "hold_until": res.hold_until.isoformat() if res.hold_until else None,
+        },
+    )
+    return _out(res)
 
 
 @router.get(
@@ -55,12 +67,23 @@ def my_hold(
     summary="Nhả ghế đã giữ chỗ",
     description="Chủ động giải phóng ghế đã giữ để nhường chỗ cho người khác. Để trống danh sách seat_ids để nhả toàn bộ ghế.",
 )
-def release_seats(
+async def release_seats(
     trip_id: int = Path(..., description="ID chuyến xe"),
     body: ReleaseRequest | None = None,
     account: Account = Depends(sellers),
     svc: SeatHoldService = Depends(get_hold_service),
 ):
     """Giải phóng một phần hoặc toàn bộ ghế đang giữ trên chuyến xe."""
-    svc.release(trip_id, account.id, body.seat_ids if body else None)
-    return _out(svc.current(trip_id, account.id))
+    released_ids = body.seat_ids if (body and body.seat_ids) else None
+    svc.release(trip_id, account.id, released_ids)
+    cur = svc.current(trip_id, account.id)
+    await trip_seat_hub.broadcast(
+        trip_id,
+        {
+            "event": "SEATS_RELEASED",
+            "trip_id": trip_id,
+            "seat_ids": released_ids or [],
+            "status": "available",
+        },
+    )
+    return _out(cur)

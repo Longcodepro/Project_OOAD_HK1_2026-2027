@@ -6,6 +6,7 @@ from app.config import settings
 from app.domain.clock import now_vn
 from app.domain.entities.account import Account, Role
 from app.domain.entities.booking import Channel, OrderAggregate
+from app.infrastructure.websocket.hubs import order_hub, trip_seat_hub
 from app.presentation.deps import get_booking_service, get_current_account, require_roles
 from app.presentation.schemas.booking import (
     OrderCreate,
@@ -117,14 +118,23 @@ def get_order(
     summary="Thanh toán đơn hàng (cổng giả lập)",
     description="Thanh toán đơn hàng qua các phương thức VIETQR, MOMO, ZALOPAY, THE, TIEN_MAT. Hỗ trợ tham số simulate='success'/'fail'/'pending' để kiểm thử.",
 )
-def pay(
+async def pay(
     order_id: int = Path(..., description="ID đơn hàng"),
     body: PayIn = ...,
     account: Account = Depends(get_current_account),
     svc: BookingService = Depends(get_booking_service),
 ):
     """Thực hiện thanh toán đơn hàng. Khi thành công, vé được chuyển sang trạng thái CHUA_DI."""
-    return pay_out(svc, svc.pay(order_id, account, body.method, body.simulate))
+    res = svc.pay(order_id, account, body.method, body.simulate)
+    if res.status == "THANH_CONG":
+        await order_hub.broadcast_order_paid(order_id, res.agg.order.code)
+        # Phát thông báo ghế đã bán sang WebSocket của từng chuyến xe
+        trips_seats: dict[int, list[int]] = {}
+        for t in res.agg.tickets:
+            trips_seats.setdefault(t.trip_id, []).append(t.seat_id)
+        for tid, sids in trips_seats.items():
+            await trip_seat_hub.broadcast_seats_booked(tid, sids)
+    return pay_out(svc, res)
 
 
 @router.post(
@@ -133,13 +143,20 @@ def pay(
     summary="Hủy đơn hàng đang chờ thanh toán",
     description="Khách hàng chủ động hủy đơn hàng chưa thanh toán để giải phóng ghế ngay lập tức.",
 )
-def cancel_pending(
+async def cancel_pending(
     order_id: int = Path(..., description="ID đơn hàng"),
     account: Account = Depends(get_current_account),
     svc: BookingService = Depends(get_booking_service),
 ):
     """Khách bỏ đơn chưa thanh toán: nhả ghế ngay."""
-    return order_out(svc, svc.cancel_pending(order_id, account))
+    agg = svc.cancel_pending(order_id, account)
+    await order_hub.broadcast_order_cancelled(order_id, "Khách hàng chủ động hủy đơn")
+    trips_seats: dict[int, list[int]] = {}
+    for t in agg.tickets:
+        trips_seats.setdefault(t.trip_id, []).append(t.seat_id)
+    for tid, sids in trips_seats.items():
+        await trip_seat_hub.broadcast_seat_released(tid, sids)
+    return order_out(svc, agg)
 
 
 @router.post(

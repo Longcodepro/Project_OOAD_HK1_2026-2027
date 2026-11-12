@@ -2,7 +2,7 @@ import type { Ticket, View, User } from '../types'
 import { Header } from '../components/layout/Header'
 import { CRANE, renderFigureSvg } from '../components/dongson/dongsonData'
 import { FlockOfCranes } from '../components/dongson/FlockOfCranes'
-import { formatVnd } from '../services/api'
+import { formatVnd, ticketsApi } from '../services/api'
 
 export interface SuccessPageProps {
   setView: (v: View) => void
@@ -215,8 +215,17 @@ export function SuccessPage({
         <div className="mt-8 flex flex-col sm:flex-row items-center gap-4 w-full justify-center">
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={() => ticketsApi.downloadPdf(activeTicket.id, `VeXe-${activeTicket.ticketCode}.pdf`)}
             className="cta-terracotta h-11 px-6 rounded text-xs font-bold text-paper flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+          >
+            <span className="material-symbols-outlined text-base">download</span>
+            <span>Tải vé điện tử PDF</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="h-11 px-6 rounded border border-hairline bg-[#FFFDF9] text-xs font-bold text-ink hover:border-terracotta transition cursor-pointer flex items-center justify-center gap-2 w-full sm:w-auto"
           >
             <span className="material-symbols-outlined text-base">print</span>
             <span>In vé</span>
