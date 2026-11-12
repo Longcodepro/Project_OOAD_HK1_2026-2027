@@ -19,7 +19,7 @@ class HoldResult:
 
 
 class SeatHoldService:
-    """UC20: giữ chỗ tạm thời (mặc định 5 phút), hết hạn kiểm tra lười."""
+    """UC21: giữ chỗ tạm thời (mặc định 5 phút), hết hạn kiểm tra lười."""
 
     def __init__(
         self, holds: SeatHoldRepository, trips: TripRepository, settings: SettingsRepository

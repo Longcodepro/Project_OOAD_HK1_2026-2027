@@ -149,7 +149,7 @@ def f_counter():
 
 # ---------- 09. Vé: lịch sử & tra cứu ----------
 def f_tickets():
-    f = Folder("09. Lịch sử mua vé & tra cứu vé (UC07, UC23)")
+    f = Folder("09. Lịch sử mua vé & tra cứu vé (UC07, UC24)")
     f.add(
         *mk_trip("t", 18, 8, 300000),
         *buy_online("t", [1, 2], "tok_cust2", "t_order", "t_ticket", phone="0966666666"),
@@ -291,7 +291,7 @@ def f_tickets():
 
 # ---------- 10. Hủy vé & hoàn tiền ----------
 def f_cancel():
-    f = Folder("10. Hủy vé & hoàn tiền (UC05, UC06, UC22)")
+    f = Folder("10. Hủy vé & hoàn tiền (UC05, UC06, UC23)")
     f.add(
         *mk_trip("k", 20, 8, 400000),
         *buy_online("k", [1], "tok_cust", "k_order1", "k_ticket1"),

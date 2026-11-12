@@ -15,13 +15,13 @@
 | Vai trò: `VaiTro` (3 dòng KHACH_HANG, NHAN_VIEN_BAN_VE, ADMIN); không có bảng chức năng/quyền chi tiết | UC16 "Phân quyền vai trò" = gán vai trò; BFD chỉ liệt kê `VAI_TRO` |
 | Đăng nhập bằng `SDT` (UQ), **không có email** | Quyết định: chỉ dùng số điện thoại |
 | `BatDoiMatKhau`, `SoLanDangNhapSai`, `KhoaDangNhapDen`, `PhienBanToken` trên `TaiKhoan` | Đặc tả UC09 (khóa tạm khi sai nhiều lần), UC10/UC16 (thu hồi phiên), UC16 (buộc đổi mật khẩu lần đăng nhập kế) |
-| `OtpXacThuc` | UC19 OTP SMS; BFD `MA_XAC_THUC` |
+| `OtpXacThuc` | UC20 OTP SMS; BFD `MA_XAC_THUC` |
 | `NhatKyHoatDong` (thay `LichSuVe`) | UC16 "lịch sử hoạt động"/audit log; BFD `NHAT_KY_HOAT_DONG` |
 | `ThamSo` (khóa=tên tham số) | BFD `THAM_SO`: giữ chỗ 5 phút, hạn hủy 24 giờ, phí hủy 15%... |
 | **`GheChuyen`** (PK kép chuyến + ghế) giữ trạng thái ghế; `Ghe` chỉ là sơ đồ ghế của xe | Rule #17: trạng thái ghế thuộc cặp (chuyến, ghế); giữ chỗ 5 phút |
 | **`VeXe`** = 1 ghế 1 chuyến, lưu GiaGoc/TienGiam/ThanhTien; sinh cùng lúc với đơn | Rule #10; Sequence `:VeXe` |
 | `DonDatVe.MaTK` nullable, `KenhBan` (TRUC_TUYEN/TAI_QUAY); **`BanVeQuay`** ghi nhân viên bán + thời gian | Khách vãng lai chỉ nhập họ tên + SĐT (lưu ở `VeXe`), không tạo tài khoản; Đặc tả UC04 |
-| **`HoanTien`** | UC22: hoàn về đúng nguồn, phí hủy, hủy chuyến hoàn 100%, "Chờ xử lý thủ công" cho UC18 |
+| **`HoanTien`** | UC23: hoàn về đúng nguồn, phí hủy, hủy chuyến hoàn 100%, "Chờ xử lý thủ công" cho UC18 |
 | **`DiemDonTra`** theo chuyến | Rule #20: điểm đón/trả khai báo khi thêm chuyến xe |
 | Không có bảng ca trực, tài xế, tuyến/điểm dừng quản lý riêng | Rule #19; đã chốt không làm ca trực |
 | `TuyenXe` vẫn có bảng (dữ liệu khởi tạo, không có màn hình quản lý riêng) | `ChuyenXe` cần tuyến; BFD `TUYEN_XE` |
@@ -284,7 +284,7 @@
 *(Các giá trị enum do tài liệu chuẩn gợi ý; chỉ các giá trị trong Đặc tả/Sequence/BFD là bắt buộc — còn lại là thiết kế bổ sung.)*
 
 ## 6. Quy tắc nghiệp vụ gắn với dữ liệu
-1. **Giữ chỗ 5 phút** (Đặc tả UC20): `GheChuyen.TrangThai=TAM_KHOA`, `HetHanKhoa = now + ThamSo.THOI_GIAN_GIU_CHO_PHUT`, `MaTKGiu` = tài khoản giữ. Hết hạn kiểm tra lười mỗi khi có request xem/giữ ghế (không dùng scheduler).
+1. **Giữ chỗ 5 phút** (Đặc tả UC21): `GheChuyen.TrangThai=TAM_KHOA`, `HetHanKhoa = now + ThamSo.THOI_GIAN_GIU_CHO_PHUT`, `MaTKGiu` = tài khoản giữ. Hết hạn kiểm tra lười mỗi khi có request xem/giữ ghế (không dùng scheduler).
 2. **3 giá trị tiền trên vé:** `GiaGoc` (=`ChuyenXe.GiaVe` tại thời điểm đặt), `TienGiam` (phần mã giảm giá phân bổ vào vé), `ThanhTien = GiaGoc − TienGiam`; `DonDatVe.TongTien = Σ ThanhTien`, `DonDatVe.TienGiam = Σ TienGiam`. Giá vé đổi sau đó **không** ảnh hưởng vé đã bán.
 3. **`VeXe` tạo cùng lúc với đơn** (`CHO_THANH_TOAN`, `MaQR` NULL). Thanh toán thành công → sinh `MaQR`, `CHUA_DI`, ghế `DA_BAN` (Sequence 2.2 `luuThongTinVe` = ghi `MaQR`/phát hành). Thanh toán **thất bại** → ghi `ThanhToan.TrangThai=THAT_BAI`, đơn vẫn `CHO_THANH_TOAN`, khách thử lại trong 5 phút; **hết 5 phút** → đơn `THAT_BAI`, vé `DA_HUY`, ghế về `TRONG`.
 4. **`DA_HOAN_THANH` suy ra khi truy vấn** (chuyến đã khởi hành mà vé `CHUA_DI`), không dùng job.

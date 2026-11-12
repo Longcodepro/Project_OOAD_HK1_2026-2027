@@ -13,11 +13,11 @@ Ghi lại những chỗ code **khác hoặc chi tiết hơn** so với RDM/Đặ
 ## 2. Chỗ code chi tiết hơn RDM
 | Mã UC / bảng | Chi tiết bổ sung |
 |---|---|
-| UC19 OTP | Gửi lại OTP phải cách nhau ≥ 60 giây (429); tối đa 5 lần nhập sai/OTP; hiệu lực 120 giây. Các ngưỡng OTP, số lần đăng nhập sai và thời gian khóa nay đọc từ bảng `settings` (8 tham số, Admin chỉnh qua `/admin/settings`, có kiểm khoảng hợp lệ và ghi nhật ký); giá trị trong `app/config.py` chỉ là mặc định khi thiếu |
-| UC20 Giữ chỗ | Mỗi tài khoản giữ tối đa 10 ghế/chuyến. Giữ **tất cả hoặc không ghế nào**. Giữ lại ghế mình đang giữ thì không gia hạn |
+| UC20 OTP | Gửi lại OTP phải cách nhau ≥ 60 giây (429); tối đa 5 lần nhập sai/OTP; hiệu lực 120 giây. Các ngưỡng OTP, số lần đăng nhập sai và thời gian khóa nay đọc từ bảng `settings` (8 tham số, Admin chỉnh qua `/admin/settings`, có kiểm khoảng hợp lệ và ghi nhật ký); giá trị trong `app/config.py` chỉ là mặc định khi thiếu |
+| UC21 Giữ chỗ | Mỗi tài khoản giữ tối đa 10 ghế/chuyến. Giữ **tất cả hoặc không ghế nào**. Giữ lại ghế mình đang giữ thì không gia hạn |
 | UC02/UC04 Đơn | Đơn chưa trả tiền hết hạn khi ghế không còn do chủ đơn giữ (kiểm tra lười khi đọc/thanh toán). Lượt dùng mã giảm giá được giữ từ lúc tạo đơn và trả lại khi đơn bị hủy/hết hạn |
-| UC21 Thanh toán | Đổi phương thức: thanh toán `DANG_XU_LY` cũ chuyển `DA_HUY`. Webhook báo thành công đến **muộn** (đơn đã hết hạn, hoặc giao dịch đã bị hủy do đổi phương thức) thì tự tạo lệnh hoàn 100% với lý do mới `THANH_TOAN_QUA_HAN` (gắn vào vé đầu của đơn, ghi `source_transaction_id` là giao dịch gốc); cổng từ chối thì vào hàng đợi Admin ở UC18 |
-| UC22 Hoàn tiền | Vé thanh toán tiền mặt hoàn bằng tiền mặt: nhân viên hủy ở quầy thì `DA_HOAN` ngay; nhà xe hủy chuyến thì `CHO_XU_LY_THU_CONG` để chi tại quầy, Admin xác nhận ở UC18 |
+| UC22 Thanh toán | Đổi phương thức: thanh toán `DANG_XU_LY` cũ chuyển `DA_HUY`. Webhook báo thành công đến **muộn** (đơn đã hết hạn, hoặc giao dịch đã bị hủy do đổi phương thức) thì tự tạo lệnh hoàn 100% với lý do mới `THANH_TOAN_QUA_HAN` (gắn vào vé đầu của đơn, ghi `source_transaction_id` là giao dịch gốc); cổng từ chối thì vào hàng đợi Admin ở UC18 |
+| UC23 Hoàn tiền | Vé thanh toán tiền mặt hoàn bằng tiền mặt: nhân viên hủy ở quầy thì `DA_HOAN` ngay; nhà xe hủy chuyến thì `CHO_XU_LY_THU_CONG` để chi tại quầy, Admin xác nhận ở UC18 |
 | UC10 Khôi phục MK | Số chưa có tài khoản hoặc bị khóa: API vẫn trả thành công (im lặng) thay vì báo lỗi như sơ đồ tuần tự 2.9, để người lạ không dò được số nào đã đăng ký |
 | UC06 Hủy vé quầy | Kết quả hủy có thêm trường `receipt`: nội dung biên nhận hủy gửi máy in giả (sơ đồ tuần tự 2.8, bước 11–12) |
 | UC13 Hủy chuyến | Đơn đang `CHO_THANH_TOAN` của chuyến bị hủy cũng được đóng (`DA_HUY`) và nhả ghế |

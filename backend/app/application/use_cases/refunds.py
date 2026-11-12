@@ -43,7 +43,7 @@ class TripCancelResult:
 
 
 class RefundService:
-    """UC05/UC06 (hủy vé), UC22 (hoàn tiền) và phần hoàn 100% khi nhà xe hủy chuyến (UC13)."""
+    """UC05/UC06 (hủy vé), UC23 (hoàn tiền) và phần hoàn 100% khi nhà xe hủy chuyến (UC13)."""
 
     def __init__(
         self,
@@ -118,7 +118,7 @@ class RefundService:
 
         return cancel_receipt(self._record(ticket_id, actor).ticket, refund)
 
-    # ---- UC22: tạo lệnh hoàn ----
+    # ---- UC23: tạo lệnh hoàn ----
     def _refund(
         self,
         rec: TicketRecord,
@@ -209,7 +209,7 @@ class RefundService:
             closed += 1
         return TripCancelResult(trip_id, done, manual, total, closed)
 
-    # ---- UC18 → UC22: xử lý lại lệnh hoàn bị từ chối ----
+    # ---- UC18 → UC23: xử lý lại lệnh hoàn bị từ chối ----
     def retry(self, refund_id: int, admin: Account, simulate: str | None = None) -> Refund:
         r = self.refunds.get(refund_id)
         if r is None:

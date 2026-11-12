@@ -40,7 +40,7 @@ def lookup_tickets(
     _: Account = Depends(staff_only),
     svc: TicketService = Depends(get_ticket_service),
 ):
-    """UC23: tra cứu vé theo mã QR, mã vé hoặc số điện thoại (nhiều vé cùng số thì trả về danh sách)."""
+    """UC24: tra cứu vé theo mã QR, mã vé hoặc số điện thoại (nhiều vé cùng số thì trả về danh sách)."""
     return [detail(r) for r in svc.lookup(qr, ticket_id, phone)]
 
 

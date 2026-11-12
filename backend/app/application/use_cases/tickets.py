@@ -6,7 +6,7 @@ from app.domain.entities.booking import TicketRecord, TicketStatus
 
 
 class TicketService:
-    """UC07 (lịch sử mua vé của khách) và UC23 (tra cứu vé cho nhân viên)."""
+    """UC07 (lịch sử mua vé của khách) và UC24 (tra cứu vé cho nhân viên)."""
 
     def __init__(self, repo: BookingRepository):
         self.repo = repo

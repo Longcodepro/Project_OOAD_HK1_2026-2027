@@ -63,7 +63,7 @@ class AuthService:
         self.rules = rules
         self.logs = logs
 
-    # ---- UC19: OTP dùng chung ----
+    # ---- UC20: OTP dùng chung ----
     def _issue_otp(self, phone: str, purpose: OtpPurpose) -> str:
         now = utcnow()
         last = self.otps.latest(phone, purpose)

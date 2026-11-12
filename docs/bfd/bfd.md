@@ -1,8 +1,8 @@
 ---
 tai_lieu: Sơ đồ phân rã chức năng (BFD — Business Function Diagram)
 du_an: Hệ thống đặt vé xe khách trực tuyến (đồ án OOAD)
-phien_ban: 3.1 — đồng bộ với bộ 18 sơ đồ Use Case (thêm 4.6 Quản lý đơn đặt vé)
-cap_nhat: 2026-10-17
+phien_ban: 3.2 — đồng bộ với bộ 19 sơ đồ Use Case và với code backend (thêm 1.7 Quản lý tham số hệ thống)
+cap_nhat: 2026-11-12
 lien_quan: [../use-case/USECASE.md, ../specs/DacTaUseCase.md, ../sequence/Sequence_diagram.md, ../rdm/RDM.md]
 ---
 
@@ -47,7 +47,8 @@ HỆ THỐNG ĐẶT VÉ XE KHÁCH TRỰC TUYẾN
 │   ├── 1.3 Khôi phục mật khẩu
 │   ├── 1.4 Đổi mật khẩu
 │   ├── 1.5 Quản lý thông tin cá nhân
-│   └── 1.6 Quản lý tài khoản & Phân quyền
+│   ├── 1.6 Quản lý tài khoản & Phân quyền
+│   └── 1.7 Quản lý tham số hệ thống
 │
 ├── 2. Quản lý Chuyến xe & Giá vé
 │   ├── 2.1 Quản lý xe & Sơ đồ ghế
@@ -78,7 +79,7 @@ HỆ THỐNG ĐẶT VÉ XE KHÁCH TRỰC TUYẾN
     └── 5.5 Xuất báo cáo
 ```
 
-**5 nhóm chức năng — 26 chức năng lá.**
+**5 nhóm chức năng — 27 chức năng lá.**
 
 ---
 
@@ -109,12 +110,14 @@ flowchart TB
     N1_4["1.4 Đổi mật khẩu"]
     N1_5["1.5 Quản lý thông tin cá nhân"]
     N1_6["1.6 Quản lý tài khoản<br/>& Phân quyền"]
+    N1_7["1.7 Quản lý tham số<br/>hệ thống"]
     N1 --- N1_1
     N1 --- N1_2
     N1 --- N1_3
     N1 --- N1_4
     N1 --- N1_5
     N1 --- N1_6
+    N1 --- N1_7
 
     N2_1["2.1 Quản lý xe<br/>& Sơ đồ ghế"]
     N2_2["2.2 Quản lý chuyến xe<br/>& Lịch trình"]
@@ -170,7 +173,7 @@ flowchart TB
 ## 4. Bảng ánh xạ BFD ↔ Use Case ↔ Bảng CSDL
 
 Mọi chức năng lá đều có ít nhất một sơ đồ use case chịu trách nhiệm — **độ phủ 100%**.
-Số sơ đồ tham chiếu theo thứ tự tab trong `UseCase_DatVeXeKhach.drawio` (18 tab: 1–17 là sơ đồ chức năng, 18 là sơ đồ tổng quát).
+Số sơ đồ tham chiếu theo thứ tự tab trong `UseCase_DatVeXeKhach.drawio` (19 tab: 1–18 là sơ đồ chức năng, 19 là sơ đồ tổng quát).
 
 | BFD | Chức năng | Sơ đồ Use Case | Tác nhân | Bảng CSDL chính |
 |-----|-----------|----------------|----------|-----------------|
@@ -180,6 +183,7 @@ Số sơ đồ tham chiếu theo thứ tự tab trong `UseCase_DatVeXeKhach.draw
 | 1.4 | Đổi mật khẩu | Sơ đồ 4 | Cả 3 | `TaiKhoan` |
 | 1.5 | Quản lý thông tin cá nhân | Sơ đồ 5 | Cả 3 | `TaiKhoan` |
 | 1.6 | Quản lý tài khoản & Phân quyền | Sơ đồ 15 | Admin | `TaiKhoan`, `VaiTro`, `NhatKyHoatDong` |
+| 1.7 | Quản lý tham số hệ thống | Sơ đồ 18 | Admin | `ThamSo`, `NhatKyHoatDong` |
 | 2.1 | Quản lý xe & Sơ đồ ghế | Sơ đồ 13 | Admin | `Xe`, `LoaiXe`, `Ghe` |
 | 2.2 | Quản lý chuyến xe & Lịch trình | Sơ đồ 12 | Admin | `ChuyenXe`, `TuyenXe`, `Xe`, `DiemDonTra`, `VeXe`, `HoanTien` |
 | 2.3 | Quản lý giá vé & Khuyến mãi | Sơ đồ 14 | Admin | `ChuyenXe`, `MaGiamGia` |
@@ -214,6 +218,8 @@ không ánh xạ 1–1. Ba chỗ lệch cần biết:
    3.2 (in vé tại quầy).
 3. **Xử lý vé của chuyến bị hủy** nằm trong 2.2, gọi sang 4.5 Hoàn tiền. Nhà xe hủy chuyến
    thì hoàn 100%, không trừ phí.
+4. **Đổi số điện thoại** không có lá riêng. Là luồng mở rộng của 1.5, `«include»` use case dùng
+   chung *Xác thực số điện thoại bằng OTP* (UC20). Xem sơ đồ use case tab 5 và sơ đồ tuần tự 2.11.
 
 ---
 
@@ -244,7 +250,8 @@ Không còn mục chưa chốt. **Quản lý đơn đặt vé** cho Admin đã q
 | 1.0 | 2026-09-30 | Bản vẽ tay ban đầu (17 lá) |
 | 2.0 | 2026-10-03 | Rà soát chéo với Use Case. Bỏ "Quản lý Tuyến xe & Trạm dừng"; "Đổi vé & Hủy vé" → "Hủy vé"; "Thanh toán trực tuyến & Tiền mặt" → "Thanh toán trực tuyến"; "Thống kê Tỷ lệ hủy vé & Hoàn tiền" → "Thống kê Tỷ lệ hủy vé". Bổ sung bảng ánh xạ và mục ngoài phạm vi. (16 lá) |
 | 3.0 | 2026-10-07 | Dựng lại toàn bộ cho khớp bộ 17 sơ đồ Use Case cuối cùng. **16 lá → 25 lá.** Chi tiết bên dưới. |
-| 3.1 | 2026-10-17 | Rà soát chéo BFD–Use Case–Đặc tả–Sequence: thêm lá **4.6 Quản lý đơn đặt vé** (**25 → 26 lá**); cột "Bảng CSDL chính" đổi sang tên bảng trong `RDM.md`; bỏ mục chưa chốt. (`BFD.pdf` chưa được xuất lại.) |
+| 3.1 | 2026-10-17 | Rà soát chéo BFD–Use Case–Đặc tả–Sequence: thêm lá **4.6 Quản lý đơn đặt vé** (**25 → 26 lá**); cột "Bảng CSDL chính" đổi sang tên bảng trong `RDM.md`; bỏ mục chưa chốt. |
+| 3.2 | 2026-11-12 | Rà soát chéo với **code backend**: thêm lá **1.7 Quản lý tham số hệ thống** (**26 → 27 lá**) cho `GET/PATCH /admin/settings` — chức năng đã code nhưng chưa sơ đồ nào vẽ. Ghi chú thêm *Đổi số điện thoại* là luồng mở rộng của 1.5. |
 
 ### Chi tiết thay đổi 2.0 → 3.0
 

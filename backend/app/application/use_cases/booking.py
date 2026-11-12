@@ -46,7 +46,7 @@ class PayResult:
 
 
 class BookingService:
-    """UC02 (đặt vé) + UC21 (thanh toán). Kênh quầy dùng lại cùng các hàm này (UC04)."""
+    """UC02 (đặt vé) + UC22 (thanh toán). Kênh quầy dùng lại cùng các hàm này (UC04)."""
 
     def __init__(
         self,
@@ -198,7 +198,7 @@ class BookingService:
         self._close_pending(agg, OrderStatus.CANCELLED)
         return self.repo.get_order(order_id)
 
-    # ---- UC21: thanh toán ----
+    # ---- UC22: thanh toán ----
     def pay(
         self, order_id: int, actor: Account, method: PaymentMethod, simulate: str | None
     ) -> PayResult:

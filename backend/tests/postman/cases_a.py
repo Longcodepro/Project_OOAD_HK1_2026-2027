@@ -65,7 +65,7 @@ pm.collectionVariables.set('rid', base.toString(36).toUpperCase());
 
 # ---------- 01. Xác thực ----------
 def f_auth():
-    f = Folder("01. Xác thực (UC08 Đăng ký, UC09 Đăng nhập/Đăng xuất, UC19 OTP)")
+    f = Folder("01. Xác thực (UC08 Đăng ký, UC09 Đăng nhập/Đăng xuất, UC20 OTP)")
     f.add(
         Req(
             "OTP: SĐT sai định dạng → 422",

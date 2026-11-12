@@ -1,14 +1,15 @@
 # ĐẶC TẢ USE CASE — HỆ THỐNG ĐẶT VÉ XE KHÁCH TRỰC TUYẾN
 
 > Tài liệu này mô tả toàn bộ sơ đồ Use Case của đồ án, viết để AI đọc và sinh code.
-> Nguồn gốc: file `UseCase_DatVeXeKhach.drawio` (18 sơ đồ). Mọi thay đổi phải sửa ở file
+> Nguồn gốc: file `UseCase_DatVeXeKhach.drawio` (19 sơ đồ). Mọi thay đổi phải sửa ở file
 > draw.io trước, rồi cập nhật lại tài liệu này.
 
-- **Phiên bản:** 2026-10-17 (rà soát chéo với BFD, Đặc tả, Sequence)
-- **Số sơ đồ:** 18 (17 sơ đồ chức năng + 1 sơ đồ tổng quát)
+- **Phiên bản:** 2026-11-12 (rà soát chéo với BFD, Đặc tả, Sequence **và code backend**)
+- **Số sơ đồ:** 19 (18 sơ đồ chức năng + 1 sơ đồ tổng quát)
 - **Phạm vi:** website đặt vé xe khách liên tỉnh, luồng mua vé là trọng tâm
 - **Mã UC:** mã `(UCxx)` ghi sau tên mỗi mục 1–16 khớp đúng với mã dùng ở Class Diagram
-  (`docs/class/*.jpg`) và Sequence Diagram (`docs/sequence/Sequence_diagram.md`). Không có
+  (`docs/class/ClassDiagram_DatVeXeKhach.drawio`, mô tả ở `docs/class/Class.md`) và Sequence
+  Diagram (`docs/sequence/Sequence_diagram.md`). Không có
   UC03 — use case này đã bị gộp vào UC02 từ trước, chủ ý bỏ số.
 
 ---
@@ -50,7 +51,7 @@ Quy ước bổ sung:
 
 ---
 
-## 3. CHI TIẾT 18 SƠ ĐỒ
+## 3. CHI TIẾT 19 SƠ ĐỒ
 
 ### 1. Đăng nhập - Đăng xuất (UC09)
 
@@ -130,24 +131,33 @@ Quy ước bổ sung:
 
 ### 5. Quản lý thông tin cá nhân (UC11)
 
-**Actor:** `KHÁCH HÀNG`, `NHÂN VIÊN BÁN VÉ`, `ADMIN`
+**Actor:** `KHÁCH HÀNG`, `NHÂN VIÊN BÁN VÉ`, `ADMIN`, `DỊCH VỤ SMS`
 
 **Use case:**
 
 - Xem thông tin cá nhân
 - Cập nhật thông tin cá nhân
+- Đổi số điện thoại
+- Xác thực số điện thoại bằng OTP
 
 **Actor thực hiện:**
 
 - `KHÁCH HÀNG` → Xem thông tin cá nhân
 - `NHÂN VIÊN BÁN VÉ` → Xem thông tin cá nhân
 - `ADMIN` → Xem thông tin cá nhân
+- Xác thực số điện thoại bằng OTP → `DỊCH VỤ SMS` (actor phụ)
 
 **Quan hệ:**
 
 | Từ | Quan hệ | Tới |
 |---|---|---|
 | Cập nhật thông tin cá nhân | `«extend»` | Xem thông tin cá nhân |
+| Đổi số điện thoại | `«extend»` | Xem thông tin cá nhân |
+| Đổi số điện thoại | `«include»` | Xác thực số điện thoại bằng OTP |
+
+> Số điện thoại là định danh đăng nhập nên không sửa trực tiếp ở *Cập nhật thông tin cá nhân*.
+> Đổi số phải nhập lại mật khẩu và xác thực OTP gửi tới **số mới**; thành công thì mọi phiên
+> đăng nhập cũ bị thu hồi. Xem sơ đồ tuần tự 2.11.
 
 
 ### 6. Xem lịch sử mua vé (UC07)
@@ -203,6 +213,7 @@ Quy ước bổ sung:
 - Thanh toán
 - Ví MoMo / ZaloPay
 - VietQR / Thẻ
+- Hủy đơn chưa thanh toán
 
 **Actor thực hiện:**
 
@@ -214,6 +225,7 @@ Quy ước bổ sung:
 | Từ | Quan hệ | Tới |
 |---|---|---|
 | Áp dụng mã giảm giá | `«extend»` | Đặt vé trực tuyến |
+| Hủy đơn chưa thanh toán | `«extend»` | Đặt vé trực tuyến |
 | Đặt vé trực tuyến | `«include»` | Giữ chỗ tạm thời |
 | Đặt vé trực tuyến | `«include»` | Thanh toán |
 | Ví MoMo / ZaloPay | `«extend»` | Thanh toán |
@@ -343,7 +355,7 @@ Quy ước bổ sung:
 - Xem danh sách xe
 - Thêm xe mới
 - Sửa thông tin xe
-- Ngừng hoạt động xe
+- Bật / Tắt hoạt động xe
 - Xem sơ đồ ghế của xe
 - Thiết lập sơ đồ ghế
 
@@ -352,7 +364,7 @@ Quy ước bổ sung:
 - `ADMIN` → Xem danh sách xe
 - `ADMIN` → Thêm xe mới
 - `ADMIN` → Sửa thông tin xe
-- `ADMIN` → Ngừng hoạt động xe
+- `ADMIN` → Bật / Tắt hoạt động xe
 
 **Quan hệ:**
 
@@ -480,7 +492,31 @@ Quy ước bổ sung:
 | Xử lý hoàn tiền thủ công | `«include»` | Hoàn tiền |
 
 
-### 18. Sơ đồ tổng quát
+### 18. Quản lý tham số hệ thống (UC19)
+
+**Actor:** `ADMIN`
+
+**Use case:**
+
+- Xem danh sách tham số
+- Cập nhật tham số
+
+**Actor thực hiện:**
+
+- `ADMIN` → Xem danh sách tham số
+
+**Quan hệ:**
+
+| Từ | Quan hệ | Tới |
+|---|---|---|
+| Cập nhật tham số | `«extend»` | Xem danh sách tham số |
+
+> Tám tham số vận hành: thời gian giữ chỗ, hạn hủy vé, phí hủy, bốn ngưỡng OTP và ngưỡng khóa
+> đăng nhập. Mỗi tham số có khoảng hợp lệ riêng; sửa xong ghi nhật ký và áp dụng ngay.
+> Xem đặc tả UC19 và sơ đồ tuần tự 2.20.
+
+
+### 19. Sơ đồ tổng quát
 
 **Actor:** `KHÁCH HÀNG`, `NHÂN VIÊN BÁN VÉ`, `ADMIN`, `CỔNG THANH TOÁN`, `DỊCH VỤ SMS`
 
@@ -503,6 +539,7 @@ Quy ước bổ sung:
 - Quản lý giá vé & khuyến mãi
 - Quản lý tài khoản & phân quyền
 - Thống kê & báo cáo doanh thu
+- Quản lý tham số hệ thống
 - Quản lý đơn đặt vé
 - Xác thực số điện thoại bằng OTP
 - Giữ chỗ tạm thời
