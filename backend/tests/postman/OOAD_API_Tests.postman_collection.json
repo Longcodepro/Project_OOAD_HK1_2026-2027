@@ -652,7 +652,7 @@
       ]
     },
     {
-      "name": "01. Xác thực (UC08 Đăng ký, UC09 Đăng nhập/Đăng xuất, UC19 OTP)",
+      "name": "01. Xác thực (UC08 Đăng ký, UC09 Đăng nhập/Đăng xuất, UC20 OTP)",
       "description": "",
       "item": [
         {
@@ -5176,7 +5176,7 @@
       ]
     },
     {
-      "name": "05. Giữ chỗ tạm thời (UC20)",
+      "name": "05. Giữ chỗ tạm thời (UC21)",
       "description": "",
       "item": [
         {
@@ -6994,7 +6994,7 @@
       ]
     },
     {
-      "name": "07. Đặt vé trực tuyến & thanh toán (UC02, UC21)",
+      "name": "07. Đặt vé trực tuyến & thanh toán (UC02, UC22)",
       "description": "",
       "item": [
         {
@@ -9370,7 +9370,7 @@
       ]
     },
     {
-      "name": "09. Lịch sử mua vé & tra cứu vé (UC07, UC23)",
+      "name": "09. Lịch sử mua vé & tra cứu vé (UC07, UC24)",
       "description": "",
       "item": [
         {
@@ -10495,7 +10495,7 @@
       ]
     },
     {
-      "name": "10. Hủy vé & hoàn tiền (UC05, UC06, UC22)",
+      "name": "10. Hủy vé & hoàn tiền (UC05, UC06, UC23)",
       "description": "",
       "item": [
         {

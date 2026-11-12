@@ -256,7 +256,7 @@ pm.collectionVariables.set('tr_date_empty', day(11));
 
 # ---------- 05. Giữ chỗ ----------
 def f_hold():
-    f = Folder("05. Giữ chỗ tạm thời (UC20)")
+    f = Folder("05. Giữ chỗ tạm thời (UC21)")
     f.add(
         *mk_trip("h", 12, 8, 200000),
         hold(
@@ -571,7 +571,7 @@ pm.collectionVariables.set('cp_to', new Date(Date.now() + 30*86400000).toISOStri
 
 # ---------- 07. Đặt vé online ----------
 def f_booking():
-    f = Folder("07. Đặt vé trực tuyến & thanh toán (UC02, UC21)")
+    f = Folder("07. Đặt vé trực tuyến & thanh toán (UC02, UC22)")
     f.add(
         *mk_trip("b", 14, 8, 400000, n_seats=8),
         Req(

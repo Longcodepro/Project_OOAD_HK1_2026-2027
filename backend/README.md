@@ -13,7 +13,7 @@ backend/
 │   ├── main.py              # tạo FastAPI app, đăng ký router
 │   ├── config.py            # Settings đọc .env (DB, JWT)
 │   ├── domain/              # entity (dataclass thuần), quy tắc nghiệp vụ, không phụ thuộc framework
-│   ├── application/         # use case (UC01..UC23), cổng (interface) repository
+│   ├── application/         # use case (UC01..UC24), cổng (interface) repository
 │   ├── infrastructure/      # SQLAlchemy, repository, Alembic, JWT, mock thanh toán/SMS
 │   └── presentation/        # router, schema request/response, dependency
 └── tests/
@@ -102,22 +102,22 @@ Tài khoản & phân quyền (UC16, Admin): `/admin/users` (danh sách + tìm ki
 
 Quản lý đơn (UC18, Admin): `GET /admin/orders` (lọc theo trạng thái, kênh, ngày, SĐT, mã đơn, mã vé), `GET /admin/orders/{id}`, `GET /admin/refunds` (mặc định lệnh chờ xử lý thủ công), `POST /admin/refunds/{id}/retry`.
 
-Hủy vé & hoàn tiền (UC05, UC06, UC22, và hủy chuyến của UC13): `GET /tickets/{id}/cancel-quote`, `POST /tickets/{id}/cancel` (khách, còn ≥ 24 giờ, phí 15%), `POST /counter/tickets/{id}/cancel` (nhân viên quầy), `POST /admin/trips/{id}/cancel` (hoàn 100%). Lệnh hoàn bị cổng từ chối nằm ở trạng thái `CHO_XU_LY_THU_CONG` để Admin xử lý.
+Hủy vé & hoàn tiền (UC05, UC06, UC23, và hủy chuyến của UC13): `GET /tickets/{id}/cancel-quote`, `POST /tickets/{id}/cancel` (khách, còn ≥ 24 giờ, phí 15%), `POST /counter/tickets/{id}/cancel` (nhân viên quầy), `POST /admin/trips/{id}/cancel` (hoàn 100%). Lệnh hoàn bị cổng từ chối nằm ở trạng thái `CHO_XU_LY_THU_CONG` để Admin xử lý.
 
-Vé (UC07 lịch sử, UC23 tra cứu): `GET /me/tickets?status=`, `GET /tickets/lookup?qr=|ticket_id=|phone=` (nhân viên/Admin), `GET /tickets/{id}`.
+Vé (UC07 lịch sử, UC24 tra cứu): `GET /me/tickets?status=`, `GET /tickets/lookup?qr=|ticket_id=|phone=` (nhân viên/Admin), `GET /tickets/{id}`.
 
 Bán vé tại quầy (UC04, nhân viên bán vé): `POST /counter/orders`, thanh toán qua `POST /orders/{id}/pay` (tiền mặt hoặc VietQR, đổi phương thức được), `GET /counter/orders/{id}/receipts` (in và in lại vé), `GET /counter/orders` (đối soát doanh thu trong ngày).
 
-Đặt vé trực tuyến & thanh toán (UC02, UC21, khách hàng): `POST /orders` (ghế phải đã giữ chỗ), `POST /orders/{id}/pay`, `GET /orders`, `GET /orders/{id}`, `POST /orders/{id}/cancel-pending`, `POST /payments/webhook`. Cổng thanh toán đang mock: tham số `simulate` = `success` / `fail` / `pending` để ép kết quả.
+Đặt vé trực tuyến & thanh toán (UC02, UC22, khách hàng): `POST /orders` (ghế phải đã giữ chỗ), `POST /orders/{id}/pay`, `GET /orders`, `GET /orders/{id}`, `POST /orders/{id}/cancel-pending`, `POST /payments/webhook`. Cổng thanh toán đang mock: tham số `simulate` = `success` / `fail` / `pending` để ép kết quả.
 
 Khuyến mãi & giá vé (UC15, Admin): `/admin/coupons` (chỉ thêm và bật/tắt), `PATCH /admin/trips/{id}/price`. Kiểm tra mã khi đặt vé: `POST /coupons/validate`.
 
-Giữ chỗ (UC20, khách hoặc nhân viên quầy): `POST /trips/{id}/hold` (mặc định 5 phút theo bảng `settings`), `GET /trips/{id}/hold`, `POST /trips/{id}/release`.
+Giữ chỗ (UC21, khách hoặc nhân viên quầy): `POST /trips/{id}/hold` (mặc định 5 phút theo bảng `settings`), `GET /trips/{id}/hold`, `POST /trips/{id}/release`.
 
 Xe & sơ đồ ghế (UC14, Admin): `/admin/vehicle-types`, `/admin/vehicles` (kèm `PUT /admin/vehicles/{id}/seats`).
 Tuyến & chuyến (UC13, Admin): `/admin/routes`, `/admin/trips`. Tra cứu (UC01, công khai): `GET /trips/search`, `GET /trips/{id}`, `GET /trips/{id}/seats`.
 
 Tài khoản (UC10, UC11, UC12): `POST /auth/password/forgot/otp`, `POST /auth/password/reset`, `POST /auth/password/change`, `PATCH /auth/me`.
 
-Xác thực (UC08, UC09, UC19): `POST /auth/register/otp`, `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`.
+Xác thực (UC08, UC09, UC20): `POST /auth/register/otp`, `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`.
 OTP đang mock: với `SMS_MOCK=true` (mặc định) API trả mã trong trường `mock_otp`. Các ngưỡng (OTP 120 giây, khóa đăng nhập sau 5 lần sai trong 15 phút) đang để trong `app/config.py`, chưa đọc từ bảng `ThamSo`.

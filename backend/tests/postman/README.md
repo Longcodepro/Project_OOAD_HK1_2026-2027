@@ -24,16 +24,16 @@ Biến trong chuỗi viết `@{ten_bien}` (thành `{{ten_bien}}` của Postman).
 ## Chức năng ↔ thư mục
 | Thư mục | Use case | Số request |
 |---|---|---|
-| 01 | UC08, UC09, UC19: đăng ký, đăng nhập, OTP, khóa tạm | 26 |
+| 01 | UC08, UC09, UC20: đăng ký, đăng nhập, OTP, khóa tạm | 26 |
 | 02 | UC10, UC11, UC12: quên/đổi mật khẩu, hồ sơ | 21 |
 | 03 | UC14: xe và sơ đồ ghế | 19 |
 | 04 | UC13, UC01: tuyến, chuyến, tra cứu | 30 |
-| 05 | UC20: giữ chỗ | 19 |
+| 05 | UC21: giữ chỗ | 19 |
 | 06 | UC15: giá vé, mã giảm giá | 19 |
-| 07 | UC02, UC21: đặt vé online, thanh toán | 32 |
+| 07 | UC02, UC22: đặt vé online, thanh toán | 32 |
 | 08 | UC04: bán vé tại quầy | 19 |
-| 09 | UC07, UC23: lịch sử, tra cứu vé | 25 |
-| 10 | UC05, UC06, UC22: hủy vé, hoàn tiền | 37 |
+| 09 | UC07, UC24: lịch sử, tra cứu vé | 25 |
+| 10 | UC05, UC06, UC23: hủy vé, hoàn tiền | 37 |
 | 11 | UC13: nhà xe hủy chuyến | 21 |
 | 12 | UC18: quản lý đơn, hoàn tiền thủ công | 19 |
 | 13 | UC16: tài khoản, phân quyền | 28 |
