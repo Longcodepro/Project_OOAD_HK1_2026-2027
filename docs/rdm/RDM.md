@@ -1,7 +1,8 @@
 # RDM — MÔ HÌNH QUAN HỆ DỮ LIỆU (HỆ THỐNG ĐẶT VÉ XE KHÁCH)
 
 > Nguồn gốc: `RDM_DatVeXeKhach.drawio` (cùng thư mục). Sửa drawio trước rồi cập nhật file này.
-> Bản 2026-10-17: dựng từ 4 tài liệu chuẩn **BFD, Use Case, Đặc tả, Sequence** (không sao chép `rdm.svg` cũ; `rdm.svg` chỉ còn là tham khảo).
+> Bản 2026-10-17: dựng từ 4 tài liệu chuẩn **BFD, Use Case, Đặc tả, Sequence** (không sao chép bản vẽ RDM cũ).
+> Rà soát lại 2026-11-12: khớp 100% với `RDM_DatVeXeKhach.drawio` và với models + migrations trong `backend/` (18/18 bảng, 22/22 quan hệ, 18/18 nhóm enum).
 > Quy ước đặt tên: tên bảng = tên lớp thực thể trong Sequence (`TaiKhoan`, `DonDatVe`, `VeXe`, `MaGiamGia`...).
 
 ## 1. Quy ước

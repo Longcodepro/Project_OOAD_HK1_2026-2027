@@ -112,7 +112,7 @@ flowchart LR
 ## 1. ĐẶC TẢ SƠ ĐỒ USE CASE TỔNG QUAN (SYSTEM OVERVIEW SPECIFICATION)
 
 #### Mô tả use case: Sơ đồ Use Case Tổng Quan (UC00)
-*(Tương ứng sơ đồ tổng quát `USECASE/SoDoThongQuat.png`)*
+*(Tương ứng tab 19 trong `UseCase_DatVeXeKhach.drawio`)*
 
 | Thành phần | Nội dung đặc tả |
 | :--- | :--- |
@@ -134,7 +134,7 @@ flowchart LR
 ### PHẦN A: NHÓM NGHIỆP VỤ ĐẶT VÉ & BÁN VÉ
 
 #### Mô tả use case: Tra cứu chuyến xe (UC01)
-*(Tương ứng sơ đồ phân rã `USECASE/TraCuuVaTimChuyenXe.png`)*
+*(Tương ứng tab 7 trong `UseCase_DatVeXeKhach.drawio`)*
 
 | Thành phần | Nội dung đặc tả |
 | :--- | :--- |
@@ -148,7 +148,7 @@ flowchart LR
 ---
 
 #### Mô tả use case: Đặt vé trực tuyến (UC02)
-*(Tương ứng sơ đồ phân rã `USECASE/DatVeVaTamKhoaCho.png` và `USECASE/BanVeVaThanhToanTrucTuyen.png` — **đã gộp**)*
+*(Tương ứng tab 8 trong `UseCase_DatVeXeKhach.drawio` — hai sơ đồ cũ **đã gộp** làm một)*
 
 | Thành phần | Nội dung đặc tả |
 | :--- | :--- |
@@ -164,7 +164,7 @@ flowchart LR
 ---
 
 #### Mô tả use case: Bán vé & in vé tại quầy (UC04)
-*(Tương ứng sơ đồ phân rã `USECASE/BanVeVaInVeTaiQuay.png`)*
+*(Tương ứng tab 9 trong `UseCase_DatVeXeKhach.drawio`)*
 
 | Thành phần | Nội dung đặc tả |
 | :--- | :--- |
@@ -178,7 +178,7 @@ flowchart LR
 ---
 
 #### Mô tả use case: Hủy vé trực tuyến (UC05)
-*(Tương ứng sơ đồ phân rã `USECASE/HuyVeTrucTuyen.png`)*
+*(Tương ứng tab 10 trong `UseCase_DatVeXeKhach.drawio`)*
 
 | Thành phần | Nội dung đặc tả |
 | :--- | :--- |
@@ -192,7 +192,7 @@ flowchart LR
 ---
 
 #### Mô tả use case: Hủy vé tại quầy (UC06)
-*(Tương ứng sơ đồ phân rã `USECASE/HuyVeTaiQuay.png`)*
+*(Tương ứng tab 11 trong `UseCase_DatVeXeKhach.drawio`)*
 
 | Thành phần | Nội dung đặc tả |
 | :--- | :--- |
@@ -206,7 +206,7 @@ flowchart LR
 ---
 
 #### Mô tả use case: Xem lịch sử mua vé (UC07)
-*(Tương ứng sơ đồ phân rã `USECASE/LichsuMuaVe.png`)*
+*(Tương ứng tab 6 trong `UseCase_DatVeXeKhach.drawio`)*
 
 | Thành phần | Nội dung đặc tả |
 | :--- | :--- |
@@ -222,7 +222,7 @@ flowchart LR
 ### PHẦN B: NHÓM XÁC THỰC & QUẢN LÝ TÀI KHOẢN
 
 #### Mô tả use case: Đăng ký tài khoản (UC08)
-*(Tương ứng sơ đồ phân rã `USECASE/DangKyTaiKhoan.png`)*
+*(Tương ứng tab 2 trong `UseCase_DatVeXeKhach.drawio`)*
 
 | Thành phần | Nội dung đặc tả |
 | :--- | :--- |
@@ -236,7 +236,7 @@ flowchart LR
 ---
 
 #### Mô tả use case: Đăng nhập - Đăng xuất (UC09)
-*(Tương ứng sơ đồ phân rã `USECASE/DangNhap-DangXuat.png`)*
+*(Tương ứng tab 1 trong `UseCase_DatVeXeKhach.drawio`)*
 
 | Thành phần | Nội dung đặc tả |
 | :--- | :--- |
@@ -247,12 +247,12 @@ flowchart LR
 | **Tiền điều kiện (pre-condition)** | **Đăng nhập:** người dùng sở hữu tài khoản hợp lệ, chưa bị khóa.<br>**Đăng xuất:** đang tồn tại một phiên làm việc hợp lệ. |
 | **Hậu điều kiện (post-condition)** | **Đăng nhập:** phiên làm việc được khởi tạo kèm đúng vai trò.<br>**Đăng xuất:** phiên làm việc bị hủy hoàn toàn, mọi yêu cầu sau đó phải xác thực lại. |
 
-> **⚠️ Sửa lỗi logic:** Sơ đồ cũ vẽ **Đăng xuất `<<include>>` Đăng nhập**. Điều này sai về ngữ nghĩa — `<<include>>` nghĩa là "chạy Đăng xuất thì phải chạy luôn cả thủ tục Đăng nhập", vô lý. Quan hệ đúng là **"đã đăng nhập" là tiền điều kiện của Đăng xuất**. Đã bỏ mũi tên include khỏi đặc tả; **cần sửa lại file `DangNhap-DangXuat.png`**.
+> **⚠️ Sửa lỗi logic:** Sơ đồ cũ vẽ **Đăng xuất `<<include>>` Đăng nhập**. Điều này sai về ngữ nghĩa — `<<include>>` nghĩa là "chạy Đăng xuất thì phải chạy luôn cả thủ tục Đăng nhập", vô lý. Quan hệ đúng là **"đã đăng nhập" là tiền điều kiện của Đăng xuất**. Đã bỏ mũi tên include khỏi đặc tả và khỏi tab 1 của `UseCase_DatVeXeKhach.drawio`.
 
 ---
 
 #### Mô tả use case: Khôi phục mật khẩu (UC10)
-*(Tương ứng sơ đồ phân rã `USECASE/QuenMatKhau.png`)*
+*(Tương ứng tab 3 trong `UseCase_DatVeXeKhach.drawio`)*
 
 | Thành phần | Nội dung đặc tả |
 | :--- | :--- |
@@ -266,7 +266,7 @@ flowchart LR
 ---
 
 #### Mô tả use case: Đổi mật khẩu (UC12)
-*(Tương ứng sơ đồ phân rã `USECASE/DoiMatKhau.png`)*
+*(Tương ứng tab 4 trong `UseCase_DatVeXeKhach.drawio`)*
 
 | Thành phần | Nội dung đặc tả |
 | :--- | :--- |
@@ -280,7 +280,7 @@ flowchart LR
 ---
 
 #### Mô tả use case: Quản lý thông tin cá nhân (UC11)
-*(Tương ứng sơ đồ phân rã `USECASE/QuanLyThongTinCaNhan.png`)*
+*(Tương ứng tab 5 trong `UseCase_DatVeXeKhach.drawio`)*
 
 | Thành phần | Nội dung đặc tả |
 | :--- | :--- |
@@ -296,7 +296,7 @@ flowchart LR
 ### PHẦN C: NHÓM QUẢN TRỊ & VẬN HÀNH (DÀNH CHO ADMIN)
 
 #### Mô tả use case: Quản lý chuyến xe & lịch trình (UC13)
-*(Tương ứng sơ đồ phân rã `USECASE/QuanLyChuyenXeVaLichTrinh.png`)*
+*(Tương ứng tab 12 trong `UseCase_DatVeXeKhach.drawio`)*
 
 | Thành phần | Nội dung đặc tả |
 | :--- | :--- |
@@ -312,7 +312,7 @@ flowchart LR
 ---
 
 #### Mô tả use case: Quản lý xe & sơ đồ ghế (UC14)
-*(Tương ứng sơ đồ phân rã `USECASE/QuanLyXeVaSoDoGhe.png`)*
+*(Tương ứng tab 13 trong `UseCase_DatVeXeKhach.drawio`)*
 
 | Thành phần | Nội dung đặc tả |
 | :--- | :--- |
@@ -326,7 +326,7 @@ flowchart LR
 ---
 
 #### Mô tả use case: Quản lý giá vé & khuyến mãi (UC15)
-*(Tương ứng sơ đồ phân rã `USECASE/GiaVeVaKhuyenMai.png`)*
+*(Tương ứng tab 14 trong `UseCase_DatVeXeKhach.drawio`)*
 
 | Thành phần | Nội dung đặc tả |
 | :--- | :--- |
@@ -340,7 +340,7 @@ flowchart LR
 ---
 
 #### Mô tả use case: Quản lý tài khoản & phân quyền (UC16)
-*(Tương ứng sơ đồ phân rã `USECASE/QuanLyTaiKhoanVaPhanQuyen.png`)*
+*(Tương ứng tab 15 trong `UseCase_DatVeXeKhach.drawio`)*
 
 | Thành phần | Nội dung đặc tả |
 | :--- | :--- |
@@ -354,7 +354,7 @@ flowchart LR
 ---
 
 #### Mô tả use case: Thống kê & báo cáo doanh thu (UC17)
-*(Tương ứng sơ đồ phân rã `USECASE/ThongKeVaBaoCao.png` và `USECASE/ThongKe.png`)*
+*(Tương ứng tab 16 trong `UseCase_DatVeXeKhach.drawio` — hai sơ đồ cũ đã gộp làm một)*
 
 | Thành phần | Nội dung đặc tả |
 | :--- | :--- |
@@ -486,15 +486,15 @@ flowchart LR
 
 | Mã | Lỗi | Phân tích | Xử lý trong tài liệu |
 | :--- | :--- | :--- | :--- |
-| **L1** | `Đăng xuất <<include>> Đăng nhập` | `<<include>>` = use case cơ sở **luôn luôn** thực thi trọn vẹn use case được include. Đăng xuất không hề chạy lại thủ tục đăng nhập; "đang có phiên" chỉ là **điều kiện đầu vào**. | Bỏ quan hệ include; chuyển thành **Tiền điều kiện** của UC09. **Cần sửa lại file `DangNhap-DangXuat.png`.** |
+| **L1** | `Đăng xuất <<include>> Đăng nhập` | `<<include>>` = use case cơ sở **luôn luôn** thực thi trọn vẹn use case được include. Đăng xuất không hề chạy lại thủ tục đăng nhập; "đang có phiên" chỉ là **điều kiện đầu vào**. | Bỏ quan hệ include; chuyển thành **Tiền điều kiện** của UC09. **Đã sửa ở tab 1 của `UseCase_DatVeXeKhach.drawio`.** |
 | **L2** | UC02 và UC03 cũ trùng nhau | Hai sơ đồ cùng mô tả nghiệp vụ "Đặt vé trực tuyến" ở hai mức chi tiết. Ngoài ra các mục "Tìm kiếm chuyến", "Xem sơ đồ ghế", "Chọn ghế", "Nhập thông tin hành khách" là **các bước thao tác**, không phải use case (lỗi *functional decomposition* — phân rã chức năng nhầm thành use case). | **Gộp thành một UC02 duy nhất**; các bước trên đưa vào **Dòng sự kiện chính**. |
 | **L3** | Trùng tên: "Tạm khóa chỗ (5 phút)" vs "Giữ chỗ tạm thời" | Cùng một chức năng nhưng hai tên khác nhau ở hai sơ đồ → khi sang Class/Sequence Diagram sẽ sinh ra hai thành phần thừa. | Thống nhất một tên: **"Giữ chỗ tạm thời"** (UC18), thời lượng 5 phút đưa vào nội dung đặc tả. |
 | **L4** | Tên UC không nhất quán giữa sơ đồ tổng quát và sơ đồ phân rã | "Tra cứu & tìm chuyến xe" vs "Tra cứu chuyến xe"; "Khôi phục mật khẩu" vs "Quên mật khẩu"; "Bán vé & in vé tại quầy" vs "Bán vé tại quầy". | Lấy tên ở **sơ đồ tổng quát** làm chuẩn, thống nhất toàn tài liệu. |
 | **L5** | Tác nhân sai ở Hủy vé tại quầy | Hành khách **không thao tác trên phần mềm**, họ chỉ nêu yêu cầu. Tác nhân phải là người trực tiếp tương tác với hệ thống. | Tác nhân chính = **Nhân viên bán vé**; hành khách là bên thụ hưởng (nêu trong dòng sự kiện). |
-| **L6** | `Hủy chuyến xe <<include>> Hoàn tiền` | Chuyến bị hủy khi **chưa bán vé nào** thì không có gì để hoàn → quan hệ **có điều kiện**, không phải bắt buộc. | Đổi thành **`<<extend>>`** trong UC13. **Cần sửa lại file `QuanLyChuyenXeVaLichTrinh.png`.** |
-| **L7** | Admin có "Quản lý thông tin cá nhân" ở sơ đồ tổng quát nhưng không có ở sơ đồ phân rã | Mâu thuẫn giữa hai mức sơ đồ. | Bổ sung **Admin** vào tác nhân của UC11. **Cần thêm actor Admin vào `QuanLyThongTinCaNhan.png`.** |
+| **L6** | `Hủy chuyến xe <<include>> Hoàn tiền` | Chuyến bị hủy khi **chưa bán vé nào** thì không có gì để hoàn → quan hệ **có điều kiện**, không phải bắt buộc. | Đổi thành **`<<extend>>`** trong UC13. **Đã sửa ở tab 12 của `UseCase_DatVeXeKhach.drawio`.** |
+| **L7** | Admin có "Quản lý thông tin cá nhân" ở sơ đồ tổng quát nhưng không có ở sơ đồ phân rã | Mâu thuẫn giữa hai mức sơ đồ. | Bổ sung **Admin** vào tác nhân của UC11. **Đã thêm actor Admin ở tab 5.** |
 | **L8** | "Hủy vé trực tuyến" không include "Tra cứu vé" | Tại quầy phải tra cứu vé để đối chiếu, còn trực tuyến khách chọn vé từ danh sách của chính mình nên đã ngầm định danh. Chấp nhận được, nhưng nếu muốn cho phép hủy bằng mã vé mà không cần đăng nhập thì **bắt buộc** phải include UC24. | **Giữ nguyên** theo sơ đồ; ghi chú khuyến nghị để nhóm quyết định. |
-| **L9** | Tên UC04 có chữ "in vé" nhưng sơ đồ không có use case nào về in vé | Thiếu bước xuất vé — trong khi luồng trực tuyến lại có "Xuất vé điện tử & Mã QR". | Ghi **In vé** / **Xuất vé điện tử** là một **bước trong dòng sự kiện chính** (không là use case riêng — khớp BFD). **Cần thêm vào `BanVeVaInVeTaiQuay.png`.** |
+| **L9** | Tên UC04 có chữ "in vé" nhưng sơ đồ không có use case nào về in vé | Thiếu bước xuất vé — trong khi luồng trực tuyến lại có "Xuất vé điện tử & Mã QR". | Ghi **In vé** / **Xuất vé điện tử** là một **bước trong dòng sự kiện chính** (không là use case riêng — khớp BFD). **Đã ghi vào dòng sự kiện chính của UC04 (tab 9).** |
 | **L10** | Hầu hết use case thiếu **dòng sự kiện ngoại lệ** | Bản cũ chỉ liệt kê các nhánh `<<extend>>`, thiếu các tình huống lỗi (thanh toán thất bại, hết hạn giữ chỗ, ghế bị chiếm...). Đây là phần chấm điểm quan trọng và là đầu vào cho Sequence Diagram. | Bổ sung các nhánh **E1, E2, E3…** cho từng use case. |
 
 ### A.3. Bảng mã UC chính thức (v3.0)

@@ -1,6 +1,21 @@
 # Thay đổi và quyết định bổ sung khi code backend
 
-Ghi lại những chỗ code **khác hoặc chi tiết hơn** so với RDM/Đặc tả/Sequence để nhóm cập nhật sơ đồ `.drawio` sau khi xong sản phẩm. Theo quy ước: khi Markdown ≠ drawio thì theo Markdown.
+Ghi lại những chỗ code **khác hoặc chi tiết hơn** so với RDM / Đặc tả / Sequence.
+
+## 0. Quy ước nguồn sự thật của sơ đồ
+
+| Sơ đồ | Nguồn sự thật | Cách sửa |
+|---|---|---|
+| Use Case | `docs/use-case/UseCase_DatVeXeKhach.drawio` | sửa drawio → cập nhật `USECASE.md` |
+| BFD | `docs/bfd/BFD.drawio` | sửa drawio → cập nhật `bfd.md` (cây mục 2 **và** khối Mermaid mục 3) |
+| RDM | `docs/rdm/RDM_DatVeXeKhach.drawio` | sửa drawio → cập nhật `RDM.md` |
+| Class | `docs/class/ClassDiagram_DatVeXeKhach.drawio` | sửa drawio → cập nhật `Class.md` |
+| **Sequence** | **`docs/sequence/Sequence_diagram.md`** (khối Mermaid) | sửa Mermaid → chạy `python docs/sequence/gen_sequence_drawio.py` |
+
+Sơ đồ tuần tự là **ngoại lệ**: file `.drawio` do script sinh ra, **không sửa tay trong draw.io**.
+Kiểm tra hai bên còn khớp: `python -m pytest docs/sequence/test_gen_sequence.py -q`.
+
+Mọi giá trị trạng thái viết trong tài liệu phải nằm trong danh sách enum ở `docs/rdm/RDM.md` mục 5.
 
 ## 1. Quy ước chung
 | Nội dung | Quyết định | Lý do |
@@ -28,7 +43,25 @@ Ghi lại những chỗ code **khác hoặc chi tiết hơn** so với RDM/Đặ
 | UC11 Hồ sơ | Thêm đổi số điện thoại: OTP gửi tới **số mới** + nhập lại mật khẩu; thành công thì thu hồi mọi phiên và cấp token mới. Dùng mục đích OTP mới `DOI_SO_DIEN_THOAI` (RDM chưa liệt kê) |
 | `activity_logs` | Ghi cả đăng nhập/đăng xuất lẫn thao tác Admin lên tài khoản |
 
-## 3. Chưa làm / cần quyết định thêm
-- Chưa đối chiếu từng bước với Sequence diagram và Class diagram (chỉ bám Đặc tả + RDM + BFD).
+## 3. Đã rà soát chéo sơ đồ ↔ code (12/11/2026)
+
+Đối chiếu từng bảng, từng enum, từng endpoint. **RDM khớp 100%** với models và migrations
+(18/18 bảng, mọi cột/kiểu/cờ, 22/22 quan hệ, 18/18 nhóm enum, 8/8 tham số `ThamSo`).
+Bốn chức năng đã code nhưng chưa sơ đồ nào vẽ đã được bổ sung vào sơ đồ:
+
+| Chức năng | Endpoint | Đã thêm vào |
+|---|---|---|
+| Quản lý tham số hệ thống | `GET/PATCH /admin/settings` | **UC19 mới**: tab 18 Use Case, lá BFD 1.7, đặc tả UC19, Class 2.18, Sequence 2.20 |
+| Đổi số điện thoại | `/auth/phone/otp`, `/auth/phone/change` | tab 5 (`«extend»` của UC11), Sequence 2.11 |
+| Bật / Tắt hoạt động xe | `POST /vehicles/{id}/activate` | tab 13 — trước chỉ có "Ngừng hoạt động xe" |
+| Hủy đơn chưa thanh toán | `POST /orders/{id}/cancel-pending` | tab 8 (`«extend»` của UC02) |
+
+Các use case dùng chung dồn số **UC19–UC23 → UC20–UC24** để nhường mã UC19 cho chức năng mới.
+
+Đã sửa các chỗ tài liệu nói sai so với code: bỏ hai trạng thái không tồn tại `DA_HOAN_TIEN` và
+`DA_HUY_HOAN_TIEN`, viết lại mục 2.19 (UC18 không hủy đơn/vé), bỏ tham số `email` khi đăng ký,
+đăng nhập bằng số điện thoại thay vì "tên đăng nhập", UC12 áp dụng cho cả 3 vai trò.
+
+## 4. Chưa làm / cần quyết định thêm
 - Cổng thanh toán, SMS vẫn là bản giả; chưa có tích hợp thật.
 - Chưa có giới hạn tốc độ (rate limit) ngoài việc khóa đăng nhập và giới hạn gửi lại OTP.

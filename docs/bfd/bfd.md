@@ -8,9 +8,9 @@ lien_quan: [../use-case/USECASE.md, ../specs/DacTaUseCase.md, ../sequence/Sequen
 
 # Sơ đồ phân rã chức năng (BFD)
 
-> **File này là nguồn gốc duy nhất (single source of truth) của BFD.**
-> Sửa chữ ở đây trước, rồi render lại ảnh. Ảnh `BFD.png` và file `BFD.drawio` cùng thư mục
-> được sinh ra từ file này.
+> **`BFD.drawio` là nguồn sự thật của BFD; file này mô tả lại bằng chữ.**
+> Sửa sơ đồ trong draw.io trước, rồi cập nhật cây ở mục 2 và khối Mermaid ở mục 3 cho khớp.
+> Repo không giữ ảnh xuất ra (PNG/PDF) — mở thẳng `BFD.drawio`.
 >
 > **Dành cho AI Coding:** mục 4 cho biết mỗi chức năng tương ứng với sơ đồ use case nào và
 > động tới bảng dữ liệu nào. Mục 5 liệt kê những thứ **cố ý không làm** — đừng tự sinh code
