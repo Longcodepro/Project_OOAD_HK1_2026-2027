@@ -18,20 +18,17 @@ export function Button({
   type = 'button',
 }: ButtonProps) {
   const types = {
-    primary:
-      'bg-orange-600 text-white hover:bg-orange-500 disabled:opacity-50 shadow-sm cursor-pointer',
-    ghost:
-      'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 shadow-xs cursor-pointer',
-    secondary:
-      'border border-slate-200 bg-slate-100 text-slate-800 hover:bg-slate-200 disabled:opacity-50 cursor-pointer',
-    dark: 'bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 cursor-pointer shadow-sm',
+    primary: 'cta-terracotta hover:bg-terracotta-hover',
+    ghost: 'border border-hairline bg-card text-ink hover:border-bronze hover:bg-paper-deep',
+    secondary: 'border border-hairline bg-paper-deep text-ink hover:border-bronze',
+    dark: 'bg-ink text-paper hover:bg-ink/85',
   }
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-2.5 text-sm font-semibold transition ${types[kind]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded px-5 py-2.5 text-sm font-semibold transition disabled:opacity-50 cursor-pointer ${types[kind]} ${className}`}
     >
       {children}
     </button>

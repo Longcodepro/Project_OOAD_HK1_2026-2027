@@ -18,18 +18,18 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      port: 3000,
+      port: 5173,
       host: true,
       proxy: {
         '/api': {
-          target: env.VITE_BACKEND_URL || 'http://localhost:5000',
+          target: env.VITE_BACKEND_URL || 'http://localhost:8005',
           changeOrigin: true,
           secure: false,
         },
       },
     },
     preview: {
-      port: 3000,
+      port: 5173,
       host: true,
     },
   }

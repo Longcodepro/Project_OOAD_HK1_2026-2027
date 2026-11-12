@@ -1,115 +1,113 @@
 import type { View, User } from '../../types'
 import { Logo } from '../common/Logo'
-import { Button } from '../common/Button'
-
-const navItems: { label: string; view: View }[] = [
-  { label: 'Tìm chuyến', view: 'home' },
-  { label: 'Hành trình', view: 'profile' },
-  { label: 'Tra cứu vé', view: 'lookup' },
-  { label: 'Ưu đãi', view: 'home' },
-]
 
 export interface HeaderProps {
+  currentView?: View
   setView: (v: View) => void
   openLogin?: () => void
   openRegister?: () => void
   user: User | null
-  backendOnline: boolean
+  backendOnline?: boolean
   onLogout?: () => void
 }
 
 export function Header({
+  currentView = 'home',
   setView,
-  openLogin,
-  openRegister,
   user,
-  backendOnline: _backendOnline,
   onLogout,
 }: HeaderProps) {
-  const handleLoginClick = () => {
-    if (openLogin) openLogin()
-    else setView('login')
-  }
+  const navLinks: { label: string; view: View }[] = [
+    { label: 'Tìm chuyến', view: 'home' },
+    { label: 'Tra cứu vé của tôi', view: 'lookup' },
+    { label: 'Hành trình của tôi', view: 'profile' },
+  ]
 
-  const handleRegisterClick = () => {
-    if (openRegister) openRegister()
-    else setView('register')
+  // Get initials for user avatar circle (e.g. "Nguyễn Văn An" -> "NA")
+  const getInitials = (name?: string) => {
+    if (!name) return 'KH'
+    const parts = name.trim().split(/\s+/)
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
   }
-
-  const isAdmin = user?.role === 'admin'
 
   return (
-    <header className="relative z-30 mx-auto flex max-w-[1320px] items-center justify-between px-5 py-5 lg:px-8">
-      <div className="flex items-center gap-4">
-        <div onClick={() => setView('home')} className="cursor-pointer">
-          <Logo />
+    <header className="sticky top-0 left-0 w-full z-50 bg-paper/95 backdrop-blur-sm border-b border-hairline">
+      <div className="h-16 max-w-[1080px] mx-auto px-4 md:px-6 flex items-center justify-between gap-4">
+        {/* Logo */}
+        <div
+          onClick={() => setView('home')}
+          className="cursor-pointer flex items-center gap-2.5"
+          title="Trang chủ VéXe Việt"
+        >
+          <Logo size="md" />
         </div>
-      </div>
 
-      <nav className="hidden items-center gap-8 text-sm text-white/65 md:flex">
-        {navItems.map((i) => (
-          <button
-            key={i.label}
-            onClick={() => setView(i.view)}
-            className="hover:text-white"
-          >
-            {i.label}
-          </button>
-        ))}
-      </nav>
-
-      <div className="flex items-center gap-3">
-        {/* Nút vào Portal Admin CHỈ hiển thị khi tài khoản đăng nhập có quyền Admin */}
-        {isAdmin && (
-          <button
-            type="button"
-            onClick={() => setView('admin-dashboard')}
-            className="flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 hover:bg-amber-100 transition shadow-xs cursor-pointer"
-          >
-            <span>⚙</span>
-            <span>Vào Portal Admin</span>
-          </button>
-        )}
-
-        {user ? (
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={() => setView('profile')}
-              kind="ghost"
-              className="px-3.5 py-2 text-xs"
-            >
-              <span className="h-2 w-2 rounded-full bg-emerald-400" />
-              <span className="max-w-[120px] truncate">{user.fullName}</span>
-            </Button>
-            {onLogout && (
+        {/* Navigation */}
+        <nav className="hidden md:flex items-center gap-7">
+          {navLinks.map((item) => {
+            const isActive = currentView === item.view
+            return (
               <button
-                type="button"
-                onClick={onLogout}
-                title="Đăng xuất tài khoản"
-                className="rounded-xl px-2.5 py-1.5 text-xs text-white/50 hover:bg-white/10 hover:text-rose-400 transition"
+                key={item.view}
+                onClick={() => setView(item.view)}
+                className={`text-sm font-medium transition-colors cursor-pointer relative py-1 ${
+                  isActive
+                    ? 'text-terracotta font-bold border-b-2 border-terracotta'
+                    : 'text-ink-soft hover:text-ink'
+                }`}
               >
-                Đăng xuất
+                {item.label}
               </button>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={handleLoginClick}
-              kind="ghost"
-              className="px-4 py-2.5 text-xs"
-            >
-              Đăng nhập
-            </Button>
-            <Button
-              onClick={handleRegisterClick}
-              kind="primary"
-              className="px-4 py-2.5 text-xs"
-            >
-              Đăng ký
-            </Button>
-          </div>
-        )}
+            )
+          })}
+        </nav>
+
+        {/* User / Actions */}
+        <div className="flex items-center gap-3">
+          {user ? (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setView('profile')}
+                className="flex items-center gap-2 p-1 rounded hover:bg-paper-deep transition cursor-pointer"
+                title="Hồ sơ cá nhân"
+              >
+                {/* Avatar tròn chữ cái đầu - không dùng ảnh người thật */}
+                <div className="w-8 h-8 rounded-full bg-paper-deep border border-hairline text-ink font-bold text-xs flex items-center justify-center select-none ring-1 ring-hairline hover:ring-terracotta">
+                  {getInitials(user.fullName)}
+                </div>
+                <span className="text-xs font-semibold text-ink hidden sm:inline max-w-[120px] truncate">
+                  {user.fullName}
+                </span>
+              </button>
+              {onLogout && (
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  title="Đăng xuất"
+                  className="p-1.5 text-xs text-ink-soft hover:text-terracotta transition cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-base">logout</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setView('login')}
+                className="inline-flex items-center justify-center h-9 px-3.5 rounded border border-hairline bg-transparent text-xs font-semibold text-ink hover:border-ink transition cursor-pointer"
+              >
+                Đăng nhập
+              </button>
+              <button
+                onClick={() => setView('register')}
+                className="cta-terracotta inline-flex items-center justify-center h-9 px-3.5 rounded text-xs font-semibold text-paper shadow-none hover:bg-terracotta-hover transition cursor-pointer"
+              >
+                Đăng ký
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   )

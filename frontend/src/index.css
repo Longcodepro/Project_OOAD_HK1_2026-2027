@@ -1,3 +1,6 @@
+/* Font icon nạp vào layer `base`: nếu để ngoài layer, font-size:24px của Google thắng mọi class text-* của Tailwind */
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap') layer(base);
+
 /* ========================================================
  * VIOLETLINE DESIGN SYSTEM
  * Hệ thống CSS được phân tách thành từng module rõ ràng
@@ -12,11 +15,8 @@
 /* 3. Bố cục tổng thể & trang trí Hero */
 @import './styles/layout.css';
 
-/* 4. Form tìm kiếm chuyến xe */
-@import './styles/search.css';
-
-/* 5. Kết quả tìm kiếm & chọn ngày */
-@import './styles/trips.css';
+/* 4. Cửa sổ (dialog), popover chọn tỉnh/ngày, dải chọn ngày */
+@import './styles/dialog.css';
 
 /* 6. Sơ đồ xe & ghế ngồi */
 @import './styles/seats.css';

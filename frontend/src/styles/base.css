@@ -4,57 +4,221 @@
 
 body {
   margin: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Manrope, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
 button {
   cursor: pointer;
+  font-family: inherit;
 }
 
 button:disabled {
   cursor: not-allowed;
+  opacity: 0.6;
 }
 
-button.bg-violet-400 {
-  background: #e56b3f !important;
-  color: #fff !important;
-}
-
-button.bg-violet-400:hover {
-  background: #cf5c34 !important;
-}
-
-input {
-  width: 100%;
-  border: 1.5px solid #cbd5e1;
-  border-radius: 12px;
-  background: #f8fafc;
-  padding: 11px 14px;
-  color: #0f172a;
-  font-size: 13px;
+/* Base form controls */
+input, select, textarea {
+  font-family: inherit;
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  background: #FFFDF9;
+  padding: 10px 14px;
+  color: var(--ink);
+  font-size: 14px;
   outline: none;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s var(--ease);
 }
 
-input:focus {
-  border-color: #ea580c;
-  background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.15);
+input:focus, select:focus, textarea:focus {
+  border-color: var(--terracotta);
 }
 
 input::placeholder {
-  color: #94a3b8;
-}
-
-.font-mono {
-  font-family: 'DM Mono', monospace;
+  color: var(--ink-soft);
+  opacity: 0.7;
 }
 
 .eyebrow {
-  color: #bd4f29;
-  font-family: 'DM Mono', monospace;
-  font-size: 10px;
-  letter-spacing: .19em;
+  color: var(--terracotta);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* ========================================================
+ * ĐÔNG SƠN ANIMATIONS & MOTIFS
+ * ======================================================== */
+
+/* 1. Mặt trống Đông Sơn xoay đa tốc độ */
+.drum {
+  position: relative;
+  aspect-ratio: 1;
+  color: var(--bronze);
+  border-radius: 50%;
+}
+
+.drum .ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+.drum .sun {
+  opacity: 0.15;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes spin-reverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+.drum .l-birds { animation: spin-reverse 80s linear infinite; transform-origin: 50% 50%; }
+.drum .l-deer { animation: spin-reverse 110s linear infinite; transform-origin: 50% 50%; }
+.drum .l-people { animation: spin-reverse 150s linear infinite; transform-origin: 50% 50%; }
+.drum .l-geo { animation: spin 200s linear infinite; transform-origin: 50% 50%; }
+
+/* 2. Chim Lạc vỗ cánh & bay */
+.wing-u { transform-origin: 89px 30px; }
+.wing-d { transform-origin: 89px 49px; }
+.flap .wing-u, .flap .wing-d { animation: flap 900ms cubic-bezier(.45, 0, .55, 1) infinite alternate; }
+
+@keyframes flap {
+  from { transform: scale(1, 1); }
+  to { transform: scale(1, 0.62); }
+}
+
+/* Đàn chim Lạc bay ngang */
+.flock {
+  position: relative;
+  height: 64px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.fly {
+  position: absolute;
+  left: -170px;
+  top: 0;
+  animation: flyx 16s linear infinite;
+}
+
+.fly svg {
+  display: block;
+  animation: bob 2.8s ease-in-out infinite alternate;
+}
+
+@keyframes flyx {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(100vw + 340px)); }
+}
+
+@keyframes bob {
+  from { transform: translateY(-4px); }
+  to { transform: translateY(5px); }
+}
+
+/* 3. Nón lá tự vẽ từng nét & quai đung đưa */
+.hat path, .hat ellipse {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+
+.hat.draw path, .hat.draw ellipse {
+  animation: draw 900ms var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+@keyframes draw {
+  from { stroke-dashoffset: 1; opacity: 0; }
+  8% { opacity: 1; }
+  to { stroke-dashoffset: 0; opacity: 1; }
+}
+
+.hat .strap {
+  transform-origin: 120px 138px;
+  animation: sway 3.6s ease-in-out infinite alternate;
+}
+
+@keyframes sway {
+  from { transform: rotate(-2.2deg); }
+  to { transform: rotate(2.2deg); }
+}
+
+/* 4. Spinner 3 vành trống đồng */
+.spinner g { transform-origin: 0px 0px; }
+.spinner .s-saw { animation: spin 7s linear infinite; }
+.spinner .s-tan { animation: spin 5s linear infinite reverse; }
+.spinner .s-star { animation: spin 11s linear infinite; }
+
+/* 5. Hiệu ứng mực loang khi click nút CTA */
+.cta-terracotta {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background-color: var(--terracotta);
+  color: var(--paper);
+  border-radius: 4px;
+  font-weight: 600;
+  transition: background-color 0.2s var(--ease);
+}
+
+.cta-terracotta:hover {
+  background-color: var(--terracotta-hover);
+}
+
+.ink {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
+  background: #501408;
+  opacity: 0.28;
+  border-radius: 47% 53% 44% 56% / 55% 46% 54% 45%;
+  pointer-events: none;
+  animation: inkSpread 620ms var(--ease) forwards;
+}
+
+@keyframes inkSpread {
+  0% { transform: scale(0.2) rotate(0deg); opacity: 0.36; }
+  100% { transform: scale(15) rotate(40deg); opacity: 0; }
+}
+
+/* 6. Hiệu ứng sóng âm trống đồng khi nhấp vào nền */
+.drum-ripple {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  border: 1.5px solid var(--bronze);
+  transform: translate(-50%, -50%);
+  z-index: 40;
+  opacity: 0.6;
+  animation: rippleSound 750ms cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+@keyframes rippleSound {
+  0% { width: 10px; height: 10px; opacity: 0.5; border-width: 2px; }
+  100% { width: 180px; height: 180px; opacity: 0; border-width: 0.5px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -4,8 +4,8 @@ import { Logo } from '../common/Logo'
 export interface AdminSidebarProps {
   currentView: View
   setView: (v: View) => void
-  user: User | null
-  pendingCancelCount: number
+  user: User
+  pendingRefunds: number
   onLogout: () => void
 }
 
@@ -13,71 +13,93 @@ export function AdminSidebar({
   currentView,
   setView,
   user,
-  pendingCancelCount,
+  pendingRefunds,
   onLogout,
 }: AdminSidebarProps) {
-  const menuItems: { id: View; label: string; icon: string; badge?: number }[] = [
+  const adminItems: { id: View; label: string; icon: string; badge?: number }[] = [
     {
       id: 'admin-dashboard',
-      label: 'Tổng quan hệ thống',
-      icon: '📊',
+      label: 'Tổng quan',
+      icon: 'dashboard',
     },
     {
       id: 'admin-tickets',
-      label: 'Quản lý & Duyệt vé',
-      icon: '🎫',
-      badge: pendingCancelCount > 0 ? pendingCancelCount : undefined,
+      label: 'Quản lý vé & hoàn tiền',
+      icon: 'confirmation_number',
+      badge: pendingRefunds > 0 ? pendingRefunds : undefined,
+    },
+    {
+      id: 'admin-routes',
+      label: 'Tuyến đường',
+      icon: 'route',
     },
     {
       id: 'admin-trips',
-      label: 'Quản lý Chuyến xe',
-      icon: '🚌',
+      label: 'Điều hành chuyến xe',
+      icon: 'alt_route',
     },
     {
       id: 'admin-buses',
-      label: 'Xe & Sơ đồ ghế',
-      icon: '🚐',
+      label: 'Đội xe & Sơ đồ ghế',
+      icon: 'directions_bus',
     },
     {
       id: 'admin-pricing',
-      label: 'Bảng giá & Voucher',
-      icon: '🏷️',
+      label: 'Bảng giá & voucher',
+      icon: 'sell',
     },
     {
       id: 'admin-accounts',
-      label: 'Quản lý Tài khoản',
-      icon: '👥',
+      label: 'Tài khoản',
+      icon: 'group',
+    },
+    {
+      id: 'admin-settings',
+      label: 'Cấu hình hệ thống',
+      icon: 'tune',
+    },
+    {
+      id: 'admin-scan',
+      label: 'Soát vé',
+      icon: 'qr_code_scanner',
     },
   ]
+  // Nhân viên bán vé: quầy bán vé và soát vé
+  const clerkItems: { id: View; label: string; icon: string; badge?: number }[] = [
+    { id: 'admin-counter', label: 'Bán vé tại quầy', icon: 'point_of_sale' },
+    { id: 'admin-scan', label: 'Soát vé', icon: 'qr_code_scanner' },
+  ]
+  const menuItems = user.role === 'admin' ? adminItems : clerkItems
+  const roleLabel = user.role === 'admin' ? 'Quản trị viên' : 'Nhân viên'
+  const initials = user.fullName.trim().split(/\s+/).slice(-2).map((w) => w[0]).join('').toUpperCase()
 
   return (
-    <aside className="w-64 shrink-0 bg-white border-r border-slate-200 flex flex-col justify-between p-5 min-h-screen shadow-sm">
-      <div>
+    <aside className="w-[240px] shrink-0 bg-paper-deep border-r border-hairline flex flex-col justify-between p-4 min-h-screen text-ink select-none">
+      <div className="space-y-5">
         {/* Brand */}
-        <div className="pb-5 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <Logo />
+        <div className="pb-4 border-b border-hairline">
+          <div
+            onClick={() => setView('home')}
+            className="cursor-pointer"
+            title="Về Trang chủ VéXe Việt"
+          >
+            <Logo size="md" />
           </div>
-          <div className="mt-2 flex items-center gap-1.5">
-            <span className="inline-block rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-bold tracking-wider text-amber-700 border border-amber-200">
-              PORTAL QUẢN TRỊ
+          <div className="mt-2.5 flex items-center justify-between">
+            <span className="text-[10px] font-bold tracking-widest text-terracotta uppercase">
+              {roleLabel}
             </span>
-            <span className="text-[11px] text-slate-400 font-medium">v2.4</span>
+            <button
+              onClick={() => setView('home')}
+              className="text-[11px] text-ink-soft hover:text-terracotta transition cursor-pointer flex items-center gap-0.5"
+            >
+              <span className="material-symbols-outlined text-xs">arrow_back</span>
+              <span>Trang khách</span>
+            </button>
           </div>
         </div>
 
-        {/* Admin profile snippet */}
-        <div className="my-5 flex items-center gap-3 rounded-2xl bg-slate-50 p-3 border border-slate-200/80">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-orange-600 font-bold text-white text-sm shadow-sm">
-            AD
-          </div>
-          <div className="overflow-hidden">
-            <p className="text-xs font-bold text-slate-800 truncate">{user?.fullName || 'Quản trị viên'}</p>
-            <p className="text-[10px] text-slate-500 font-medium truncate">Toàn quyền hệ thống</p>
-          </div>
-        </div>
-
-        {/* Navigation Items */}
+        {/* Navigation Items  */}
         <nav className="space-y-1">
           {menuItems.map((item) => {
             const isActive = currentView === item.id
@@ -86,24 +108,20 @@ export function AdminSidebar({
                 key={item.id}
                 type="button"
                 onClick={() => setView(item.id)}
-                className={`w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-semibold transition cursor-pointer ${
+                className={`w-full flex items-center justify-between rounded px-3 py-2 text-xs font-semibold transition cursor-pointer relative ${
                   isActive
-                    ? 'bg-orange-500 text-white shadow-sm'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    ? 'bg-paper text-ink font-bold border-l-3 border-terracotta shadow-2xs'
+                    : 'text-ink-soft hover:bg-paper/50 hover:text-ink'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <span className="text-base">{item.icon}</span>
+                  <span className={`material-symbols-outlined text-base ${isActive ? 'text-terracotta' : 'text-ink-soft'}`}>
+                    {item.icon}
+                  </span>
                   <span>{item.label}</span>
                 </div>
                 {item.badge !== undefined && (
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      isActive
-                        ? 'bg-white text-orange-600'
-                        : 'bg-amber-100 text-amber-800 border border-amber-300 animate-pulse'
-                    }`}
-                  >
+                  <span className="rounded-full bg-bronze px-1.5 py-0.2 text-[10px] font-bold text-paper">
                     {item.badge}
                   </span>
                 )}
@@ -113,25 +131,28 @@ export function AdminSidebar({
         </nav>
       </div>
 
-      {/* Switch Portal & Logout */}
-      <div className="pt-5 border-t border-slate-100 space-y-2">
-        <button
-          type="button"
-          onClick={() => setView('home')}
-          className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
-        >
-          <span>🌐</span>
-          <span>Xem trang Khách hàng</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={onLogout}
-          className="w-full flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition cursor-pointer"
-        >
-          <span>🚪</span>
-          <span>Đăng xuất Admin</span>
-        </button>
+      {/* Admin Profile bottom */}
+      <div className="pt-4 border-t border-hairline space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            {/* Avatar tròn chữ cái đầu của tên */}
+            <div className="w-8 h-8 rounded-full bg-paper border border-hairline text-ink font-bold text-xs flex items-center justify-center">
+              {initials}
+            </div>
+            <div className="overflow-hidden">
+              <p className="text-xs font-bold text-ink truncate">{user.fullName}</p>
+              <p className="text-[10.5px] text-celadon font-semibold">{roleLabel}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onLogout}
+            title="Đăng xuất"
+            className="p-1 text-ink-soft hover:text-terracotta transition cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-base">logout</span>
+          </button>
+        </div>
       </div>
     </aside>
   )
