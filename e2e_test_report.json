@@ -1,0 +1,527 @@
+{
+  "total_tests": 44,
+  "passed_tests": 44,
+  "failed_tests": 0,
+  "success_rate": 100.0,
+  "avg_latency_ms": 24.67,
+  "min_latency_ms": 3.67,
+  "max_latency_ms": 114.92,
+  "scenarios": {
+    "0. Hạ tầng mạng & Proxy": {
+      "total": 3,
+      "passed": 3,
+      "times": [
+        3.67,
+        16.67,
+        11.19
+      ]
+    },
+    "Thiết lập tham số": {
+      "total": 2,
+      "passed": 2,
+      "times": [
+        10.54,
+        6.86
+      ]
+    },
+    "Kịch bản 1: Khách hàng": {
+      "total": 14,
+      "passed": 14,
+      "times": [
+        58.71,
+        114.92,
+        59.25,
+        10.74,
+        10.61,
+        18.07,
+        6.1,
+        21.21,
+        37.81,
+        8.61,
+        7.64,
+        8.28,
+        28.15,
+        10.33
+      ]
+    },
+    "Kịch bản 2: Nhân viên quầy": {
+      "total": 8,
+      "passed": 8,
+      "times": [
+        62.8,
+        18.46,
+        24.26,
+        21.72,
+        39.96,
+        20.08,
+        69.52,
+        10.57
+      ]
+    },
+    "Kịch bản 3: Quản trị viên": {
+      "total": 17,
+      "passed": 17,
+      "times": [
+        65.41,
+        23.27,
+        16.6,
+        23.58,
+        69.4,
+        10.02,
+        13.86,
+        39.43,
+        10.8,
+        10.07,
+        9.71,
+        24.0,
+        6.91,
+        12.57,
+        5.6,
+        12.52,
+        15.21
+      ]
+    }
+  },
+  "detailed_steps": [
+    {
+      "scenario": "0. Hạ tầng mạng & Proxy",
+      "name": "Backend Direct Health Check (http://localhost:8005/health)",
+      "method": "GET",
+      "url": "http://localhost:8005/health",
+      "status_code": 200,
+      "elapsed_ms": 3.67,
+      "passed": true,
+      "details": "DB Status: up"
+    },
+    {
+      "scenario": "0. Hạ tầng mạng & Proxy",
+      "name": "Frontend Vite Dev Server (http://localhost:5173/)",
+      "method": "GET",
+      "url": "http://localhost:5173/",
+      "status_code": 200,
+      "elapsed_ms": 16.67,
+      "passed": true,
+      "details": "HTTP 200 - Vite HTML ready"
+    },
+    {
+      "scenario": "0. Hạ tầng mạng & Proxy",
+      "name": "Vite Proxy /api/health forwarding to Backend",
+      "method": "GET",
+      "url": "/health",
+      "status_code": 200,
+      "elapsed_ms": 11.19,
+      "passed": true,
+      "details": "DB Status: up"
+    },
+    {
+      "scenario": "Thiết lập tham số",
+      "name": "Admin: Cấu hình THOI_GIAN_GIU_CHO_PHUT = 15",
+      "method": "PATCH",
+      "url": "/admin/settings/THOI_GIAN_GIU_CHO_PHUT",
+      "status_code": 200,
+      "elapsed_ms": 10.54,
+      "passed": true,
+      "details": "Value: 15 phút"
+    },
+    {
+      "scenario": "Thiết lập tham số",
+      "name": "Admin: Kích hoạt voucher CHAOBAN (BAT)",
+      "method": "PATCH",
+      "url": "/admin/coupons/1",
+      "status_code": 200,
+      "elapsed_ms": 6.86,
+      "passed": true,
+      "details": "Status: BAT"
+    },
+    {
+      "scenario": "Kịch bản 1: Khách hàng",
+      "name": "1.1 Gửi yêu cầu OTP đăng ký số điện thoại mới",
+      "method": "POST",
+      "url": "/auth/register/otp",
+      "status_code": 200,
+      "elapsed_ms": 58.71,
+      "passed": true,
+      "details": "OTP nhận được: 326499"
+    },
+    {
+      "scenario": "Kịch bản 1: Khách hàng",
+      "name": "1.2 Hoàn tất đăng ký tài khoản khách hàng bằng OTP",
+      "method": "POST",
+      "url": "/auth/register",
+      "status_code": 201,
+      "elapsed_ms": 114.92,
+      "passed": true,
+      "details": "Tài khoản #35 - Nguyễn E2E Khách Hàng"
+    },
+    {
+      "scenario": "Kịch bản 1: Khách hàng",
+      "name": "1.3 Đăng nhập tài khoản khách hàng lấy access token JWT",
+      "method": "POST",
+      "url": "/auth/login",
+      "status_code": 200,
+      "elapsed_ms": 59.25,
+      "passed": true,
+      "details": "Token thời hạn: 3600s"
+    },
+    {
+      "scenario": "Kịch bản 1: Khách hàng",
+      "name": "1.4 Tìm kiếm chuyến xe TP.HCM - Đà Lạt ngày 2026-11-15",
+      "method": "GET",
+      "url": "/trips/search?origin=TP.+H%E1%BB%93+Ch%C3%AD+Minh&destination=%C4%90%C3%A0+L%E1%BA%A1t&date=2026-11-15",
+      "status_code": 200,
+      "elapsed_ms": 10.74,
+      "passed": true,
+      "details": "Tìm thấy 1 chuyến xe"
+    },
+    {
+      "scenario": "Kịch bản 1: Khách hàng",
+      "name": "1.5 Lấy sơ đồ ghế chuyến #317 (TP. Hồ Chí Minh -> Đà Lạt)",
+      "method": "GET",
+      "url": "/trips/317/seats",
+      "status_code": 200,
+      "elapsed_ms": 10.61,
+      "passed": true,
+      "details": "Tổng số 44 vị trí ghế trên xe"
+    },
+    {
+      "scenario": "Kịch bản 1: Khách hàng",
+      "name": "1.6 Khóa tạm giữ ghế A01 trong 15 phút (900s)",
+      "method": "POST",
+      "url": "/trips/317/hold",
+      "status_code": 200,
+      "elapsed_ms": 18.07,
+      "passed": true,
+      "details": "Thời gian giữ: 900s (Hạn giữ: 2026-11-12T14:05:07)"
+    },
+    {
+      "scenario": "Kịch bản 1: Khách hàng",
+      "name": "1.7 Kiểm tra tính hợp lệ và áp dụng voucher CHAOBAN",
+      "method": "POST",
+      "url": "/coupons/validate",
+      "status_code": 200,
+      "elapsed_ms": 6.1,
+      "passed": true,
+      "details": "Mã: CHAOBAN, Giảm: 28,000đ, Cần trả: 252,000đ"
+    },
+    {
+      "scenario": "Kịch bản 1: Khách hàng",
+      "name": "1.8 Tạo đơn hàng đặt vé trực tuyến",
+      "method": "POST",
+      "url": "/orders",
+      "status_code": 201,
+      "elapsed_ms": 21.21,
+      "passed": true,
+      "details": "Đơn hàng #715, Tổng tiền: 252,000đ, Số vé: 1"
+    },
+    {
+      "scenario": "Kịch bản 1: Khách hàng",
+      "name": "1.9 Thanh toán đơn hàng #715 qua VietQR (Giả lập thành công)",
+      "method": "POST",
+      "url": "/orders/715/pay",
+      "status_code": 200,
+      "elapsed_ms": 37.81,
+      "passed": true,
+      "details": "Kết quả GD: THANH_CONG, Trạng thái đơn: DA_THANH_TOAN"
+    },
+    {
+      "scenario": "Kịch bản 1: Khách hàng",
+      "name": "1.10 Tra cứu lịch sử vé điện tử của khách hàng (CHUA_DI)",
+      "method": "GET",
+      "url": "/me/tickets?status=CHUA_DI",
+      "status_code": 200,
+      "elapsed_ms": 8.61,
+      "passed": true,
+      "details": "Tổng số 1 vé chưa khởi hành"
+    },
+    {
+      "scenario": "Kịch bản 1: Khách hàng",
+      "name": "1.10b Xem chi tiết vé điện tử #744 (Mã QR & Chỗ ngồi)",
+      "method": "GET",
+      "url": "/tickets/744",
+      "status_code": 200,
+      "elapsed_ms": 7.64,
+      "passed": true,
+      "details": "Ghế: A01, QR: RACKlxWpeOsr4xFZttgFvw, Biển số xe: 43B-666.66"
+    },
+    {
+      "scenario": "Kịch bản 1: Khách hàng",
+      "name": "1.11 Báo giá hủy vé trực tuyến trước giờ khởi hành (Phí 15%)",
+      "method": "GET",
+      "url": "/tickets/744/cancel-quote",
+      "status_code": 200,
+      "elapsed_ms": 8.28,
+      "passed": true,
+      "details": "Đủ điều kiện: True, Phí hủy: 15%, Hoàn lại: 214,200đ"
+    },
+    {
+      "scenario": "Kịch bản 1: Khách hàng",
+      "name": "1.12 Xác nhận hủy vé #744 trực tuyến và nhận tiền hoàn",
+      "method": "POST",
+      "url": "/tickets/744/cancel",
+      "status_code": 200,
+      "elapsed_ms": 28.15,
+      "passed": true,
+      "details": "Trạng thái hoàn: DA_HOAN, Tiền hoàn: 214,200đ, Mã GD hoàn: RF-745C06055EB14E"
+    },
+    {
+      "scenario": "Kịch bản 1: Khách hàng",
+      "name": "1.13 Xác minh trạng thái vé #744 sau khi hủy là DA_HUY",
+      "method": "GET",
+      "url": "/tickets/744",
+      "status_code": 200,
+      "elapsed_ms": 10.33,
+      "passed": true,
+      "details": "Trạng thái vé hiện tại: DA_HUY"
+    },
+    {
+      "scenario": "Kịch bản 2: Nhân viên quầy",
+      "name": "2.1 Đăng nhập nhân viên bán vé (Staff 0900000001)",
+      "method": "POST",
+      "url": "/auth/login",
+      "status_code": 200,
+      "elapsed_ms": 62.8,
+      "passed": true,
+      "details": "Token thời hạn: 3600s"
+    },
+    {
+      "scenario": "Kịch bản 2: Nhân viên quầy",
+      "name": "2.1b Tra cứu sơ đồ ghế chuyến #317",
+      "method": "GET",
+      "url": "/trips/317/seats",
+      "status_code": 200,
+      "elapsed_ms": 18.46,
+      "passed": true,
+      "details": "Ghế khả dụng: 41"
+    },
+    {
+      "scenario": "Kịch bản 2: Nhân viên quầy",
+      "name": "2.2 Nhân viên quầy khóa tạm ghế A01",
+      "method": "POST",
+      "url": "/trips/317/hold",
+      "status_code": 200,
+      "elapsed_ms": 24.26,
+      "passed": true,
+      "details": "Còn 899s"
+    },
+    {
+      "scenario": "Kịch bản 2: Nhân viên quầy",
+      "name": "2.3 Lập phiếu bán vé cho khách vãng lai tại bến xe",
+      "method": "POST",
+      "url": "/counter/orders",
+      "status_code": 201,
+      "elapsed_ms": 21.72,
+      "passed": true,
+      "details": "Mã đơn quầy: #716, Tổng tiền: 280,000đ"
+    },
+    {
+      "scenario": "Kịch bản 2: Nhân viên quầy",
+      "name": "2.4 Thu tiền mặt đơn hàng #716 tại quầy",
+      "method": "POST",
+      "url": "/orders/716/pay",
+      "status_code": 200,
+      "elapsed_ms": 39.96,
+      "passed": true,
+      "details": "Kết quả: THANH_CONG, Trạng thái: DA_THANH_TOAN"
+    },
+    {
+      "scenario": "Kịch bản 2: Nhân viên quầy",
+      "name": "2.5 In phôi vé giấy POS cho khách mua tại quầy",
+      "method": "GET",
+      "url": "/counter/orders/716/receipts",
+      "status_code": 200,
+      "elapsed_ms": 20.08,
+      "passed": true,
+      "details": "Số liên in: 1, Chiều dài văn bản in: 238 ký tự"
+    },
+    {
+      "scenario": "Kịch bản 2: Nhân viên quầy",
+      "name": "2.6 Đối soát doanh thu ca trực trong ngày của nhân viên",
+      "method": "GET",
+      "url": "/counter/orders",
+      "status_code": 200,
+      "elapsed_ms": 69.52,
+      "passed": true,
+      "details": "Đơn đã thanh toán: 4, Vé bán: 4, Doanh thu: 1,120,000đ"
+    },
+    {
+      "scenario": "Kịch bản 2: Nhân viên quầy",
+      "name": "2.7 Soát vé lên xe theo mã vé #745",
+      "method": "GET",
+      "url": "/tickets/lookup?ticket_id=745",
+      "status_code": 200,
+      "elapsed_ms": 10.57,
+      "passed": true,
+      "details": "Hợp lệ lên xe: Vé #745, Khách: Khách Vãng Lai Bác Ba, Ghế: A01, Trạng thái: CHUA_DI"
+    },
+    {
+      "scenario": "Kịch bản 3: Quản trị viên",
+      "name": "3.1 Đăng nhập Quản trị viên (Admin 0900000000)",
+      "method": "POST",
+      "url": "/auth/login",
+      "status_code": 200,
+      "elapsed_ms": 65.41,
+      "passed": true,
+      "details": "Token exp: 3600s"
+    },
+    {
+      "scenario": "Kịch bản 3: Quản trị viên",
+      "name": "3.2 Lấy báo cáo doanh thu & tỷ lệ lấp đầy thời gian thực",
+      "method": "GET",
+      "url": "/admin/reports?date_from=2026-11-01&date_to=2026-11-30",
+      "status_code": 200,
+      "elapsed_ms": 23.27,
+      "passed": true,
+      "details": "Gross: 6,172,000đ, Refund: 3,398,300đ, Net: 2,773,700đ, Occupancy: 0.5%"
+    },
+    {
+      "scenario": "Kịch bản 3: Quản trị viên",
+      "name": "3.3 Xuất báo cáo doanh thu ra định dạng CSV (UTF-8 BOM)",
+      "method": "GET",
+      "url": "/admin/reports/export.csv?date_from=2026-11-01&date_to=2026-11-30",
+      "status_code": 200,
+      "elapsed_ms": 16.6,
+      "passed": true,
+      "details": "Size: 878 bytes, Type: text/csv; charset=utf-8"
+    },
+    {
+      "scenario": "Kịch bản 3: Quản trị viên",
+      "name": "3.3b Xuất báo cáo doanh thu ra bảng tính Excel (XLSX)",
+      "method": "GET",
+      "url": "/admin/reports/export.xlsx?date_from=2026-11-01&date_to=2026-11-30",
+      "status_code": 200,
+      "elapsed_ms": 23.58,
+      "passed": true,
+      "details": "Size: 6754 bytes, Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    },
+    {
+      "scenario": "Kịch bản 3: Quản trị viên",
+      "name": "3.3c Xuất báo cáo doanh thu ra tài liệu PDF khổ A4",
+      "method": "GET",
+      "url": "/admin/reports/export.pdf?date_from=2026-11-01&date_to=2026-11-30",
+      "status_code": 200,
+      "elapsed_ms": 69.4,
+      "passed": true,
+      "details": "Size: 25086 bytes, Header: b'%PDF'"
+    },
+    {
+      "scenario": "Kịch bản 3: Quản trị viên",
+      "name": "3.4a Xem danh sách lệnh hoàn tiền chờ xử lý thủ công (CHO_XU_LY_THU_CONG)",
+      "method": "GET",
+      "url": "/admin/refunds?status=CHO_XU_LY_THU_CONG",
+      "status_code": 200,
+      "elapsed_ms": 10.02,
+      "passed": true,
+      "details": "Hàng đợi đang có 1 lệnh chờ duyệt"
+    },
+    {
+      "scenario": "Kịch bản 3: Quản trị viên",
+      "name": "3.4b Admin duyệt / xử lý lại lệnh hoàn tiền #63",
+      "method": "POST",
+      "url": "/admin/refunds/63/retry",
+      "status_code": 200,
+      "elapsed_ms": 13.86,
+      "passed": true,
+      "details": "Trạng thái: DA_HOAN, Đã xử lý bởi Admin #1"
+    },
+    {
+      "scenario": "Kịch bản 3: Quản trị viên",
+      "name": "3.5 Khởi tạo chuyến xe mới tuyến TP.HCM - Đà Lạt (2026-12-10 09:00:00)",
+      "method": "POST",
+      "url": "/admin/trips",
+      "status_code": 201,
+      "elapsed_ms": 39.43,
+      "passed": true,
+      "details": "Mã chuyến: #391, Tuyến: TP. Hồ Chí Minh -> Đà Lạt, Khởi hành: 2026-12-10 09:00:00"
+    },
+    {
+      "scenario": "Kịch bản 3: Quản trị viên",
+      "name": "3.6 Tạo mã voucher khuyến mãi mới: E2E2810",
+      "method": "POST",
+      "url": "/admin/coupons",
+      "status_code": 201,
+      "elapsed_ms": 10.8,
+      "passed": true,
+      "details": "ID: #16, Giảm: 50,000đ, Hạn: 2026-12-31T23:59:59"
+    },
+    {
+      "scenario": "Kịch bản 3: Quản trị viên",
+      "name": "3.6b Tắt nhanh trạng thái voucher #16",
+      "method": "POST",
+      "url": "/admin/coupons/16/toggle",
+      "status_code": 200,
+      "elapsed_ms": 10.07,
+      "passed": true,
+      "details": "Trạng thái sau toggle: TAT"
+    },
+    {
+      "scenario": "Kịch bản 3: Quản trị viên",
+      "name": "3.6c Mở lại kích hoạt voucher #16",
+      "method": "POST",
+      "url": "/admin/coupons/16/toggle",
+      "status_code": 200,
+      "elapsed_ms": 9.71,
+      "passed": true,
+      "details": "Trạng thái sau toggle: BAT"
+    },
+    {
+      "scenario": "Kịch bản 3: Quản trị viên",
+      "name": "3.7a Khóa tài khoản khách hàng #35 (0971066339)",
+      "method": "POST",
+      "url": "/admin/users/35/lock",
+      "status_code": 200,
+      "elapsed_ms": 24.0,
+      "passed": true,
+      "details": "Trạng thái: KHOA (Cảnh báo: None)"
+    },
+    {
+      "scenario": "Kịch bản 3: Quản trị viên",
+      "name": "3.7b Xác minh tài khoản bị khóa không thể đăng nhập (HTTP 403)",
+      "method": "POST",
+      "url": "/auth/login",
+      "status_code": 403,
+      "elapsed_ms": 6.91,
+      "passed": true,
+      "details": "Bị từ chối: 403 - Tài khoản đã bị khóa, vui lòng liên hệ quản trị"
+    },
+    {
+      "scenario": "Kịch bản 3: Quản trị viên",
+      "name": "3.7c Mở khóa khôi phục tài khoản #35",
+      "method": "POST",
+      "url": "/admin/users/35/unlock",
+      "status_code": 200,
+      "elapsed_ms": 12.57,
+      "passed": true,
+      "details": "Trạng thái: HOAT_DONG"
+    },
+    {
+      "scenario": "Kịch bản 3: Quản trị viên",
+      "name": "3.8 Tra cứu toàn bộ danh sách tham số vận hành hệ thống",
+      "method": "GET",
+      "url": "/admin/settings",
+      "status_code": 200,
+      "elapsed_ms": 5.6,
+      "passed": true,
+      "details": "Số tham số cấu hình: 9"
+    },
+    {
+      "scenario": "Kịch bản 3: Quản trị viên",
+      "name": "3.8b Cập nhật tham số PHI_HUY_PHAN_TRAM = 15",
+      "method": "PATCH",
+      "url": "/admin/settings/PHI_HUY_PHAN_TRAM",
+      "status_code": 200,
+      "elapsed_ms": 12.52,
+      "passed": true,
+      "details": "Phí hủy vé: 15%"
+    },
+    {
+      "scenario": "Kịch bản 3: Quản trị viên",
+      "name": "3.8c Cập nhật tham số HAN_HUY_VE_GIO = 24",
+      "method": "PATCH",
+      "url": "/admin/settings/HAN_HUY_VE_GIO",
+      "status_code": 200,
+      "elapsed_ms": 15.21,
+      "passed": true,
+      "details": "Hạn hủy trước giờ chạy: 24 giờ"
+    }
+  ]
+}

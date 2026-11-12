@@ -38,7 +38,7 @@ services:
       - ./backend/app:/app/app
       - ./backend/alembic:/app/alembic
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8001}:8000"
     depends_on:
       mysql:
         condition: service_healthy

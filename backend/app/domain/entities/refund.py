@@ -33,4 +33,5 @@ class Refund:
     transaction_id: str | None = None
     error_note: str | None = None
     source_transaction_id: str | None = None  # mã giao dịch thu tiền gốc cần hoàn
+    code: str | None = None
     id: int | None = None

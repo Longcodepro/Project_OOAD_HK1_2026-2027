@@ -49,7 +49,11 @@ class BookingRepository(Protocol):
     # tra cứu vé (UC07, UC24)
     def paid_tickets_of_account(self, account_id: int) -> list[TicketRecord]: ...
     def find_tickets(
-        self, qr: str | None, ticket_id: int | None, phone: str | None
+        self,
+        qr: str | None,
+        ticket_id: int | None,
+        phone: str | None,
+        code: str | None = None,
     ) -> list[TicketRecord]: ...
     def get_ticket(self, ticket_id: int) -> TicketRecord | None: ...
 
@@ -69,4 +73,5 @@ class BookingRepository(Protocol):
         phone: str | None,
         order_id: int | None,
         ticket_id: int | None,
+        order_code: str | None = None,
     ) -> list[OrderAggregate]: ...

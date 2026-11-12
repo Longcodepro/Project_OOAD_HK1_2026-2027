@@ -62,6 +62,17 @@ class CouponService:
         self.repo.save(c)
         return c
 
+    def toggle(self, coupon_id: int, status: CouponStatus | None = None) -> Coupon:
+        c = self.repo.get(coupon_id)
+        if c is None:
+            raise NotFound("Không tìm thấy mã giảm giá")
+        if status is not None:
+            c.status = status
+        else:
+            c.status = CouponStatus.OFF if c.status == CouponStatus.ON else CouponStatus.ON
+        self.repo.save(c)
+        return c
+
     def check(self, code: str, amount: Decimal) -> CouponCheck:
         c = self.repo.get_by_code(code.strip().upper())
         if c is None:

@@ -35,6 +35,7 @@ class Route:
     distance_km: Decimal | None = None
     expected_minutes: int | None = None
     status: RouteStatus = RouteStatus.ACTIVE
+    code: str | None = None
     id: int | None = None
 
 
@@ -56,6 +57,7 @@ class Trip:
     status: TripStatus = TripStatus.OPEN
     cancel_reason: str | None = None
     note: str | None = None
+    code: str | None = None
     id: int | None = None
     expected_minutes: int | None = None  # lấy từ tuyến, để tính giờ đến dự kiến
 
@@ -82,6 +84,7 @@ class TripView:
     vehicle_type: str
     available_seats: int
     total_seats: int
+    code: str | None = None
 
 
 @dataclass

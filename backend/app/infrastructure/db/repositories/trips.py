@@ -1,4 +1,5 @@
 from datetime import date, datetime, time, timedelta
+from uuid import uuid4
 
 from sqlalchemy import case, delete, func, or_, select, update
 from sqlalchemy.orm import Session
@@ -14,6 +15,7 @@ from app.domain.entities.trip import (
     TripStatus,
     TripView,
 )
+from app.domain.rules.code_generator import gen_route_code, gen_trip_code
 from app.domain.rules.text import norm
 from app.infrastructure.db.models import (
     RouteModel,
@@ -27,7 +29,13 @@ from app.infrastructure.db.models import (
 
 def _route(m: RouteModel) -> Route:
     return Route(
-        m.origin, m.destination, m.distance_km, m.expected_minutes, RouteStatus(m.status), m.id
+        origin=m.origin,
+        destination=m.destination,
+        distance_km=m.distance_km,
+        expected_minutes=m.expected_minutes,
+        status=RouteStatus(m.status),
+        code=m.code,
+        id=m.id,
     )
 
 
@@ -41,6 +49,7 @@ def _trip(m: TripModel) -> Trip:
         status=TripStatus(m.status),
         cancel_reason=m.cancel_reason,
         note=m.note,
+        code=m.code,
         id=m.id,
         expected_minutes=m.route.expected_minutes,
     )
@@ -68,14 +77,20 @@ class SqlTripRepository:
         return self.db.scalar(stmt) is not None
 
     def add_route(self, r: Route) -> Route:
+        base_code = r.code or gen_route_code(r.origin, r.destination)
+        existing = self.db.scalar(select(RouteModel.id).where(RouteModel.code == base_code))
         m = RouteModel(
             origin=r.origin,
             destination=r.destination,
             distance_km=r.distance_km,
             expected_minutes=r.expected_minutes,
             status=r.status,
+            code=base_code if not existing else f"TMP-{uuid4().hex[:12]}",
         )
         self.db.add(m)
+        self.db.flush()
+        if m.code.startswith("TMP-"):
+            m.code = gen_route_code(m.origin, m.destination, m.id)
         self.db.commit()
         return _route(m)
 
@@ -87,6 +102,10 @@ class SqlTripRepository:
 
     # ---- chuyến ----
     def add_trip(self, t: Trip, stops: list[Stop], seat_ids: list[int]) -> Trip:
+        route = self.db.get(RouteModel, t.route_id)
+        route_code = route.code if route else None
+        base_code = t.code or gen_trip_code(route_code, t.departure_date, t.departure_time)
+        existing = self.db.scalar(select(TripModel.id).where(TripModel.code == base_code))
         m = TripModel(
             route_id=t.route_id,
             vehicle_id=t.vehicle_id,
@@ -95,10 +114,13 @@ class SqlTripRepository:
             price=t.price,
             status=t.status,
             note=t.note,
+            code=base_code if not existing else f"TMP-{uuid4().hex[:12]}",
             stops=[StopModel(name=s.name, kind=s.kind, order_no=s.order) for s in stops],
         )
         self.db.add(m)
         self.db.flush()
+        if m.code.startswith("TMP-"):
+            m.code = f"{base_code}-{m.id:02d}"
         self.db.add_all(
             TripSeatModel(trip_id=m.id, seat_id=sid, status=SeatState.FREE) for sid in seat_ids
         )
@@ -214,6 +236,7 @@ class SqlTripRepository:
                 m.vehicle.vehicle_type.name,
                 int(f or 0),
                 int(t or 0),
+                code=m.code,
             )
             for m, f, t in rows
         ]

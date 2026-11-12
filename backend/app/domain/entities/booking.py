@@ -47,6 +47,7 @@ class Payment:
     paid_at: datetime
     transaction_id: str | None = None
     note: str | None = None
+    code: str | None = None
     id: int | None = None
 
 
@@ -64,6 +65,7 @@ class Ticket:
     pickup_stop_id: int | None = None
     dropoff_stop_id: int | None = None
     qr_code: str | None = None
+    code: str | None = None
     id: int | None = None
     # thông tin hiển thị (ghép khi đọc)
     seat_code: str | None = None
@@ -91,6 +93,7 @@ class Order:
     account_id: int | None = None
     coupon_id: int | None = None
     note: str | None = None
+    code: str | None = None
     id: int | None = None
     clerk_id: int | None = None  # nhân viên bán (kênh quầy)
     coupon_code: str | None = None

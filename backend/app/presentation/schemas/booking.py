@@ -38,6 +38,7 @@ class PayIn(BaseModel):
 
 class TicketOut(BaseModel):
     id: int
+    code: str | None = None
     trip_id: int
     seat_id: int
     seat_code: str | None = None
@@ -68,6 +69,7 @@ class PaymentOut(BaseModel):
 
 class OrderOut(BaseModel):
     id: int
+    code: str | None = None
     channel: Channel
     status: OrderStatus
     created_at: datetime

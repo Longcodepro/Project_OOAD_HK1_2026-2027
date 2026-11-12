@@ -1,0 +1,3470 @@
+{
+  "info": {
+    "_postman_id": "cd3c8d73-5920-479e-99d9-9e17aa7c4137",
+    "name": "Vé Xe Khách - API Collection",
+    "description": "Postman Collection v2.1.0 chuẩn hóa cho Hệ thống Đặt Vé Xe Khách (OOAD).\n\nHệ thống bao gồm đầy đủ 13 phân hệ nghiệp vụ:\n- Xác thực & Phân quyền (Admin, Quầy, Khách hàng)\n- Tra cứu chuyến & Sơ đồ ghế\n- Tạm giữ chỗ (5 phút)\n- Đặt vé & Cổng thanh toán (VietQR, MoMo, Thẻ)\n- Quản lý vé & Quy trình hủy hoàn tiền (85% - 100%)\n- Bán vé tại quầy & Soát vé (QR, SĐT)\n- Admin Quản trị: Báo cáo doanh thu (CSV, XLSX, PDF), Đơn hàng & Hoàn tiền, Tuyến xe, Chuyến xe, Đội xe & Sơ đồ ghế, Voucher khuyến mãi, Tài khoản & Bảo mật, Tham số hệ thống.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8005",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "customer_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "staff_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "last_otp",
+      "value": "123456",
+      "type": "string"
+    },
+    {
+      "key": "trip_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "order_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "ticket_id",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Folder 01: Authentication",
+      "description": "Các API xác thực, đăng nhập Admin/Customer/Staff, đăng ký OTP, quản lý hồ sơ và bảo mật tài khoản.",
+      "item": [
+        {
+          "name": "01 - Đăng nhập Quản trị viên (Admin)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Đăng nhập tài khoản Quản trị viên (Admin). Test script tự động lưu `access_token` vào biến collection `admin_token`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"0900000000\",\n  \"password\": \"Admin12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "var data = pm.response.json();",
+                  "pm.collectionVariables.set(\"admin_token\", data.access_token);",
+                  "pm.test(\"Đăng nhập Admin thành công\", function () {",
+                  "pm.expect(data.access_token).to.be.a(\"string\");",
+                  "});",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 - Đăng nhập Khách hàng (Customer)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Đăng nhập tài khoản Khách hàng (Nguyễn Văn An). Test script tự động lưu `access_token` vào biến collection `customer_token`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"0900000002\",\n  \"password\": \"Khach12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "var data = pm.response.json();",
+                  "pm.collectionVariables.set(\"customer_token\", data.access_token);",
+                  "pm.test(\"Đăng nhập Customer thành công\", function () {",
+                  "pm.expect(data.access_token).to.be.a(\"string\");",
+                  "});",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 - Đăng nhập Nhân viên quầy (Staff)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Đăng nhập tài khoản Nhân viên bán vé tại quầy (Bến xe Mỹ Đình). Test script tự động lưu `access_token` vào biến collection `staff_token`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"0900000001\",\n  \"password\": \"Staff12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "var data = pm.response.json();",
+                  "pm.collectionVariables.set(\"staff_token\", data.access_token);",
+                  "pm.test(\"Đăng nhập Staff thành công\", function () {",
+                  "pm.expect(data.access_token).to.be.a(\"string\");",
+                  "});",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 - Yêu cầu gửi OTP đăng ký",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register/otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register",
+                "otp"
+              ]
+            },
+            "description": "Gửi yêu cầu OTP để tạo tài khoản mới. Do bật SMS_MOCK=true, mã OTP sẽ trả về ngay trong response field `mock_otp` và tự lưu vào `last_otp`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"0988776655\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "var data = pm.response.json();",
+                  "if (data.mock_otp) {",
+                  "pm.collectionVariables.set(\"last_otp\", data.mock_otp);",
+                  "}",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 - Đăng ký tài khoản Khách hàng",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Đăng ký tài khoản Khách hàng mới sau khi đã có mã OTP.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Lê Văn Mới\",\n  \"phone\": \"0988776655\",\n  \"password\": \"MatKhau123@\",\n  \"otp\": \"{{last_otp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "06 - Lấy thông tin cá nhân (Me)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Xem thông tin chi tiết tài khoản của người dùng đang đăng nhập."
+          },
+          "response": []
+        },
+        {
+          "name": "07 - Cập nhật hồ sơ cá nhân",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Cập nhật họ tên, ngày sinh, địa chỉ cá nhân.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Nguyễn Văn An Cập Nhật\",\n  \"birth_date\": \"1998-08-15\",\n  \"address\": \"Số 123 Đường Nguyễn Huệ, Quận 1, TP. HCM\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "08 - Đổi mật khẩu",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/password/change",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "password",
+                "change"
+              ]
+            },
+            "description": "Đổi mật khẩu người dùng hiện tại (yêu cầu mật khẩu cũ).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"Khach12345\",\n  \"new_password\": \"NewKhach12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "var data = pm.response.json();",
+                  "pm.collectionVariables.set(\"customer_token\", data.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "09 - Yêu cầu OTP quên mật khẩu",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/password/forgot/otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "password",
+                "forgot",
+                "otp"
+              ]
+            },
+            "description": "Yêu cầu OTP reset mật khẩu (luôn trả về HTTP 200 để tránh lộ thông tin). Tự lưu `mock_otp` vào `last_otp`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"0900000002\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "var data = pm.response.json();",
+                  "if (data.mock_otp) {",
+                  "pm.collectionVariables.set(\"last_otp\", data.mock_otp);",
+                  "}",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "10 - Đặt lại mật khẩu mới (Reset Password)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/password/reset",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "password",
+                "reset"
+              ]
+            },
+            "description": "Đặt lại mật khẩu mới sử dụng mã OTP vừa nhận.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"0900000002\",\n  \"otp\": \"{{last_otp}}\",\n  \"new_password\": \"Khach12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11 - Yêu cầu OTP đổi số điện thoại",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/phone/otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "phone",
+                "otp"
+              ]
+            },
+            "description": "Gửi OTP đến số điện thoại mới để xác minh quyền sở hữu.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_phone\": \"0977112233\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "var data = pm.response.json();",
+                  "if (data.mock_otp) {",
+                  "pm.collectionVariables.set(\"last_otp\", data.mock_otp);",
+                  "}",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "12 - Xác nhận đổi số điện thoại",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/phone/change",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "phone",
+                "change"
+              ]
+            },
+            "description": "Xác nhận đổi số điện thoại tài khoản sang số mới.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_phone\": \"0977112233\",\n  \"otp\": \"{{last_otp}}\",\n  \"password\": \"Khach12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "var data = pm.response.json();",
+                  "pm.collectionVariables.set(\"customer_token\", data.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "13 - Đăng xuất (Logout)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Đăng xuất và vô hiệu hóa access token hiện tại."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Folder 02: Tra cứu & Chọn chuyến",
+      "description": "API công khai phục vụ hành khách tìm kiếm chuyến xe, xem sơ đồ ghế và lộ trình điểm đón trả.",
+      "item": [
+        {
+          "name": "01 - Tìm chuyến xe (Search Trips)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/search?origin=Hà Nội&destination=Đà Nẵng&date=2026-11-15&time_of_day=CHIEU&min_price=100000&max_price=600000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "trips",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "origin",
+                  "value": "Hà Nội",
+                  "description": "Điểm đi"
+                },
+                {
+                  "key": "destination",
+                  "value": "Đà Nẵng",
+                  "description": "Điểm đến"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-11-15",
+                  "description": "Ngày khởi hành (YYYY-MM-DD)"
+                },
+                {
+                  "key": "time_of_day",
+                  "value": "CHIEU",
+                  "description": "Khung giờ: SANG (05:00-11:59), CHIEU (12:00-17:59), DEM (18:00-04:59)"
+                },
+                {
+                  "key": "min_price",
+                  "value": "100000",
+                  "description": "Giá vé tối thiểu"
+                },
+                {
+                  "key": "max_price",
+                  "value": "600000",
+                  "description": "Giá vé tối đa"
+                }
+              ]
+            },
+            "description": "Tìm kiếm chuyến xe theo lộ trình, ngày đi, khung giờ và khoảng giá. Tự động lưu `trip_id` vào biến collection."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "var data = pm.response.json();",
+                  "if (data.items && data.items.length > 0) {",
+                  "pm.collectionVariables.set(\"trip_id\", data.items[0].id);",
+                  "}",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 - Danh sách tuyến xe mở bán (Route Offers)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/routes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "routes"
+              ]
+            },
+            "description": "Lấy danh sách các tuyến đang có chuyến sắp chạy kèm giá khởi điểm thấp nhất (dùng cho trang chủ)."
+          },
+          "response": []
+        },
+        {
+          "name": "03 - Xem chi tiết chuyến xe & Điểm đón/trả",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{trip_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "trips",
+                "{{trip_id}}"
+              ]
+            },
+            "description": "Xem chi tiết giờ xuất bến, bến đến, thông tin xe và danh sách các điểm đón/trả khách của chuyến xe."
+          },
+          "response": []
+        },
+        {
+          "name": "04 - Xem sơ đồ ghế & Trạng thái chỗ",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{trip_id}}/seats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "trips",
+                "{{trip_id}}",
+                "seats"
+              ]
+            },
+            "description": "Lấy sơ đồ vị trí ghế (tầng, hàng, cột) và trạng thái hiện tại (TRONG, TAM_KHOA, DA_BAN) kèm thời hạn giữ chỗ."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Folder 03: Tạm giữ chỗ",
+      "description": "Cơ chế khóa chỗ tạm thời (Seat Lock) chống đặt trùng ghế trong thời gian khách thanh toán.",
+      "item": [
+        {
+          "name": "01 - Tạm giữ ghế 5 phút (Hold Seats)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{trip_id}}/hold",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "trips",
+                "{{trip_id}}",
+                "hold"
+              ]
+            },
+            "description": "Tạm khóa ghế trong 5 phút để chuẩn bị nhập thông tin và thanh toán. Tối đa 10 ghế/lần.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"seat_ids\": [\n    1,\n    2\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02 - Xem thông tin ghế đang giữ của tôi",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{trip_id}}/hold",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "trips",
+                "{{trip_id}}",
+                "hold"
+              ]
+            },
+            "description": "Kiểm tra danh sách ghế đang giữ và số giây còn lại trước khi hết hạn tạm giữ."
+          },
+          "response": []
+        },
+        {
+          "name": "03 - Hủy giữ chỗ / Nhả ghế (Release Seats)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{trip_id}}/release",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "trips",
+                "{{trip_id}}",
+                "release"
+              ]
+            },
+            "description": "Chủ động nhả bớt ghế hoặc toàn bộ ghế (bỏ trống seat_ids = nhả tất cả).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"seat_ids\": [\n    1\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Folder 04: Đặt vé & Thanh toán",
+      "description": "Tạo đơn hàng, áp dụng voucher, thanh toán trực tuyến qua VietQR/MoMo/Thẻ và xử lý webhook cổng thanh toán.",
+      "item": [
+        {
+          "name": "01 - Kiểm tra mã giảm giá (Validate Coupon)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/coupons/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "coupons",
+                "validate"
+              ]
+            },
+            "description": "Kiểm tra tính hợp lệ của mã khuyến mãi và tính số tiền được giảm trước khi tạo đơn.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"CHAOBAN\",\n  \"amount\": 450000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02 - Tạo đơn hàng đặt vé (Create Order)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "Tạo đơn hàng từ các ghế đã tạm giữ thành công. Tự động lưu `order_id` và `ticket_id` vào collection variables.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trip_id\": 1,\n  \"items\": [\n    {\n      \"seat_id\": 1,\n      \"passenger_name\": \"Nguyễn Văn An\",\n      \"passenger_phone\": \"0900000002\",\n      \"pickup_stop_id\": null,\n      \"dropoff_stop_id\": null\n    }\n  ],\n  \"coupon_code\": \"CHAOBAN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "var data = pm.response.json();",
+                  "if (data.id) {",
+                  "pm.collectionVariables.set(\"order_id\", data.id);",
+                  "}",
+                  "if (data.tickets && data.tickets.length > 0) {",
+                  "pm.collectionVariables.set(\"ticket_id\", data.tickets[0].id);",
+                  "}",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 - Xem danh sách đơn hàng của tôi",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "Xem toàn bộ lịch sử đơn hàng trực tuyến của khách hàng đang đăng nhập."
+          },
+          "response": []
+        },
+        {
+          "name": "04 - Xem chi tiết đơn hàng",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{order_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{order_id}}"
+              ]
+            },
+            "description": "Xem trạng thái, hạn giữ chỗ, chi tiết vé và lịch sử thanh toán của đơn hàng."
+          },
+          "response": []
+        },
+        {
+          "name": "05 - Thanh toán đơn hàng qua VietQR (Giả lập QR)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{order_id}}/pay",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{order_id}}",
+                "pay"
+              ]
+            },
+            "description": "Thanh toán đơn hàng qua mã chuẩn VietQR. Cổng giả trả về chuỗi nội dung QR và kết quả thanh toán ngay lập tức.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"VIETQR\",\n  \"simulate\": \"success\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "06 - Thanh toán đơn hàng qua MoMo / Thẻ",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{order_id}}/pay",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{order_id}}",
+                "pay"
+              ]
+            },
+            "description": "Thanh toán đơn hàng qua ví điện tử MoMo hoặc Thẻ quốc tế/ATM.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"MOMO\",\n  \"simulate\": \"success\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "07 - Hủy đơn hàng đang chờ thanh toán (Nhả ghế ngay)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{order_id}}/cancel-pending",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{order_id}}",
+                "cancel-pending"
+              ]
+            },
+            "description": "Khách hàng chủ động hủy đơn khi chưa thanh toán để giải phóng ghế ngay lập tức cho người khác đặt."
+          },
+          "response": []
+        },
+        {
+          "name": "08 - Webhook Cổng thanh toán (Mô phỏng IPN)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-gateway-key",
+                "value": "mock-gateway-key",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments/webhook",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                "webhook"
+              ]
+            },
+            "description": "Webhook bất đồng bộ nhận thông báo kết quả giao dịch từ cổng thanh toán. Bảo mật bằng Header `x-gateway-key`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaction_id\": \"MOCK-TXN-ORDER-1\",\n  \"status\": \"SUCCESS\",\n  \"simulate\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Folder 05: Vé & Hủy vé",
+      "description": "Quản lý vé xe điện tử, kiểm tra mã QR, báo giá hủy vé theo quy định 24h và hoàn tiền tự động.",
+      "item": [
+        {
+          "name": "01 - Lịch sử vé của tôi",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/me/tickets?status=CHUA_DI",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "me",
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "CHUA_DI",
+                  "description": "Lọc theo trạng thái: CHUA_DI, DA_HOAN_THANH, DA_HUY"
+                }
+              ]
+            },
+            "description": "Xem danh sách vé xe đã mua của khách hàng. Tự động lưu `ticket_id` của vé đầu tiên vào biến collection."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "var data = pm.response.json();",
+                  "if (data.items && data.items.length > 0) {",
+                  "pm.collectionVariables.set(\"ticket_id\", data.items[0].id);",
+                  "}",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 - Chi tiết vé điện tử",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{ticket_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tickets",
+                "{{ticket_id}}"
+              ]
+            },
+            "description": "Xem chi tiết vé xe điện tử bao gồm mã QR soát vé, biển số xe, thông tin khách và trạng thái."
+          },
+          "response": []
+        },
+        {
+          "name": "03 - Báo giá hủy vé (Xem trước phí 15%)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{ticket_id}}/cancel-quote",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tickets",
+                "{{ticket_id}}",
+                "cancel-quote"
+              ]
+            },
+            "description": "Kiểm tra điều kiện hủy (phải trước giờ khởi hành ≥ 24h), xem trước tỷ lệ phí hủy (15%) và số tiền thực nhận (85%)."
+          },
+          "response": []
+        },
+        {
+          "name": "04 - Xác nhận hủy vé trực tuyến (Hoàn tiền 85%)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{ticket_id}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tickets",
+                "{{ticket_id}}",
+                "cancel"
+              ]
+            },
+            "description": "Xác nhận hủy vé trực tuyến. Hệ thống tự động hoàn tiền về phương thức ban đầu (hoặc chuyển vào hàng đợi xử lý thủ công nếu cổng từ chối khi simulate='fail_refund').",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"simulate\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Folder 06: Quầy vé & Soát vé",
+      "description": "Các tác vụ của Nhân viên bán vé tại quầy (POS) và Nhân viên kiểm soát vé lên xe.",
+      "item": [
+        {
+          "name": "01 - Quầy: Lập đơn bán vé trực tiếp",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staff_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/counter/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "counter",
+                "orders"
+              ]
+            },
+            "description": "Nhân viên quầy bán vé trực tiếp cho khách vãng lai sau khi đã giữ chỗ ghế qua API Hold.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trip_id\": 1,\n  \"items\": [\n    {\n      \"seat_id\": 4,\n      \"passenger_name\": \"Nguyễn Văn Quầy\",\n      \"passenger_phone\": \"0912000099\",\n      \"pickup_stop_id\": null,\n      \"dropoff_stop_id\": null\n    }\n  ],\n  \"coupon_code\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02 - Quầy: Thanh toán đơn hàng tiền mặt / quầy",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staff_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{order_id}}/pay",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{order_id}}",
+                "pay"
+              ]
+            },
+            "description": "Thu tiền mặt trực tiếp tại quầy hoặc quẹt thẻ cho đơn hàng tạo tại quầy.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"TIEN_MAT\",\n  \"simulate\": \"success\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03 - Quầy: Đối soát doanh thu bán vé trong ngày",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staff_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/counter/orders?date=2026-11-12",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "counter",
+                "orders"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-11-12",
+                  "description": "Ngày đối soát (mặc định hôm nay)"
+                }
+              ]
+            },
+            "description": "Nhân viên đối soát tổng số vé đã bán, tổng doanh thu và chi tiết doanh thu theo từng phương thức (Tiền mặt, VietQR, Thẻ)."
+          },
+          "response": []
+        },
+        {
+          "name": "04 - Quầy: In lại biên nhận vé giấy",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staff_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/counter/orders/{{order_id}}/receipts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "counter",
+                "orders",
+                "{{order_id}}",
+                "receipts"
+              ]
+            },
+            "description": "Lấy chuỗi định dạng in biên nhận vé giấy để gửi máy in nhiệt POS."
+          },
+          "response": []
+        },
+        {
+          "name": "05 - Quầy: Hủy vé tại quầy (Chi tiền mặt / Hoàn cổng)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staff_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/counter/tickets/{{ticket_id}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "counter",
+                "tickets",
+                "{{ticket_id}}",
+                "cancel"
+              ]
+            },
+            "description": "Nhân viên xử lý hủy vé tại quầy. Xuất biên nhận hoàn tiền giấy và ghi nhận hình thức hoàn tương ứng.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"simulate\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "06 - Soát vé & Tra cứu vé (Theo SĐT / Mã vé / QR)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staff_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tickets/lookup?phone=0900000002&ticket_id=1&qr=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tickets",
+                "lookup"
+              ],
+              "query": [
+                {
+                  "key": "phone",
+                  "value": "0900000002",
+                  "description": "Tra cứu theo số điện thoại"
+                },
+                {
+                  "key": "ticket_id",
+                  "value": "1",
+                  "description": "Tra cứu theo ID vé (tùy chọn)"
+                },
+                {
+                  "key": "qr",
+                  "value": "",
+                  "description": "Tra cứu quét mã QR (tùy chọn)"
+                }
+              ]
+            },
+            "description": "Nhân viên soát vé kiểm tra tính hợp lệ của vé khi khách lên xe (CHUA_DI -> Hợp lệ; DA_HOAN_THANH/DA_HUY -> Từ chối)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Folder 07: Admin - Báo cáo & Doanh thu",
+      "description": "Báo cáo tài chính, thống kê doanh thu đa chiều và xuất file định dạng CSV, Excel (.xlsx), PDF.",
+      "item": [
+        {
+          "name": "01 - Báo cáo doanh thu & lấp đầy (JSON)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/reports?date_from=2026-11-01&date_to=2026-11-30&route_id=1&channel=TRUC_TUYEN",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "reports"
+              ],
+              "query": [
+                {
+                  "key": "date_from",
+                  "value": "2026-11-01",
+                  "description": "Từ ngày"
+                },
+                {
+                  "key": "date_to",
+                  "value": "2026-11-30",
+                  "description": "Đến ngày"
+                },
+                {
+                  "key": "route_id",
+                  "value": "1",
+                  "description": "Lọc theo tuyến (tùy chọn)"
+                },
+                {
+                  "key": "channel",
+                  "value": "TRUC_TUYEN",
+                  "description": "Lọc theo kênh: TRUC_TUYEN hoặc TAI_QUAY (tùy chọn)"
+                }
+              ]
+            },
+            "description": "Báo cáo tổng hợp doanh thu gộp (Gross), tiền hoàn (Refunded), doanh thu thuần (Net), số vé bán, vé hủy, tỷ lệ lấp đầy theo tuyến và chuyến xe."
+          },
+          "response": []
+        },
+        {
+          "name": "02 - Xuất báo cáo doanh thu ra CSV",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/reports/export.csv?date_from=2026-11-01&date_to=2026-11-30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "reports",
+                "export.csv"
+              ],
+              "query": [
+                {
+                  "key": "date_from",
+                  "value": "2026-11-01",
+                  "description": "Từ ngày"
+                },
+                {
+                  "key": "date_to",
+                  "value": "2026-11-30",
+                  "description": "Đến ngày"
+                }
+              ]
+            },
+            "description": "Xuất báo cáo định dạng CSV có UTF-8 BOM, hỗ trợ mở trực tiếp bằng Excel không lỗi font tiếng Việt."
+          },
+          "response": []
+        },
+        {
+          "name": "03 - Xuất báo cáo doanh thu ra Excel (XLSX)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/reports/export.xlsx?date_from=2026-11-01&date_to=2026-11-30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "reports",
+                "export.xlsx"
+              ],
+              "query": [
+                {
+                  "key": "date_from",
+                  "value": "2026-11-01",
+                  "description": "Từ ngày"
+                },
+                {
+                  "key": "date_to",
+                  "value": "2026-11-30",
+                  "description": "Đến ngày"
+                }
+              ]
+            },
+            "description": "Xuất file bảng tính Excel (.xlsx) gồm 2 sheet: Doanh thu theo tuyến và Tỷ lệ lấp đầy chuyến xe."
+          },
+          "response": []
+        },
+        {
+          "name": "04 - Xuất báo cáo doanh thu ra PDF (Khổ A4)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/reports/export.pdf?date_from=2026-11-01&date_to=2026-11-30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "reports",
+                "export.pdf"
+              ],
+              "query": [
+                {
+                  "key": "date_from",
+                  "value": "2026-11-01",
+                  "description": "Từ ngày"
+                },
+                {
+                  "key": "date_to",
+                  "value": "2026-11-30",
+                  "description": "Đến ngày"
+                }
+              ]
+            },
+            "description": "Xuất báo cáo ra tài liệu PDF khổ A4 ngang, căn chỉnh biểu bảng chuẩn mực để in ấn hoặc trình duyệt."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Folder 08: Admin - Đơn hàng & Hoàn tiền",
+      "description": "Tra cứu đơn hàng toàn diện và quản lý quy trình duyệt lệnh hoàn tiền thủ công.",
+      "item": [
+        {
+          "name": "01 - Danh sách đơn đặt vé",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/orders?status=DA_THANH_TOAN&channel=TRUC_TUYEN&page=1&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "orders"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "DA_THANH_TOAN",
+                  "description": "Trạng thái: CHO_THANH_TOAN, DA_THANH_TOAN, THAT_BAI, DA_HUY"
+                },
+                {
+                  "key": "channel",
+                  "value": "TRUC_TUYEN",
+                  "description": "Kênh bán: TRUC_TUYEN hoặc TAI_QUAY"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Trang số"
+                },
+                {
+                  "key": "size",
+                  "value": "20",
+                  "description": "Số lượng mỗi trang"
+                }
+              ]
+            },
+            "description": "Tìm kiếm và phân trang toàn bộ đơn đặt vé trên hệ thống."
+          },
+          "response": []
+        },
+        {
+          "name": "02 - Chi tiết đơn hàng quản trị",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/orders/{{order_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "orders",
+                "{{order_id}}"
+              ]
+            },
+            "description": "Xem toàn bộ thông tin đơn hàng, danh sách vé, thanh toán và các lệnh hoàn tiền liên quan."
+          },
+          "response": []
+        },
+        {
+          "name": "03 - Danh sách lệnh hoàn tiền (Hàng đợi)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/refunds?status=CHO_XU_LY_THU_CONG&page=1&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "refunds"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "CHO_XU_LY_THU_CONG",
+                  "description": "Trạng thái: CHO_XU_LY_THU_CONG, THANH_CONG, THAT_BAI"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Trang số"
+                },
+                {
+                  "key": "size",
+                  "value": "20",
+                  "description": "Số lượng mỗi trang"
+                }
+              ]
+            },
+            "description": "Xem danh sách các lệnh hoàn tiền đang chờ Admin can thiệp thủ công (do cổng thanh toán lỗi hoặc hoàn tiền mặt)."
+          },
+          "response": []
+        },
+        {
+          "name": "04 - Phê duyệt / Thử lại lệnh hoàn tiền (Retry)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/refunds/1/retry",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "refunds",
+                "1",
+                "retry"
+              ]
+            },
+            "description": "Admin thực hiện gọi lại cổng thanh toán hoặc xác nhận đã hoàn tất chi tiền mặt cho hành khách.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"simulate\": \"success\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Folder 09: Admin - Lộ trình & Chuyến xe",
+      "description": "Quản lý tuyến đường, điều độ chuyến xe, điều chỉnh giá vé và quy trình hủy chuyến hoàn tiền 100%.",
+      "item": [
+        {
+          "name": "01 - Danh sách tất cả tuyến xe",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/routes?status=HOAT_DONG",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "routes"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "HOAT_DONG",
+                  "description": "Trạng thái tuyến: HOAT_DONG hoặc NGUNG"
+                }
+              ]
+            },
+            "description": "Lấy danh sách các tuyến xe hiện có của nhà xe."
+          },
+          "response": []
+        },
+        {
+          "name": "02 - Tạo tuyến xe mới",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/routes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "routes"
+              ]
+            },
+            "description": "Khai báo tuyến đường xe chạy mới giữa hai địa danh.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"origin\": \"Hà Nội\",\n  \"destination\": \"Huế\",\n  \"distance_km\": 680,\n  \"expected_minutes\": 720\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03 - Cập nhật thông tin tuyến xe",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/routes/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "routes",
+                "1"
+              ]
+            },
+            "description": "Cập nhật thời gian dự kiến di chuyển hoặc tạm ngừng khai thác tuyến.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_minutes\": 810,\n  \"status\": \"HOAT_DONG\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "04 - Danh sách chuyến xe",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/trips?route_id=1&status=MO_BAN&page=1&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "trips"
+              ],
+              "query": [
+                {
+                  "key": "route_id",
+                  "value": "1",
+                  "description": "Lọc theo ID tuyến xe"
+                },
+                {
+                  "key": "status",
+                  "value": "MO_BAN",
+                  "description": "Trạng thái: MO_BAN, DA_KHOA, DA_HUY"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Trang số"
+                },
+                {
+                  "key": "size",
+                  "value": "20",
+                  "description": "Số lượng mỗi trang"
+                }
+              ]
+            },
+            "description": "Danh sách các chuyến xe được lên lịch chạy trong hệ thống."
+          },
+          "response": []
+        },
+        {
+          "name": "05 - Tạo chuyến xe mới",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/trips",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "trips"
+              ]
+            },
+            "description": "Thiết lập chuyến xe mới, chỉ định phương tiện, lộ trình điểm đón trả và giá vé gốc.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"route_id\": 1,\n  \"vehicle_id\": 1,\n  \"departure_date\": \"2026-11-20\",\n  \"departure_time\": \"19:00:00\",\n  \"price\": 450000,\n  \"pickup_points\": [\n    \"Bến xe Giáp Bát\",\n    \"Bến xe Mỹ Đình\"\n  ],\n  \"dropoff_points\": [\n    \"Bến xe Trung tâm Đà Nẵng\"\n  ],\n  \"note\": \"Chuyến xe tăng cường cuối tuần\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "06 - Cập nhật giờ chạy hoặc đổi xe (Báo SMS)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/trips/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "trips",
+                "1"
+              ]
+            },
+            "description": "Đổi giờ xuất bến hoặc đổi sang xe khác. Hệ thống tự động gửi tin nhắn SMS thông báo đến mọi hành khách đã mua vé.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departure_time\": \"19:30:00\",\n  \"note\": \"Điều chỉnh giờ khởi hành lùi 30 phút\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "07 - Cập nhật giá vé chuyến xe",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/trips/1/price",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "trips",
+                "1",
+                "price"
+              ]
+            },
+            "description": "Điều chỉnh giá vé niêm yết của chuyến xe (chỉ áp dụng cho các vé mua sau thời điểm đổi giá).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 480000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "08 - Hủy chuyến xe bất khả kháng (Tự động hoàn 100%)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/trips/1/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "trips",
+                "1",
+                "cancel"
+              ]
+            },
+            "description": "Hủy chuyến xe do sự cố bất khả kháng. Tự động đóng bán ngay và hoàn trả 100% tiền vé cho tất cả khách hàng đã đặt.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Ảnh hưởng áp thấp nhiệt đới và ngập lụt đường sắt đường bộ\",\n  \"simulate\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Folder 10: Admin - Đội xe & Sơ đồ ghế",
+      "description": "Quản lý đội phương tiện, chủng loại xe, sơ đồ ghế 1 tầng / 2 tầng và bảo dưỡng xe.",
+      "item": [
+        {
+          "name": "01 - Danh sách loại xe",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/vehicle-types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "vehicle-types"
+              ]
+            },
+            "description": "Danh mục các dòng loại xe: Giường nằm, Limousine, Ghế ngồi."
+          },
+          "response": []
+        },
+        {
+          "name": "02 - Tạo loại xe mới",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/vehicle-types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "vehicle-types"
+              ]
+            },
+            "description": "Khai báo thêm danh mục chủng loại xe mới vào hệ thống.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Limousine VIP 22 Phòng\",\n  \"description\": \"Xe cabin cung điện cao cấp có rèm riêng và màn hình massage\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03 - Danh sách xe trong đội xe",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/vehicles?status=HOAT_DONG&q=&page=1&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "vehicles"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "HOAT_DONG",
+                  "description": "Trạng thái xe: HOAT_DONG hoặc NGUNG_HOAT_DONG"
+                },
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "Tìm kiếm theo biển số hoặc nhãn hiệu"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Trang số"
+                },
+                {
+                  "key": "size",
+                  "value": "20",
+                  "description": "Số lượng mỗi trang"
+                }
+              ]
+            },
+            "description": "Quản lý danh sách phương tiện vận tải của doanh nghiệp."
+          },
+          "response": []
+        },
+        {
+          "name": "04 - Thêm xe mới kèm layout sơ đồ ghế",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/vehicles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "vehicles"
+              ]
+            },
+            "description": "Thêm phương tiện mới và tự động sinh mã vị trí ghế theo số tầng, số hàng và số ghế mỗi hàng (A01..B20).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plate\": \"51B-999.99\",\n  \"vehicle_type_id\": 1,\n  \"brand\": \"Thaco Mobihome 2024\",\n  \"manufacture_year\": 2024,\n  \"note\": \"Xe mới bàn giao tháng 11/2026\",\n  \"layout\": {\n    \"floors\": 2,\n    \"rows\": 10,\n    \"seats_per_row\": 2\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "05 - Xem chi tiết xe & Sơ đồ ghế",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/vehicles/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "vehicles",
+                "1"
+              ]
+            },
+            "description": "Xem thông tin kỹ thuật của xe và danh sách chi tiết toàn bộ các ghế hiện có."
+          },
+          "response": []
+        },
+        {
+          "name": "06 - Cập nhật thông tin phương tiện",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/vehicles/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "vehicles",
+                "1"
+              ]
+            },
+            "description": "Cập nhật biển số, dòng xe, năm sản xuất hoặc ghi chú bảo trì.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brand\": \"Thaco Mobihome Premium 2024\",\n  \"note\": \"Bảo dưỡng định kỳ cấp 1 xong ngày 10/11/2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "07 - Tạm khóa / Ngừng hoạt động xe",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/vehicles/1/deactivate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "vehicles",
+                "1",
+                "deactivate"
+              ]
+            },
+            "description": "Chuyển trạng thái xe thành NGUNG_HOAT_DONG (không thể phân bổ vào các chuyến xe mới)."
+          },
+          "response": []
+        },
+        {
+          "name": "08 - Kích hoạt xe hoạt động trở lại",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/vehicles/1/activate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "vehicles",
+                "1",
+                "activate"
+              ]
+            },
+            "description": "Kích hoạt lại phương tiện sang trạng thái HOAT_DONG để đưa vào vận hành."
+          },
+          "response": []
+        },
+        {
+          "name": "09 - Cấu hình thay đổi sơ đồ ghế xe",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/vehicles/1/seats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "vehicles",
+                "1",
+                "seats"
+              ]
+            },
+            "description": "Tái cấu trúc sơ đồ ghế của xe (chỉ cho phép khi xe chưa có vé đã bán ở các chuyến tương lai).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"floors\": 2,\n  \"rows\": 9,\n  \"seats_per_row\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Folder 11: Admin - Khuyến mãi & Voucher",
+      "description": "Quản trị các chiến dịch khuyến mãi, mã giảm giá và hạn ngạch sử dụng.",
+      "item": [
+        {
+          "name": "01 - Danh sách voucher khuyến mãi",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/coupons?status=BAT&page=1&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "coupons"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "BAT",
+                  "description": "Trạng thái: BAT hoặc TAT"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Trang số"
+                },
+                {
+                  "key": "size",
+                  "value": "20",
+                  "description": "Số lượng mỗi trang"
+                }
+              ]
+            },
+            "description": "Danh sách các chương trình mã giảm giá đang triển khai."
+          },
+          "response": []
+        },
+        {
+          "name": "02 - Tạo voucher khuyến mãi mới",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/coupons",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "coupons"
+              ]
+            },
+            "description": "Tạo mã voucher mới theo phần trăm (PHAN_TRAM) hoặc số tiền cố định (SO_TIEN), giới hạn số lượng và thời hạn.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"GIAM50K\",\n  \"kind\": \"SO_TIEN\",\n  \"value\": 50000,\n  \"max_discount\": null,\n  \"min_order\": 400000,\n  \"quantity\": 100,\n  \"valid_from\": \"2026-11-01T00:00:00\",\n  \"valid_to\": \"2026-12-31T23:59:59\",\n  \"description\": \"Giảm 50.000đ cho mọi đơn đặt vé từ 400.000đ\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03 - Bật / Tắt voucher khuyến mãi",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/coupons/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "coupons",
+                "1"
+              ]
+            },
+            "description": "Bật (BAT) hoặc Tắt (TAT) kích hoạt mã voucher để tạm dừng áp dụng.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"TAT\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Folder 12: Admin - Người dùng & Bảo mật",
+      "description": "Quản trị người dùng, phân quyền nhân viên quầy, kiểm tra nhật ký audit, khóa và mở khóa tài khoản.",
+      "item": [
+        {
+          "name": "01 - Danh sách tài khoản người dùng",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users?role=KHACH_HANG&status=HOAT_DONG&page=1&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "KHACH_HANG",
+                  "description": "Vai trò: KHACH_HANG, NHAN_VIEN_BAN_VE, ADMIN"
+                },
+                {
+                  "key": "status",
+                  "value": "HOAT_DONG",
+                  "description": "Trạng thái: HOAT_DONG hoặc KHOA"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Trang số"
+                },
+                {
+                  "key": "size",
+                  "value": "20",
+                  "description": "Số lượng mỗi trang"
+                }
+              ]
+            },
+            "description": "Tìm kiếm và phân trang tài khoản người dùng, nhân viên và quản trị."
+          },
+          "response": []
+        },
+        {
+          "name": "02 - Tạo tài khoản nhân viên mới",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ]
+            },
+            "description": "Tạo tài khoản Nhân viên bán vé mới. Hệ thống tự sinh mật khẩu tạm ngẫu nhiên trả về một lần duy nhất.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"0900000099\",\n  \"full_name\": \"Trần Thị Thu Ngân\",\n  \"role\": \"NHAN_VIEN_BAN_VE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03 - Xem chi tiết tài khoản & Lịch sử audit log",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "2"
+              ]
+            },
+            "description": "Xem thông tin người dùng, số vé chưa đi và toàn bộ lịch sử thao tác nhật ký (Audit Log)."
+          },
+          "response": []
+        },
+        {
+          "name": "04 - Cập nhật thông tin tài khoản",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "2"
+              ]
+            },
+            "description": "Cập nhật họ tên hoặc phân quyền vai trò cho tài khoản.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Nguyễn Văn An Cập Nhật Quyền\",\n  \"role\": \"KHACH_HANG\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "05 - Reset mật khẩu tài khoản (Mật khẩu tạm)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/2/reset-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "2",
+                "reset-password"
+              ]
+            },
+            "description": "Cấp lại mật khẩu tạm cho người dùng, người dùng buộc phải đổi mật khẩu ở lần đăng nhập tiếp theo."
+          },
+          "response": []
+        },
+        {
+          "name": "06 - Khóa tài khoản",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/2/lock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "2",
+                "lock"
+              ]
+            },
+            "description": "Khóa tài khoản người dùng. Nếu tài khoản còn vé chưa đi (CHUA_DI), hệ thống sẽ trả về cảnh báo warning kèm theo."
+          },
+          "response": []
+        },
+        {
+          "name": "07 - Mở khóa tài khoản",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/2/unlock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "2",
+                "unlock"
+              ]
+            },
+            "description": "Mở khóa để tài khoản tiếp tục đăng nhập và mua vé bình thường."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Folder 13: Admin - Cấu hình hệ thống",
+      "description": "Quản lý các thông số động của hệ thống mà không cần sửa code hay khởi động lại máy chủ.",
+      "item": [
+        {
+          "name": "01 - Danh sách tham số cấu hình hệ thống",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "settings"
+              ]
+            },
+            "description": "Xem toàn bộ các tham số vận hành nghiệp vụ: thời gian giữ chỗ, hạn hủy vé, phí hủy vé %, thông số OTP, số lần đăng nhập sai tối đa..."
+          },
+          "response": []
+        },
+        {
+          "name": "02 - Cập nhật thời gian tạm giữ chỗ (Phút)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/THOI_GIAN_GIU_CHO_PHUT",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "settings",
+                "THOI_GIAN_GIU_CHO_PHUT"
+              ]
+            },
+            "description": "Thay đổi thời gian giữ chỗ ghế (1 - 60 phút).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03 - Cập nhật hạn hủy vé trực tuyến (Giờ)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/HAN_HUY_VE_GIO",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "settings",
+                "HAN_HUY_VE_GIO"
+              ]
+            },
+            "description": "Thay đổi khoảng thời gian tối thiểu trước khi xe chạy cho phép khách hủy vé (0 - 720 giờ).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": 24\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "04 - Cập nhật tỷ lệ phí hủy vé (%)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/PHI_HUY_PHAN_TRAM",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "settings",
+                "PHI_HUY_PHAN_TRAM"
+              ]
+            },
+            "description": "Thay đổi phần trăm khấu trừ phí hủy vé (0 - 100%). Mặc định 15%.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": 15\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "05 - Cập nhật số lần đăng nhập sai tối đa",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/DANG_NHAP_SAI_TOI_DA",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "settings",
+                "DANG_NHAP_SAI_TOI_DA"
+              ]
+            },
+            "description": "Thay đổi số lần nhập sai mật khẩu liên tiếp trước khi khóa tài khoản tạm thời (1 - 20 lần).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "00 - Kiểm tra sức khỏe hệ thống (Health Check)",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        },
+        "description": "Kiểm tra trạng thái kết nối Web Server và Cơ sở dữ liệu MySQL."
+      },
+      "response": []
+    }
+  ]
+}
