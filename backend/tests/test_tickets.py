@@ -115,3 +115,16 @@ def test_order_view_derives_completed_status_after_departure(client, make_user):
         client.get(f"/orders/{o['id']}", headers=h).json()["tickets"][0]["status"]
         == "DA_HOAN_THANH"
     )
+
+
+def test_download_ticket_pdf(client, make_user):
+    admin, r, v = world(client, make_user)
+    trip = mk_trip(client, admin, r, v)
+    _, h = make_user(Role.CUSTOMER)
+    o = buy(client, h, trip, seat_ids(client, trip["id"])[:1])
+    ticket_id = o["tickets"][0]["id"]
+
+    res = client.get(f"/tickets/{ticket_id}/pdf", headers=h)
+    assert res.status_code == 200
+    assert res.headers["content-type"] == "application/pdf"
+    assert res.content.startswith(b"%PDF")

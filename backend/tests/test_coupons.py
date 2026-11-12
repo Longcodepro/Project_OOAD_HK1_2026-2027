@@ -36,6 +36,16 @@ def test_create_and_toggle_coupon(client, make_user):
     assert off.json()["status"] == "TAT"
     assert len(client.get("/admin/coupons?status=BAT", headers=h).json()) == 0
 
+    # Test toggle endpoint
+    t_on = client.post(f"/admin/coupons/{r.json()['id']}/toggle", headers=h)
+    assert t_on.status_code == 200 and t_on.json()["status"] == "BAT"
+    t_off = client.post(f"/admin/coupons/{r.json()['id']}/toggle", headers=h)
+    assert t_off.status_code == 200 and t_off.json()["status"] == "TAT"
+    t_explicit = client.post(
+        f"/admin/coupons/{r.json()['id']}/toggle", headers=h, json={"status": "BAT"}
+    )
+    assert t_explicit.status_code == 200 and t_explicit.json()["status"] == "BAT"
+
 
 def test_end_before_start_rejected(client, make_user):
     h = make_user(Role.ADMIN)[1]

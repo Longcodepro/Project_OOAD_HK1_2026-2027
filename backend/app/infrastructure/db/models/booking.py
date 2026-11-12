@@ -11,6 +11,7 @@ class OrderModel(Base):
     __tablename__ = "orders"  # DonDatVe
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(50), unique=True, index=True)
     account_id: Mapped[int | None] = mapped_column(ForeignKey("accounts.id"))
     coupon_id: Mapped[int | None] = mapped_column(ForeignKey("coupons.id"))
     channel: Mapped[str] = mapped_column(String(20))
@@ -46,6 +47,7 @@ class TicketModel(Base):
     __tablename__ = "tickets"  # VeXe
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(50), unique=True, index=True)
     order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"))
     trip_id: Mapped[int] = mapped_column(ForeignKey("trips.id"))
     seat_id: Mapped[int] = mapped_column(ForeignKey("seats.id"))

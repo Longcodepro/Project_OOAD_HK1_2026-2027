@@ -1,14 +1,18 @@
 import { useEffect, useState, useMemo } from 'react'
 import type { Trip, View, User } from '../types'
-import { tripsApi } from '../services/api'
+import { tripsApi, apiErrorMessage } from '../services/api'
 import { Header } from '../components/layout/Header'
 import { FilterSidebar, type FilterOptions } from '../components/results/FilterSidebar'
 import { TripCard } from '../components/results/TripCard'
+import { FlockOfCranes } from '../components/dongson/FlockOfCranes'
+import { DongSonSpinner } from '../components/dongson/DongSonSpinner'
+import { toYmd, fromYmd } from '../components/common/PickerFields'
 
 export interface ResultsPageProps {
   setView: (v: View) => void
   user: User | null
   backendOnline: boolean
+  onLogout?: () => void
   searchParams: { from: string; to: string; date: string }
   onSelectTrip: (trip: Trip) => void
 }
@@ -17,199 +21,206 @@ export function ResultsPage({
   setView,
   user,
   backendOnline,
+  onLogout,
   searchParams,
   onSelectTrip,
 }: ResultsPageProps) {
   const [trips, setTrips] = useState<Trip[]>([])
+  const [suggestedDates, setSuggestedDates] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [reloadKey, setReloadKey] = useState(0)
   const [selectedDate, setSelectedDate] = useState(
-    searchParams.date || new Date().toISOString().slice(0, 10),
+    searchParams.date || toYmd(new Date()),
   )
-  const [firstDayOffset, setFirstDayOffset] = useState(0)
+  const [sort, setSort] = useState<'time' | 'price' | 'seats'>('time')
   const [filters, setFilters] = useState<FilterOptions>({
+    earlyMorning: true,
     morning: true,
     afternoon: true,
     evening: true,
   })
 
-  const today = useMemo(() => {
-    const d = new Date()
-    d.setHours(12, 0, 0, 0)
-    return d
-  }, [])
-
-  const asDateStr = (d: Date) => d.toISOString().slice(0, 10)
-
-  // Tạo danh sách các ngày xung quanh để chọn nhanh
-  const quickDays = useMemo(() => {
-    return Array.from({ length: 4 }, (_, index) => {
-      const d = new Date(today)
-      const offset = firstDayOffset + index
-      d.setDate(today.getDate() + offset)
-      return {
-        date: d,
-        dateStr: asDateStr(d),
-        offset,
-      }
-    })
-  }, [today, firstDayOffset])
-
-  const dayLabel = (d: Date, offset: number) => {
-    if (offset === 0) return 'Hôm nay'
-    if (offset === 1) return 'Ngày mai'
-    return `Th ${d.getDay() === 0 ? 'CN' : d.getDay() + 1}`
-  }
-
-  const handleDateChange = (newDateStr: string) => {
-    setSelectedDate(newDateStr)
-    setLoading(true)
-    const targetDate = new Date(newDateStr)
-    targetDate.setHours(12, 0, 0, 0)
-    const diffDays = Math.round(
-      (targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-    )
-    if (diffDays >= 0) {
-      setFirstDayOffset(Math.max(0, diffDays - 1))
-    }
-  }
-
   useEffect(() => {
     let isMounted = true
+    setLoading(true)
+    setError('')
     tripsApi
       .search(searchParams.from, searchParams.to, selectedDate)
       .then((data) => {
-        if (isMounted) {
-          setTrips(data)
-          setLoading(false)
-        }
+        if (!isMounted) return
+        setTrips(data.trips)
+        setSuggestedDates(data.suggestedDates)
+        setLoading(false)
       })
-      .catch(() => {
-        if (isMounted) setLoading(false)
+      .catch((err) => {
+        if (!isMounted) return
+        setTrips([])
+        setSuggestedDates([])
+        setError(apiErrorMessage(err, 'Không tải được danh sách chuyến'))
+        setLoading(false)
       })
     return () => {
       isMounted = false
     }
-  }, [searchParams.from, searchParams.to, selectedDate])
+  }, [searchParams.from, searchParams.to, selectedDate, reloadKey])
+
+  // 7 ngày kể từ hôm nay (+ ngày đang chọn nếu nằm ngoài dải)
+  const days = useMemo(() => {
+    const list = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date()
+      d.setDate(d.getDate() + i)
+      return toYmd(d)
+    })
+    return list.includes(selectedDate) ? list : [...list, selectedDate]
+  }, [selectedDate])
 
   const filteredTrips = useMemo(() => {
-    return trips.filter((trip) => {
+    const kept = trips.filter((trip) => {
       const hour = parseInt(trip.time?.split(':')[0] || '0', 10)
+      const isEarly = hour >= 0 && hour < 6
       const isMorning = hour >= 6 && hour < 12
       const isAfternoon = hour >= 12 && hour < 18
-      const isEvening = hour >= 18 || hour < 6
+      const isEvening = hour >= 18 && hour < 24
 
+      if (isEarly && !filters.earlyMorning) return false
       if (isMorning && !filters.morning) return false
       if (isAfternoon && !filters.afternoon) return false
       if (isEvening && !filters.evening) return false
-
       return true
     })
-  }, [trips, filters])
+    // ponytail: sắp xếp phía client trên trang đã tải; đủ cho vài chục chuyến/ngày.
+    return kept.sort((a, b) =>
+      sort === 'price' ? a.price - b.price : sort === 'seats' ? b.seats - a.seats : a.time.localeCompare(b.time),
+    )
+  }, [trips, filters, sort])
 
   return (
     <>
       <Header
+        currentView="home"
         setView={setView}
-        openLogin={() => setView('profile')}
         user={user}
         backendOnline={backendOnline}
+        onLogout={onLogout}
       />
-      <main className="mx-auto max-w-[1320px] px-5 pb-16 pt-8 lg:px-8">
-        <button
-          onClick={() => setView('home')}
-          className="text-sm text-white/50 hover:text-white transition"
-        >
-          ← Quay lại tìm kiếm
-        </button>
 
-        <div className="mt-5 flex flex-wrap items-end justify-between gap-5">
+      <main className="max-w-[1080px] mx-auto px-4 md:px-6 py-6 md:py-8 flex flex-col gap-6">
+        {/* Thanh tiêu đề tìm kiếm */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-hairline pb-4">
           <div>
-            <p className="eyebrow">
-              NGÀY KHỞI HÀNH: {new Date(selectedDate).toLocaleDateString('vi-VN')} · {filteredTrips.length} CHUYẾN PHÙ HỢP
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold">
-              {searchParams.from} <span className="text-violet-300">→</span>{' '}
-              {searchParams.to}
+            <div className="flex items-center gap-2 text-xs font-bold text-terracotta tracking-wider uppercase mb-1">
+              <span>KẾT QUẢ TÌM CHUYẾN</span>
+              <span className="text-hairline">|</span>
+              <span className="text-ink-soft">Ngày {fromYmd(selectedDate).toLocaleDateString('vi-VN')}</span>
+            </div>
+            <h1 className="text-2xl md:text-3xl font-extrabold text-ink tracking-tight flex items-center gap-2">
+              <span>{searchParams.from || 'Điểm đi'}</span>
+              <span className="text-terracotta">→</span>
+              <span>{searchParams.to || 'Điểm đến'}</span>
             </h1>
           </div>
 
-          {/* Khối chọn ngày: Tự do chọn ngày bất kỳ + Thanh ngày nhanh */}
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Bộ chọn lịch tự do */}
-            <label className="flex items-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-3.5 py-2.5 text-xs text-white hover:border-violet-300/60 transition cursor-pointer">
-              <span className="text-base text-violet-300">📅</span>
-              <span className="text-white/70">Chọn ngày khác:</span>
-              <input
-                type="date"
-                value={selectedDate}
-                min={asDateStr(today)}
-                onChange={(e) => handleDateChange(e.target.value)}
-                className="bg-transparent text-violet-200 font-mono text-xs focus:outline-none cursor-pointer"
-              />
-            </label>
-
-            {/* Thanh trượt ngày nhanh */}
-            <div className="date-pills">
-              <button
-                type="button"
-                onClick={() => setFirstDayOffset(Math.max(0, firstDayOffset - 1))}
-                disabled={firstDayOffset === 0}
-                className="hover:bg-white/10 transition px-2"
-                title="Ngày trước"
-              >
-                ‹
-              </button>
-              {quickDays.map(({ date, dateStr, offset }) => (
-                <button
-                  key={dateStr}
-                  type="button"
-                  onClick={() => handleDateChange(dateStr)}
-                  className={`date-choice ${selectedDate === dateStr ? 'active' : ''}`}
-                >
-                  {dayLabel(date, offset)}
-                  <br />
-                  <small>
-                    {date.getDate()} Th{date.getMonth() + 1}
-                  </small>
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => setFirstDayOffset(firstDayOffset + 1)}
-                className="hover:bg-white/10 transition px-2"
-                title="Ngày tiếp theo"
-              >
-                ›
-              </button>
-            </div>
-          </div>
+          <button
+            onClick={() => setView('home')}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-hairline bg-[#FFFDF9] text-xs font-semibold text-ink hover:border-terracotta transition cursor-pointer self-start sm:self-auto"
+          >
+            <span className="material-symbols-outlined text-sm">edit</span>
+            <span>Đổi lộ trình tìm kiếm</span>
+          </button>
         </div>
 
-        <div className="mt-9 grid gap-8 lg:grid-cols-[240px_1fr]">
-          <FilterSidebar onFilterChange={setFilters} />
+        {/* Dải chọn ngày */}
+        <div className="day-strip" role="group" aria-label="Chọn ngày khởi hành">
+          {days.map((d) => {
+            const dt = fromYmd(d)
+            return (
+              <button key={d} type="button" className="day-chip" aria-pressed={d === selectedDate} onClick={() => setSelectedDate(d)}>
+                <small>{d === toYmd(new Date()) ? 'Hôm nay' : dt.toLocaleDateString('vi-VN', { weekday: 'short' })}</small>
+                <b>{String(dt.getDate()).padStart(2, '0')}/{String(dt.getMonth() + 1).padStart(2, '0')}</b>
+              </button>
+            )
+          })}
+        </div>
 
-          <section className="space-y-4">
+        {/* Dải Đàn chim Lạc bay ngang kết nối */}
+        <FlockOfCranes
+          title="ĐANG TÌM CÁC CHUYẾN XE KHÁCH TỐT NHẤT"
+          subtitle="Đàn chim Lạc dẫn lối ngàn dặm non sông"
+          badge={loading || error ? 'ĐANG TÌM CHUYẾN' : `TÌM THẤY ${filteredTrips.length} CHUYẾN`}
+        />
+
+        {/* Layout 2 cột: Bộ lọc bên trái (4 cột), Danh sách bên phải (8 cột) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Cột trái: Bộ lọc */}
+          <div className="lg:col-span-4">
+            <FilterSidebar filters={filters} onFilterChange={setFilters} />
+          </div>
+
+          {/* Cột phải: Danh sách chuyến xe */}
+          <div className="lg:col-span-8 space-y-4">
+            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Sắp xếp">
+              <span className="text-xs font-bold text-ink-soft uppercase tracking-wider mr-1">Sắp xếp</span>
+              {([['time', 'Giờ đi sớm nhất'], ['price', 'Giá thấp nhất'], ['seats', 'Nhiều chỗ nhất']] as const).map(([k, label]) => (
+                <button key={k} type="button" className="sort-chip" aria-pressed={sort === k} onClick={() => setSort(k)}>
+                  {label}
+                </button>
+              ))}
+            </div>
             {loading ? (
-              <div className="rounded-[22px] border border-white/10 p-12 text-center text-white/60">
-                <span className="inline-block animate-spin text-2xl text-violet-300">
-                  ◉
-                </span>
-                <p className="mt-3">Đang tải danh sách chuyến xe...</p>
+              <div className="bg-[#FFFDF9] border border-hairline rounded p-12 flex flex-col items-center justify-center">
+                <DongSonSpinner size={54} label="Đang đối chiếu dữ liệu các nhà xe..." />
+              </div>
+            ) : error ? (
+              <div className="bg-[#FFFDF9] border border-hairline rounded p-10 text-center space-y-3" role="alert">
+                <span className="material-symbols-outlined text-4xl text-terracotta">cloud_off</span>
+                <p className="font-bold text-base text-ink">Không tải được danh sách chuyến</p>
+                <p className="text-xs text-ink-soft">{error}</p>
+                <button
+                  type="button"
+                  onClick={() => setReloadKey((k) => k + 1)}
+                  className="px-4 py-2 text-xs font-bold text-paper bg-terracotta rounded cursor-pointer"
+                >
+                  Thử lại
+                </button>
               </div>
             ) : filteredTrips.length === 0 ? (
-              <div className="rounded-[22px] border border-white/10 p-12 text-center text-white/60">
-                Không tìm thấy chuyến phù hợp với bộ lọc khung giờ đã chọn.
+              <div className="bg-[#FFFDF9] border border-hairline rounded p-10 text-center space-y-3">
+                <span className="material-symbols-outlined text-4xl text-ink-soft">search_off</span>
+                <p className="font-bold text-base text-ink">Không tìm thấy chuyến xe phù hợp</p>
+                <p className="text-xs text-ink-soft">
+                  {trips.length > 0
+                    ? 'Các chuyến của ngày này đang bị bộ lọc giờ ẩn đi.'
+                    : 'Ngày này chưa có chuyến cho tuyến đã chọn.'}
+                </p>
+                {trips.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setFilters({ earlyMorning: true, morning: true, afternoon: true, evening: true })}
+                    className="px-4 py-2 text-xs font-bold text-paper bg-terracotta rounded cursor-pointer"
+                  >
+                    Xóa bộ lọc giờ
+                  </button>
+                )}
+                {trips.length === 0 && suggestedDates.length > 0 && (
+                  <div className="space-y-2 pt-1">
+                    <p className="text-xs font-semibold text-ink">Tuyến này có chuyến vào ngày:</p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {suggestedDates.map((d) => (
+                        <button key={d} type="button" className="day-chip" onClick={() => setSelectedDate(d)}>
+                          <b>{fromYmd(d).toLocaleDateString('vi-VN')}</b>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               filteredTrips.map((trip) => (
-                <TripCard
-                  key={trip.id}
-                  trip={trip}
-                  onSelectTrip={onSelectTrip}
-                />
+                <TripCard key={trip.id} trip={trip} onSelectTrip={onSelectTrip} />
               ))
             )}
-          </section>
+          </div>
         </div>
       </main>
     </>

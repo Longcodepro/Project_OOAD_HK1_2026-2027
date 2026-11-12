@@ -1,269 +1,411 @@
 import { useEffect, useState } from 'react'
 import type { Ticket, View } from '../../types'
-import { ticketsApi } from '../../services/api'
+import {
+  adminReportsApi,
+  adminRefundsApi,
+  adminRoutesApi,
+  adminTicketsApi,
+  apiErrorMessage,
+  formatVnd,
+  type AdminReportData,
+  type AdminRoute,
+  type ReportFilter,
+  type ReportFormat,
+} from '../../services/api'
+import { DatePicker, fromYmd, toYmd } from '../../components/common/PickerFields'
 
 export interface AdminDashboardPageProps {
   setView: (v: View) => void
-  onViewTicket?: (ticket: Ticket) => void
 }
 
-export function AdminDashboardPage({ setView, onViewTicket }: AdminDashboardPageProps) {
-  const [tickets, setTickets] = useState<Ticket[]>([])
+interface ExtraData {
+  pendingRefunds: number
+  recent: Ticket[]
+}
+
+type Channel = NonNullable<ReportFilter['channel']>
+
+const CHANNELS: { value: Channel | ''; label: string }[] = [
+  { value: '', label: 'Tất cả' },
+  { value: 'TRUC_TUYEN', label: 'Trực tuyến' },
+  { value: 'TAI_QUAY', label: 'Tại quầy' },
+]
+
+const CHANNEL_LABEL: Record<Channel, string> = { TRUC_TUYEN: 'Trực tuyến', TAI_QUAY: 'Tại quầy' }
+
+const EXPORTS: { format: ReportFormat; label: string; icon: string }[] = [
+  { format: 'csv', label: 'CSV', icon: 'csv' },
+  { format: 'xlsx', label: 'Excel (.xlsx)', icon: 'table_view' },
+  { format: 'pdf', label: 'PDF', icon: 'picture_as_pdf' },
+]
+
+const dayMs = 86400000
+
+const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
+  CHUA_DI: { label: 'Đã thanh toán', cls: 'border-celadon/40 bg-celadon-light text-celadon' },
+  DA_HOAN_THANH: { label: 'Đã hoàn thành', cls: 'border-celadon/40 bg-celadon-light text-celadon' },
+  DA_HUY: { label: 'Đã hủy', cls: 'border-terracotta/40 bg-terracotta/10 text-terracotta' },
+  CHO_THANH_TOAN: { label: 'Chờ thanh toán', cls: 'border-bronze/50 bg-paper-deep text-bronze' },
+}
+
+const SHORTCUTS: { view: View; icon: string; label: string }[] = [
+  { view: 'admin-trips', icon: 'alt_route', label: 'Điều hành chuyến xe' },
+  { view: 'admin-pricing', icon: 'sell', label: 'Bảng giá & voucher' },
+  { view: 'admin-accounts', icon: 'group', label: 'Khóa / mở tài khoản' },
+  { view: 'admin-scan', icon: 'qr_code_scanner', label: 'Soát vé' },
+]
+
+const cardCls = 'rounded-md border border-hairline bg-card p-5'
+
+export function AdminDashboardPage({ setView }: AdminDashboardPageProps) {
+  const [dateFrom, setDateFrom] = useState(() => toYmd(new Date(Date.now() - 45 * dayMs)))
+  const [dateTo, setDateTo] = useState(() => toYmd(new Date(Date.now() + 15 * dayMs)))
+  const [routeId, setRouteId] = useState('')
+  const [channel, setChannel] = useState<Channel | ''>('')
+  const [routeOptions, setRouteOptions] = useState<AdminRoute[]>([])
+
+  const [report, setReport] = useState<AdminReportData | null>(null)
+  const [reportLoading, setReportLoading] = useState(true)
+  const [reportError, setReportError] = useState('')
+
+  const [extra, setExtra] = useState<ExtraData | null>(null)
+  const [extraError, setExtraError] = useState('')
+
+  const [exporting, setExporting] = useState<Partial<Record<ReportFormat, boolean>>>({})
+  const [exportError, setExportError] = useState('')
+
+  const filter: ReportFilter = { routeId: routeId ? Number(routeId) : undefined, channel: channel || undefined }
 
   useEffect(() => {
-    ticketsApi.getAll().then((data) => setTickets(data))
+    let alive = true
+    Promise.all([adminRefundsApi.list(), adminTicketsApi.list(10)])
+      .then(([refunds, recent]) => alive && setExtra({ pendingRefunds: refunds.length, recent }))
+      .catch((err) => alive && setExtraError(apiErrorMessage(err, 'Không tải được vé gần đây')))
+    adminRoutesApi
+      .list()
+      .then((list) => alive && setRouteOptions(list))
+      .catch(() => undefined) // lọc theo tuyến là phần phụ: không tải được thì chỉ còn "Tất cả tuyến"
+    return () => {
+      alive = false
+    }
   }, [])
 
-  const paidTickets = tickets.filter((t) => t.paymentStatus === 'PAID')
-  const pendingTickets = tickets.filter((t) => t.paymentStatus === 'PENDING_CANCEL')
-  const cancelledTickets = tickets.filter((t) => t.paymentStatus === 'CANCELLED')
-  const totalRevenue = paidTickets.reduce((sum, t) => sum + t.totalAmount, 0)
+  useEffect(() => {
+    if (dateFrom > dateTo) return
+    let alive = true
+    setReportLoading(true)
+    setReportError('')
+    adminReportsApi
+      .getSummary(dateFrom, dateTo, { routeId: routeId ? Number(routeId) : undefined, channel: channel || undefined })
+      .then((r) => alive && setReport(r))
+      .catch((err) => alive && setReportError(apiErrorMessage(err, 'Không tải được số liệu tổng quan')))
+      .finally(() => alive && setReportLoading(false))
+    return () => {
+      alive = false
+    }
+  }, [dateFrom, dateTo, routeId, channel])
 
-  const weeklyData = [
-    { day: 'Thứ 2', amount: 14200000, height: '65%' },
-    { day: 'Thứ 3', amount: 16800000, height: '75%' },
-    { day: 'Thứ 4', amount: 12500000, height: '55%' },
-    { day: 'Thứ 5', amount: 19100000, height: '82%' },
-    { day: 'Thứ 6', amount: 24500000, height: '96%' },
-    { day: 'Thứ 7', amount: 26800000, height: '100%' },
-    { day: 'C.Nhật', amount: 23200000, height: '90%' },
-  ]
+  const exportReport = async (format: ReportFormat) => {
+    setExporting((s) => ({ ...s, [format]: true }))
+    setExportError('')
+    try {
+      await adminReportsApi.download(format, dateFrom, dateTo, filter)
+    } catch (err) {
+      setExportError(apiErrorMessage(err, 'Không xuất được báo cáo'))
+    } finally {
+      setExporting((s) => ({ ...s, [format]: false }))
+    }
+  }
+
+  const routes = (report?.by_route ?? []).slice(0, 6)
+  const maxNet = Math.max(...routes.map((r) => r.net), 1)
+  const pending = extra?.pendingRefunds ?? 0
+  const picked = routeOptions.find((r) => String(r.id) === routeId)
+  const routeLabel = picked ? `${picked.origin} → ${picked.destination}` : ''
+  const fmtDate =(s: string) => fromYmd(s.slice(0, 10)).toLocaleDateString('vi-VN')
 
   return (
-    <div className="space-y-8 animate-fadeIn text-slate-900">
-      {/* Title */}
+    <div className="space-y-8 text-ink">
       <div>
-        <span className="text-xs font-bold uppercase tracking-wider text-orange-600">BÁO CÁO VẬN HÀNH</span>
-        <h1 className="text-2xl font-extrabold text-slate-900 mt-1">Tổng quan hoạt động Violetline</h1>
-        <p className="mt-1 text-xs text-slate-500 font-medium">
-          Số liệu thống kê thời gian thực về doanh thu bán vé, tỷ lệ lấp đầy ghế và các yêu cầu hủy vé cần xử lý.
-        </p>
+        <span className="eyebrow">Tổng quan</span>
+        <h1 className="mt-1 text-2xl font-extrabold">Hoạt động VéXe Việt</h1>
+        {report && (
+          <p className="mt-1 text-xs font-medium text-ink-soft">
+            Số liệu từ {fmtDate(report.date_from)} đến {fmtDate(report.date_to)}
+            {routeLabel && ` · tuyến ${routeLabel}`}
+            {channel && ` · kênh ${CHANNEL_LABEL[channel]}`}.
+            {reportLoading && ' Đang cập nhật...'}
+          </p>
+        )}
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Doanh thu */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-          <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-            <span>DOANH THU THỰC NHẬN</span>
-            <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold border border-emerald-200">+18.4%</span>
+      <div className={`${cardCls} space-y-4`}>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <span className="field-label">Từ ngày</span>
+            <DatePicker label="Từ ngày" value={dateFrom} onChange={setDateFrom} max={dateTo} />
           </div>
-          <p className="mt-2 text-2xl font-extrabold text-slate-900 font-mono">
-            {totalRevenue.toLocaleString('vi-VN')} đ
-          </p>
-          <p className="mt-1 text-[11px] text-slate-400 font-medium">Tính trên {paidTickets.length} vé hợp lệ</p>
-        </div>
-
-        {/* Số vé đã bán */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-          <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-            <span>TỔNG VÉ ĐÃ XUẤT</span>
-            <span className="text-orange-700 bg-orange-50 px-2 py-0.5 rounded-full font-bold border border-orange-200">Tất cả tuyến</span>
+          <div>
+            <span className="field-label">Đến ngày</span>
+            <DatePicker label="Đến ngày" value={dateTo} onChange={setDateTo} min={dateFrom} />
           </div>
-          <p className="mt-2 text-2xl font-extrabold text-slate-900 font-mono">{tickets.length} vé</p>
-          <p className="mt-1 text-[11px] text-slate-400 font-medium">
-            {paidTickets.length} hợp lệ · {cancelledTickets.length} đã hủy
-          </p>
-        </div>
-
-        {/* CẢNH BÁO: Chờ duyệt hủy vé */}
-        <div
-          onClick={() => setView('admin-tickets')}
-          className={`cursor-pointer rounded-2xl border p-5 transition shadow-xs ${
-            pendingTickets.length > 0
-              ? 'border-amber-300 bg-amber-50/70 hover:bg-amber-100/60 hover:shadow-md'
-              : 'border-slate-200 bg-white'
-          }`}
-        >
-          <div className="flex items-center justify-between text-xs font-bold text-amber-800">
-            <span>YÊU CẦU CHỜ DUYỆT HỦY</span>
-            {pendingTickets.length > 0 && (
-              <span className="h-2 w-2 rounded-full bg-amber-500 animate-ping" />
-            )}
+          <div>
+            <label className="field-label" htmlFor="report-route">Tuyến</label>
+            <select
+              id="report-route"
+              value={routeId}
+              onChange={(e) => setRouteId(e.target.value)}
+              className="w-full rounded border border-hairline bg-paper px-3 py-2.5 text-xs font-semibold text-ink"
+            >
+              <option value="">Tất cả tuyến</option>
+              {routeOptions.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.origin} → {r.destination}
+                </option>
+              ))}
+            </select>
           </div>
-          <p className="mt-2 text-2xl font-extrabold text-amber-900 font-mono">
-            {pendingTickets.length} yêu cầu
-          </p>
-          <p className="mt-1 text-[11px] font-semibold text-amber-700">
-            {pendingTickets.length > 0 ? 'Bấm để duyệt ngay →' : 'Không có yêu cầu tồn đọng'}
-          </p>
-        </div>
-
-        {/* Tỷ lệ lấp đầy */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-          <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-            <span>TỶ LỆ LẤP ĐẦY GHẾ</span>
-            <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold border border-emerald-200">Cao</span>
-          </div>
-          <p className="mt-2 text-2xl font-extrabold text-slate-900 font-mono">88.5%</p>
-          <p className="mt-1 text-[11px] text-slate-400 font-medium">Tuyến Sài Gòn - Đà Lạt dẫn đầu</p>
-        </div>
-      </div>
-
-      {/* Biểu đồ & Tác vụ cần xử lý */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Biểu đồ doanh thu 7 ngày */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs lg:col-span-2">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-            <div>
-              <h2 className="text-base font-bold text-slate-900">Doanh thu 7 ngày qua</h2>
-              <p className="text-xs text-slate-400 font-medium">Cập nhật lúc 07:00 hôm nay</p>
+          <div>
+            <span className="field-label">Kênh bán</span>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Kênh bán">
+              {CHANNELS.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  className="sort-chip"
+                  aria-pressed={channel === c.value}
+                  onClick={() => setChannel(c.value)}
+                >
+                  {c.label}
+                </button>
+              ))}
             </div>
-            <span className="rounded-lg bg-orange-50 px-2.5 py-1 text-xs font-bold text-orange-700 border border-orange-200">
-              Đỉnh tuần: Thứ 7 (26.8tr)
-            </span>
-          </div>
-
-          <div className="mt-8 flex h-52 items-end justify-between gap-3 px-2">
-            {weeklyData.map((d) => (
-              <div key={d.day} className="flex flex-1 flex-col items-center gap-2 group">
-                <span className="text-[11px] font-semibold text-slate-400 group-hover:text-slate-800 transition">
-                  {(d.amount / 1000000).toFixed(1)}M
-                </span>
-                <div className="relative w-full rounded-t-xl bg-slate-100 overflow-hidden flex items-end h-40">
-                  <div
-                    style={{ height: d.height }}
-                    className="w-full bg-gradient-to-t from-orange-600 to-orange-400 rounded-t-xl transition-all duration-300 group-hover:from-orange-500 group-hover:to-orange-300"
-                  />
-                </div>
-                <span className="text-xs font-bold text-slate-600 group-hover:text-orange-600 transition">
-                  {d.day}
-                </span>
-              </div>
-            ))}
           </div>
         </div>
 
-        {/* Lối tắt quản trị nhanh */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
-          <h2 className="text-base font-bold text-slate-900">Lối tắt quản lý nhanh</h2>
-          <p className="text-xs text-slate-500 font-medium">Truy cập nhanh các phân hệ nghiệp vụ chính.</p>
+        <div className="flex flex-wrap items-center gap-2 border-t border-hairline pt-4">
+          <span className="field-label !mb-0 mr-2">Xuất báo cáo</span>
+          {EXPORTS.map((x) => (
+            <button
+              key={x.format}
+              type="button"
+              className="btn btn-ghost"
+              disabled={exporting[x.format] || dateFrom > dateTo}
+              onClick={() => exportReport(x.format)}
+            >
+              <span className="material-symbols-outlined text-base">{x.icon}</span>
+              {exporting[x.format] ? 'Đang xuất...' : x.label}
+            </button>
+          ))}
+        </div>
+        {exportError && (
+          <p role="alert" className="text-xs font-semibold text-terracotta">
+            {exportError}
+          </p>
+        )}
+      </div>
 
-          <div className="space-y-2.5 pt-2">
+      {reportError && (
+        <div role="alert" className="rounded-md border border-terracotta/40 bg-terracotta/10 p-3.5 text-xs font-semibold text-terracotta">
+          {reportError}
+        </div>
+      )}
+
+      {reportLoading && !report && <p className="py-10 text-center text-xs text-ink-soft">Đang tải số liệu từ máy chủ...</p>}
+
+      {report && (
+        <div className={`space-y-8 transition-opacity ${reportLoading ? 'opacity-60' : ''}`}>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className={cardCls}>
+              <span className="text-xs font-semibold text-ink-soft">DOANH THU THỰC THU</span>
+              <p className="mt-2 font-mono text-2xl font-extrabold">{formatVnd(report.net)}</p>
+              <p className="mt-1 text-[11px] font-medium text-ink-soft">
+                Tổng bán {formatVnd(report.gross)} · đã hoàn {formatVnd(report.refunded)}
+              </p>
+            </div>
+
+            <div className={cardCls}>
+              <span className="text-xs font-semibold text-ink-soft">VÉ ĐÃ BÁN</span>
+              <p className="mt-2 font-mono text-2xl font-extrabold">{report.tickets_sold} vé</p>
+              <p className="mt-1 text-[11px] font-medium text-ink-soft">
+                {report.tickets_cancelled} vé đã hủy · tỉ lệ hủy {(report.cancel_rate * 100).toFixed(1)}%
+              </p>
+            </div>
+
             <button
               type="button"
               onClick={() => setView('admin-tickets')}
-              className="w-full flex items-center justify-between rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs font-bold text-amber-900 hover:bg-amber-100 transition cursor-pointer shadow-xs"
+              className={`${cardCls} cursor-pointer text-left transition hover:border-bronze ${
+                pending > 0 ? 'border-bronze bg-paper-deep' : ''
+              }`}
             >
-              <div className="flex items-center gap-2">
-                <span>🎫</span>
-                <span>Duyệt yêu cầu hủy vé</span>
-              </div>
-              <span className="rounded-full bg-amber-200 text-amber-900 px-2 py-0.5 text-[10px] font-bold border border-amber-300">
-                {pendingTickets.length} chờ
-              </span>
+              <span className="text-xs font-semibold text-ink-soft">HOÀN TIỀN CHỜ XỬ LÝ</span>
+              <p className={`mt-2 font-mono text-2xl font-extrabold ${pending > 0 ? 'text-terracotta' : ''}`}>
+                {extra ? `${pending} lệnh` : '—'}
+              </p>
+              <p className="mt-1 text-[11px] font-semibold text-ink-soft">
+                {!extra ? 'Đang tải...' : pending > 0 ? 'Bấm để xử lý →' : 'Không có lệnh tồn đọng'}
+              </p>
             </button>
 
-            <button
-              type="button"
-              onClick={() => setView('admin-trips')}
-              className="w-full flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
-            >
-              <div className="flex items-center gap-2">
-                <span>🚌</span>
-                <span>Thêm chuyến xe mới</span>
-              </div>
-              <span>→</span>
-            </button>
+            <div className={cardCls}>
+              <span className="text-xs font-semibold text-ink-soft">TỈ LỆ LẤP ĐẦY GHẾ</span>
+              <p className="mt-2 font-mono text-2xl font-extrabold">{(report.occupancy * 100).toFixed(1)}%</p>
+              <p className="mt-1 text-[11px] font-medium text-ink-soft">Trên các chuyến trong kỳ báo cáo</p>
+            </div>
+          </div>
 
-            <button
-              type="button"
-              onClick={() => setView('admin-pricing')}
-              className="w-full flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
-            >
-              <div className="flex items-center gap-2">
-                <span>🏷️</span>
-                <span>Tạo mã giảm giá Voucher</span>
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className={`${cardCls} p-6 lg:col-span-2`}>
+              <div className="flex items-center justify-between border-b border-hairline pb-4">
+                <h2 className="text-base font-bold">Doanh thu thực thu theo tuyến</h2>
+                <span className="rounded border border-hairline bg-paper-deep px-2.5 py-1 text-xs font-bold text-ink-soft">
+                  {report.by_route.length} tuyến
+                </span>
               </div>
-              <span>→</span>
-            </button>
+              {routes.length === 0 ? (
+                <p className="py-16 text-center text-xs text-ink-soft">Chưa có doanh thu trong kỳ báo cáo.</p>
+              ) : (
+                <div className="mt-6 flex h-52 items-end justify-between gap-3 px-2">
+                  {routes.map((r) => (
+                    <div key={r.route_id} title={`${r.route}: ${formatVnd(r.net)}`} className="group flex flex-1 flex-col items-center gap-2">
+                      <span className="text-[11px] font-semibold text-ink-soft">{(r.net / 1e6).toFixed(1)}M</span>
+                      <div className="flex h-40 w-full items-end overflow-hidden rounded-t bg-paper-deep">
+                        <div
+                          style={{ height: `${Math.max(Math.round((r.net / maxNet) * 100), 3)}%` }}
+                          className="w-full rounded-t bg-terracotta transition group-hover:bg-terracotta-hover"
+                        />
+                      </div>
+                      <span className="max-w-full truncate text-center text-xs font-bold text-ink-soft">{r.route}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-            <button
-              type="button"
-              onClick={() => setView('admin-accounts')}
-              className="w-full flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
-            >
-              <div className="flex items-center gap-2">
-                <span>👥</span>
-                <span>Khóa / Mở tài khoản</span>
+            <div className={`${cardCls} space-y-3 p-6`}>
+              <h2 className="text-base font-bold">Lối tắt</h2>
+              {SHORTCUTS.map((s) => (
+                <button
+                  key={s.view}
+                  type="button"
+                  onClick={() => setView(s.view)}
+                  className="flex w-full cursor-pointer items-center justify-between rounded border border-hairline bg-paper p-3 text-xs font-bold transition hover:border-bronze"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base text-terracotta">{s.icon}</span>
+                    {s.label}
+                  </span>
+                  <span>→</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className={`${cardCls} p-6`}>
+              <h2 className="border-b border-hairline pb-4 text-base font-bold">Doanh thu theo kênh bán</h2>
+              <div className="mt-4 space-y-4">
+                {(Object.keys(CHANNEL_LABEL) as Channel[]).map((c) => {
+                  const net = report.net_by_channel[c] ?? 0
+                  return (
+                    <div key={c}>
+                      <div className="flex items-baseline justify-between text-xs">
+                        <span className="font-bold">{CHANNEL_LABEL[c]}</span>
+                        <span className="font-mono font-extrabold">{formatVnd(net)}</span>
+                      </div>
+                      <div className="mt-1.5 h-2 overflow-hidden rounded bg-paper-deep">
+                        <div
+                          style={{ width: `${report.net > 0 ? Math.min(Math.round((net / report.net) * 100), 100) : 0}%` }}
+                          className="h-full bg-celadon"
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
-              <span>→</span>
-            </button>
+            </div>
+
+            <div className={`${cardCls} p-6 lg:col-span-2`}>
+              <h2 className="border-b border-hairline pb-4 text-base font-bold">Tỉ lệ lấp đầy theo tuyến</h2>
+              {report.fill_by_route.length === 0 ? (
+                <p className="py-10 text-center text-xs text-ink-soft">Chưa có chuyến nào trong kỳ báo cáo.</p>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  {report.fill_by_route.map((f) => (
+                    <div key={f.route_id}>
+                      <div className="flex items-baseline justify-between gap-3 text-xs">
+                        <span className="truncate font-bold">{f.route}</span>
+                        <span className="shrink-0 font-mono font-semibold text-ink-soft">
+                          {f.sold}/{f.total} ghế · {(f.rate * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="mt-1.5 h-2 overflow-hidden rounded bg-paper-deep">
+                        <div style={{ width: `${Math.min(Math.round(f.rate * 100), 100)}%` }} className="h-full bg-bronze" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className={`${cardCls} p-6`}>
+            <div className="mb-4 flex items-center justify-between border-b border-hairline pb-4">
+              <h2 className="text-base font-bold">Vé gần đây</h2>
+              <button
+                type="button"
+                onClick={() => setView('admin-tickets')}
+                className="cursor-pointer text-xs font-bold text-terracotta hover:text-terracotta-hover"
+              >
+                Xem tất cả trong Quản lý vé →
+              </button>
+            </div>
+
+            {extraError ? (
+              <p role="alert" className="py-6 text-center text-xs font-semibold text-terracotta">{extraError}</p>
+            ) : !extra ? (
+              <p className="py-6 text-center text-xs text-ink-soft">Đang tải vé gần đây...</p>
+            ) : extra.recent.length === 0 ? (
+              <p className="py-6 text-center text-xs text-ink-soft">Chưa có vé nào.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="border-b border-hairline bg-paper-deep text-[11px] font-bold uppercase text-ink-soft">
+                    <tr>
+                      <th className="p-3">Mã vé</th>
+                      <th className="p-3">Hành khách</th>
+                      <th className="p-3">Tuyến</th>
+                      <th className="p-3">Ghế</th>
+                      <th className="p-3">Số tiền</th>
+                      <th className="p-3">Trạng thái</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-hairline">
+                    {extra.recent.map((t) => {
+                      const badge = STATUS_BADGE[t.status]
+                      return (
+                        <tr key={t.id}>
+                          <td className="p-3 font-mono font-bold">{t.ticketCode}</td>
+                          <td className="p-3 font-semibold">{t.passengerName}</td>
+                          <td className="p-3 text-ink-soft">{t.route}</td>
+                          <td className="p-3 font-mono font-bold text-terracotta">{t.seatNumber}</td>
+                          <td className="p-3 font-mono font-bold">{formatVnd(t.totalAmount)}</td>
+                          <td className="p-3">
+                            <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${badge?.cls ?? 'border-hairline'}`}>
+                              {badge?.label ?? t.status}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
-      </div>
-
-      {/* Vé mới đặt & Vé chờ duyệt gần nhất */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
-          <h2 className="text-base font-bold text-slate-900">Vé gần đây nhất</h2>
-          <button
-            type="button"
-            onClick={() => setView('admin-tickets')}
-            className="text-xs text-orange-600 hover:text-orange-700 font-bold cursor-pointer"
-          >
-            Xem tất cả trong Quản lý vé →
-          </button>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="text-[11px] font-bold text-slate-500 uppercase border-b border-slate-200 bg-slate-50">
-              <tr>
-                <th className="p-3">Mã vé</th>
-                <th className="p-3">Hành khách</th>
-                <th className="p-3">Lộ trình</th>
-                <th className="p-3">Ghế</th>
-                <th className="p-3">Tổng tiền</th>
-                <th className="p-3">Trạng thái</th>
-                <th className="p-3 text-right">Chi tiết</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {tickets.slice(0, 5).map((t) => (
-                <tr key={t.bookingCode} className="hover:bg-slate-50 transition">
-                  <td className="p-3 font-mono font-bold text-slate-900">{t.ticketCode}</td>
-                  <td className="p-3 font-semibold text-slate-800">{t.passengerName}</td>
-                  <td className="p-3 text-slate-600">{t.route}</td>
-                  <td className="p-3 font-mono text-orange-700 font-bold">{t.seatNumber}</td>
-                  <td className="p-3 font-mono font-bold text-slate-900">{t.totalAmount.toLocaleString('vi-VN')} đ</td>
-                  <td className="p-3">
-                    {t.paymentStatus === 'PAID' && (
-                      <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                        ĐÃ THANH TOÁN
-                      </span>
-                    )}
-                    {t.paymentStatus === 'PENDING_CANCEL' && (
-                      <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-300">
-                        CHỜ DUYỆT HỦY
-                      </span>
-                    )}
-                    {t.paymentStatus === 'CANCELLED' && (
-                      <span className="text-[10px] font-bold text-rose-800 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
-                        ĐÃ HỦY
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-3 text-right">
-                    {onViewTicket && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onViewTicket(t)
-                          setView('success')
-                        }}
-                        className="text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
-                      >
-                        Xem vé
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      )}
     </div>
   )
 }

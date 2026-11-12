@@ -1,7 +1,10 @@
+from uuid import uuid4
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.domain.entities.refund import Refund, RefundMethod, RefundReason, RefundStatus
+from app.domain.rules.code_generator import gen_refund_code
 from app.infrastructure.db.models import RefundModel
 
 
@@ -18,6 +21,7 @@ def _r(m: RefundModel) -> Refund:
         source_transaction_id=m.source_transaction_id,
         transaction_id=m.transaction_id,
         error_note=m.error_note,
+        code=m.code,
         id=m.id,
     )
 
@@ -38,9 +42,13 @@ class SqlRefundRepository:
             transaction_id=r.transaction_id,
             error_note=r.error_note,
             source_transaction_id=r.source_transaction_id,
+            code=r.code or f"TMP-{uuid4().hex[:12]}",
             created_at=r.created_at,
         )
         self.db.add(m)
+        self.db.flush()
+        if not r.code or m.code.startswith("TMP-"):
+            m.code = gen_refund_code(m.created_at, m.id)
         self.db.commit()
         return _r(m)
 

@@ -18,9 +18,10 @@ class AdminOrderService:
         phone: str | None = None,
         order_id: int | None = None,
         ticket_id: int | None = None,
+        order_code: str | None = None,
     ) -> list[OrderAggregate]:
         return self.repo.search_orders(
-            status, channel, date_from, date_to, phone, order_id, ticket_id
+            status, channel, date_from, date_to, phone, order_id, ticket_id, order_code
         )
 
     def get(self, order_id: int) -> OrderAggregate:

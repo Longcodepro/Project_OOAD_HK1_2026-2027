@@ -12,6 +12,7 @@ import pathlib
 import secrets
 from datetime import datetime, time, timedelta
 from decimal import Decimal
+from uuid import uuid4
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -27,6 +28,12 @@ from app.domain.clock import now_vn
 from app.domain.entities.account import Account, Role
 from app.domain.entities.booking import Channel, PaymentMethod
 from app.domain.entities.coupon import CouponKind, CouponStatus
+from app.domain.rules.code_generator import (
+    gen_order_code,
+    gen_refund_code,
+    gen_ticket_code,
+    gen_trip_code,
+)
 from app.infrastructure.db.models import (
     AccountModel,
     CounterSaleModel,
@@ -249,6 +256,7 @@ def seed_history(db: Session) -> int:
                 departure_time=_t(it["time"]),
                 price=Decimal(it["price"]),
                 status="MO_BAN",
+                code=f"TMP-{uuid4().hex[:12]}",
                 stops=[
                     StopModel(name="Bến đi", kind="DON", order_no=1),
                     StopModel(name="Bến đến", kind="TRA", order_no=1),
@@ -256,6 +264,7 @@ def seed_history(db: Session) -> int:
             )
             db.add(trip)
             db.flush()
+            trip.code = gen_trip_code(route.code, day, _t(it["time"]), trip.id)
             seats = sorted(veh.seats, key=lambda s: s.id)
             for i, seat in enumerate(seats):
                 db.add(
@@ -277,6 +286,7 @@ def seed_history(db: Session) -> int:
                     total=trip.price,
                     discount=Decimal(0),
                     status="DA_THANH_TOAN",
+                    code=f"TMP-{uuid4().hex[:12]}",
                 )
                 order.tickets = [
                     TicketModel(
@@ -289,6 +299,7 @@ def seed_history(db: Session) -> int:
                         discount=Decimal(0),
                         amount=trip.price,
                         status="CHUA_DI",
+                        code=f"TMP-{uuid4().hex[:12]}",
                     )
                 ]
                 order.payments = [
@@ -303,6 +314,10 @@ def seed_history(db: Session) -> int:
                 if at_counter and clerk:
                     order.counter_sale = CounterSaleModel(clerk_id=clerk.id, sold_at=at)
                 db.add(order)
+                db.flush()
+                order.code = gen_order_code(at, order.id)
+                for tm in order.tickets:
+                    tm.code = gen_ticket_code(at, tm.id)
             # một vé đã hủy trong chuyến (hoàn 85%) để báo cáo có cả vé hủy
             seat = seats[it["sold"]]
             cancelled = OrderModel(
@@ -312,6 +327,7 @@ def seed_history(db: Session) -> int:
                 total=trip.price,
                 discount=Decimal(0),
                 status="DA_HUY",
+                code=f"TMP-{uuid4().hex[:12]}",
             )
             cancelled.tickets = [
                 TicketModel(
@@ -324,6 +340,7 @@ def seed_history(db: Session) -> int:
                     discount=Decimal(0),
                     amount=trip.price,
                     status="DA_HUY",
+                    code=f"TMP-{uuid4().hex[:12]}",
                 )
             ]
             cancelled.payments = [
@@ -337,19 +354,24 @@ def seed_history(db: Session) -> int:
             ]
             db.add(cancelled)
             db.flush()
+            cancelled.code = gen_order_code(at, cancelled.id)
+            for tm in cancelled.tickets:
+                tm.code = gen_ticket_code(at, tm.id)
             fee = (trip.price * Decimal("0.15")).quantize(Decimal("0.01"))
-            db.add(
-                RefundModel(
-                    ticket_id=cancelled.tickets[0].id,
-                    amount=trip.price - fee,
-                    fee=fee,
-                    method="CONG_THANH_TOAN",
-                    status="DA_HOAN",
-                    reason="KHACH_HUY_VE",
-                    transaction_id=f"RF-HIST-{trip.id}",
-                    created_at=at + timedelta(hours=3),
-                )
+            refund = RefundModel(
+                ticket_id=cancelled.tickets[0].id,
+                amount=trip.price - fee,
+                fee=fee,
+                method="CONG_THANH_TOAN",
+                status="DA_HOAN",
+                reason="KHACH_HUY_VE",
+                transaction_id=f"RF-HIST-{trip.id}",
+                created_at=at + timedelta(hours=3),
+                code=f"TMP-{uuid4().hex[:12]}",
             )
+            db.add(refund)
+            db.flush()
+            refund.code = gen_refund_code(refund.created_at, refund.id)
             n += 1
     db.commit()
     return n

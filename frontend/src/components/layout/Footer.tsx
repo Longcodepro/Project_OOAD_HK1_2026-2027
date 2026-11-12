@@ -1,4 +1,6 @@
-import type { View } from '../../types'
+import { useEffect, useState } from 'react'
+import type { RouteOffer, View } from '../../types'
+import { routesApi } from '../../services/api'
 import { Logo } from '../common/Logo'
 
 interface FooterProps {
@@ -6,90 +8,83 @@ interface FooterProps {
 }
 
 export function Footer({ setView }: FooterProps) {
+  // Tuyến thật đang mở bán; lỗi tải thì ẩn mục này thay vì hiện số liệu giả
+  const [routes, setRoutes] = useState<RouteOffer[]>([])
+  useEffect(() => {
+    routesApi
+      .offers()
+      .then((r) => setRoutes(r.slice(0, 4)))
+      .catch(() => setRoutes([]))
+  }, [])
+
   return (
-    <footer className="relative border-t border-white/10 bg-[#090e26] text-slate-200 py-12 px-5 lg:px-8 mt-20">
-      <div className="mx-auto max-w-[1320px] grid gap-10 md:grid-cols-2 lg:grid-cols-4">
+    <footer className="relative border-t border-hairline bg-paper-deep/70 text-ink mt-20">
+      {/* DẢI HỌA TIẾT MÂY XOẮN ĐÔNG SƠN THUẦN HÌNH (SVG) */}
+      <div className="w-full h-8 border-b border-hairline flex items-center justify-center overflow-hidden bg-paper/60 text-bronze opacity-70">
+        <svg
+          viewBox="0 0 1200 24"
+          width="100%"
+          height="24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.2"
+          className="w-full h-full"
+          aria-hidden="true"
+        >
+          <path d="M0,12 Q30,0 60,12 T120,12 T180,12 T240,12 T300,12 T360,12 T420,12 T480,12 T540,12 T600,12 T660,12 T720,12 T780,12 T840,12 T900,12 T960,12 T1020,12 T1080,12 T1140,12 T1200,12" />
+          <circle cx="60" cy="12" r="2" fill="currentColor" />
+          <circle cx="180" cy="12" r="2" fill="currentColor" />
+          <circle cx="300" cy="12" r="2" fill="currentColor" />
+          <circle cx="420" cy="12" r="2" fill="currentColor" />
+          <circle cx="540" cy="12" r="2" fill="currentColor" />
+          <circle cx="660" cy="12" r="2" fill="currentColor" />
+          <circle cx="780" cy="12" r="2" fill="currentColor" />
+          <circle cx="900" cy="12" r="2" fill="currentColor" />
+          <circle cx="1020" cy="12" r="2" fill="currentColor" />
+          <circle cx="1140" cy="12" r="2" fill="currentColor" />
+        </svg>
+      </div>
+
+      <div className="max-w-[1080px] mx-auto px-4 md:px-6 py-12 grid gap-10 md:grid-cols-2 lg:grid-cols-3">
         {/* Brand info */}
         <div className="space-y-4">
-          <Logo />
-          <p className="text-xs leading-relaxed text-slate-300">
-            Hệ thống đặt vé xe khách trực tuyến công nghệ cao. Trải nghiệm hành trình êm ái, tiện nghi và đúng giờ với đội xe hiện đại.
+          <Logo size="md" />
+          <p className="text-xs leading-relaxed text-ink-soft">
+            Hệ thống đặt vé xe khách liên tỉnh trực tuyến. Mang hồn di sản Đông Sơn vào từng hành trình: chọn tuyến, chọn đúng ghế và quản lý vé của bạn ngay trên một trang.
           </p>
-          <div className="flex items-center gap-2 text-xs font-mono text-emerald-400">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
-            <span className="text-slate-300">Hệ thống vận hành 24/7</span>
+        </div>
+
+        {/* Tuyến đang mở bán (dữ liệu thật) */}
+        {routes.length > 0 && (
+          <div className="space-y-3">
+            <h4 className="text-xs font-bold text-ink tracking-widest uppercase">Tuyến đang mở bán</h4>
+            <ul className="space-y-2 text-xs text-ink-soft">
+              {routes.map((r) => (
+                <li key={`${r.origin}-${r.destination}`}>
+                  <button type="button" onClick={() => setView?.('home')} className="hover:text-terracotta transition text-left cursor-pointer">
+                    {r.origin} → {r.destination}
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
-        </div>
+        )}
 
-        {/* Quick links */}
+        {/* Tài khoản */}
         <div className="space-y-3">
-          <h4 className="text-sm font-bold text-white tracking-wider uppercase">Tuyến đường phổ biến</h4>
-          <ul className="space-y-2.5 text-xs text-slate-300">
-            <li>
-              <button
-                type="button"
-                onClick={() => setView?.('home')}
-                className="hover:text-white transition text-left"
-              >
-                TP. Hồ Chí Minh ↔ Đà Lạt
-              </button>
-            </li>
-            <li>
-              <button
-                type="button"
-                onClick={() => setView?.('home')}
-                className="hover:text-white transition text-left"
-              >
-                TP. Hồ Chí Minh ↔ Nha Trang
-              </button>
-            </li>
-            <li>
-              <button
-                type="button"
-                onClick={() => setView?.('home')}
-                className="hover:text-white transition text-left"
-              >
-                TP. Hồ Chí Minh ↔ Cần Thơ
-              </button>
-            </li>
-            <li>
-              <button
-                type="button"
-                onClick={() => setView?.('home')}
-                className="hover:text-white transition text-left"
-              >
-                TP. Hồ Chí Minh ↔ Phan Thiết
-              </button>
-            </li>
+          <h4 className="text-xs font-bold text-ink tracking-widest uppercase">Dành cho khách hàng</h4>
+          <ul className="space-y-2 text-xs text-ink-soft">
+            <li><button type="button" onClick={() => setView?.('lookup')} className="hover:text-terracotta transition cursor-pointer">Tra cứu vé của tôi</button></li>
+            <li><button type="button" onClick={() => setView?.('profile')} className="hover:text-terracotta transition cursor-pointer">Hành trình của tôi</button></li>
+            <li><button type="button" onClick={() => setView?.('login')} className="hover:text-terracotta transition cursor-pointer">Đăng nhập</button></li>
           </ul>
-        </div>
-
-        {/* Policies */}
-        <div className="space-y-3">
-          <h4 className="text-sm font-bold text-white tracking-wider uppercase">Chính sách & Hỗ trợ</h4>
-          <ul className="space-y-2.5 text-xs text-slate-300">
-            <li><span className="hover:text-white cursor-pointer transition">Chính sách hoàn / đổi vé</span></li>
-            <li><span className="hover:text-white cursor-pointer transition">Quy định hành lý & vận chuyển</span></li>
-            <li><span className="hover:text-white cursor-pointer transition">Điều khoản sử dụng dịch vụ</span></li>
-            <li><span className="hover:text-white cursor-pointer transition">Chính sách bảo mật thông tin</span></li>
-          </ul>
-        </div>
-
-        {/* Contact & Hotline */}
-        <div className="space-y-3">
-          <h4 className="text-sm font-bold text-white tracking-wider uppercase">Tổng đài hỗ trợ</h4>
-          <div className="hotline-card rounded-2xl border border-white/15 bg-white/5 p-4 space-y-2">
-            <p className="text-xs text-slate-300">Hotline đặt vé & chăm sóc khách hàng:</p>
-            <p className="hotline-num font-mono text-2xl font-bold text-amber-400">1900 6868</p>
-            <p className="hotline-email text-xs text-slate-400">Email: hotro@violetline.vn</p>
-          </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-[1320px] border-t border-white/10 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs footer-copyright">
-        <p className="text-slate-400">© 2026 VIOLETLINE Express. Dự án môn Phân tích Thiết kế Hướng đối tượng (OOAD).</p>
-        <div className="flex items-center gap-4 text-slate-400 font-mono text-xs">
-          <span>Tiện nghi & Đúng giờ</span>
+      <div className="max-w-[1080px] mx-auto px-4 md:px-6 border-t border-hairline py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-ink-soft">
+        <p>© 2026 VéXe Việt. Đồ án Phân tích Thiết kế Hướng đối tượng (OOAD).</p>
+        <div className="flex items-center gap-3 font-semibold text-bronze">
+          <span>Khởi hành trọn vẹn · Kết nối non sông</span>
         </div>
       </div>
     </footer>

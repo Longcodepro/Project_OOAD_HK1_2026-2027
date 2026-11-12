@@ -1,6 +1,6 @@
 from datetime import date as date_type
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Path, Query
 
 from app.application.use_cases.booking import BookingService, ItemIn
 from app.domain.clock import now_vn
@@ -15,7 +15,13 @@ router = APIRouter(prefix="/counter", tags=["quầy: bán vé"])
 clerk_only = require_roles(Role.TICKET_CLERK)
 
 
-@router.post("/orders", status_code=201, response_model=OrderOut)
+@router.post(
+    "/orders",
+    status_code=201,
+    response_model=OrderOut,
+    summary="Lập phiếu bán vé tại quầy",
+    description="Nhân viên quầy tạo đơn bán vé cho khách mua tại bến. Các ghế phải đã được nhân viên giữ chỗ trước qua POST /trips/{id}/hold.",
+)
 def create_counter_order(
     body: OrderCreate,
     clerk: Account = Depends(clerk_only),
@@ -26,9 +32,17 @@ def create_counter_order(
     return order_out(svc, svc.create_counter_order(body.trip_id, items, body.coupon_code, clerk))
 
 
-@router.get("/orders", response_model=CounterSummary)
+@router.get(
+    "/orders",
+    response_model=CounterSummary,
+    summary="Đối soát doanh thu bán vé tại quầy của ca trực",
+    description="Thống kê tổng số đơn, số vé bán được và tổng doanh thu theo từng phương thức của chính nhân viên đang đăng nhập trong ngày.",
+)
 def my_counter_sales(
-    date: date_type | None = None,
+    date: date_type | None = Query(
+        default=None,
+        description="Ngày đối soát (định dạng YYYY-MM-DD), mặc định là ngày hôm nay",
+    ),
     clerk: Account = Depends(clerk_only),
     svc: BookingService = Depends(get_booking_service),
 ):
@@ -49,9 +63,14 @@ def my_counter_sales(
     )
 
 
-@router.get("/orders/{order_id}/receipts", response_model=ReceiptOut)
+@router.get(
+    "/orders/{order_id}/receipts",
+    response_model=ReceiptOut,
+    summary="In vé giấy cho hành khách tại quầy",
+    description="Tạo nội dung vé xe bản in gửi máy in vé tại quầy (hoặc in lại khi có sự cố kẹt giấy/mất điện).",
+)
 def print_receipts(
-    order_id: int,
+    order_id: int = Path(..., description="ID đơn hàng đã thanh toán cần in vé"),
     clerk: Account = Depends(clerk_only),
     svc: BookingService = Depends(get_booking_service),
 ):

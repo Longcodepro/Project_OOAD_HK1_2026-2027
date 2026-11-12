@@ -1,241 +1,179 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import type { View, User } from '../types'
-import { authApi } from '../services/api'
-import { Logo } from '../components/common/Logo'
-import { Button } from '../components/common/Button'
+import { authApi, apiErrorMessage, cleanPhone, type OtpTicket } from '../services/api'
+import { AuthShell, FormNote, PasswordInput } from '../components/auth/AuthShell'
 
 export interface RegisterPageProps {
   setView: (v: View) => void
   onRegisterSuccess: (user: User) => void
 }
 
+const PHONE_RE = /^0\d{9,10}$/
+
 export function RegisterPage({ setView, onRegisterSuccess }: RegisterPageProps) {
+  const [step, setStep] = useState<'info' | 'otp'>('info')
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
-  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [otp, setOtp] = useState('')
+  const [otpInfo, setOtpInfo] = useState<OtpTicket | null>(null)
+  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [errorMsg, setErrorMsg] = useState('')
 
-  const handleRegister = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault()
-    if (!fullName.trim()) {
-      setErrorMsg('Vui lòng nhập họ và tên của bạn')
-      return
-    }
-    if (!email.trim() || !email.includes('@')) {
-      setErrorMsg('Vui lòng nhập email hợp lệ để nhận vé và quản lý tài khoản')
-      return
-    }
-    if (!phone.trim()) {
-      setErrorMsg('Vui lòng nhập số điện thoại để nhà xe liên hệ khi đón')
-      return
-    }
-    if (!password || password.length < 6) {
-      setErrorMsg('Mật khẩu phải có ít nhất 6 ký tự')
-      return
-    }
-    if (password !== confirmPassword) {
-      setErrorMsg('Xác nhận mật khẩu không khớp')
-      return
-    }
-
+  const run = async (fn: () => Promise<void>) => {
+    setError('')
     setLoading(true)
-    setErrorMsg('')
     try {
-      const res = await authApi.register({
-        fullName: fullName.trim(),
-        phone: phone.trim(),
-        email: email.trim().toLowerCase(),
-        password,
-      })
-      if (res.success && res.user) {
-        onRegisterSuccess(res.user)
-        setView('home')
-      } else {
-        setErrorMsg('Không thể đăng ký tài khoản. Vui lòng thử lại.')
-      }
-    } catch {
-      setErrorMsg('Lỗi kết nối. Vui lòng thử lại sau.')
+      await fn()
+    } catch (err) {
+      setError(apiErrorMessage(err))
     } finally {
       setLoading(false)
     }
   }
 
+  const handleInfo = (e: FormEvent) => {
+    e.preventDefault()
+    if (!fullName.trim()) return setError('Vui lòng nhập họ và tên')
+    if (!PHONE_RE.test(cleanPhone(phone))) return setError('Số điện thoại gồm 10–11 chữ số, bắt đầu bằng 0')
+    if (password.length < 8) return setError('Mật khẩu phải có ít nhất 8 ký tự')
+    if (password !== confirm) return setError('Mật khẩu xác nhận không khớp')
+    run(async () => {
+      setOtpInfo(await authApi.requestRegisterOtp(phone))
+      setStep('otp')
+    })
+  }
+
+  const handleRegister = (e: FormEvent) => {
+    e.preventDefault()
+    run(async () => onRegisterSuccess(await authApi.register({ fullName, phone, password, otp: otp.trim() })))
+  }
+
+  const resend = () =>
+    run(async () => {
+      setOtpInfo(await authApi.requestRegisterOtp(phone))
+      setOtp('')
+    })
+
   return (
-    <main className="auth-page min-h-screen px-5 py-5">
-      <button
-        type="button"
-        onClick={() => setView('home')}
-        className="auth-back flex items-center gap-1.5 hover:text-white transition"
-      >
-        ← Quay về Violetline
-      </button>
-
-      <div className="auth-orbit one" />
-      <div className="auth-orbit two" />
-
-      <section className="auth-card relative overflow-hidden rounded-[32px] border border-white/12 lg:grid lg:grid-cols-[.9fr_1.1fr]">
-        {/* Banner bên trái */}
-        <div className="auth-aside p-8 lg:p-12">
-          <Logo />
-          <p className="eyebrow mt-16">THÀNH VIÊN VIOLETLINE</p>
-          <h1 className="mt-4 text-3xl font-semibold leading-tight text-white">
-            Đăng ký tài khoản để nhận đặc quyền du lịch.
-          </h1>
-          <p className="mt-4 max-w-xs text-sm leading-6 text-white/70">
-            Tích điểm trên mọi dặm đường, nhận vé điện tử trực tiếp qua email và quản lý hành trình linh hoạt 24/7.
-          </p>
-
-          <div className="mt-12 space-y-3.5 text-xs text-white/80">
-            <p className="flex items-center gap-2">
-              <span className="text-violet-300">✦</span> Tặng ngay 100 điểm thưởng chào mừng
-            </p>
-            <p className="flex items-center gap-2">
-              <span className="text-violet-300">✦</span> Quản lý & lưu danh sách vé trọn đời qua Email
-            </p>
-            <p className="flex items-center gap-2">
-              <span className="text-violet-300">✦</span> Bảo mật tài khoản & hỗ trợ 24/7
-            </p>
-          </div>
-        </div>
-
-        {/* Form đăng ký bên phải (Clean Light Theme) */}
-        <div className="bg-white p-7 sm:p-12 text-slate-900 border-l border-slate-100">
-          {/* Tab chuyển đổi Đăng nhập / Đăng ký */}
-          <div className="flex border-b border-slate-200 pb-4 mb-6 gap-6">
-            <button
-              type="button"
-              onClick={() => setView('login')}
-              className="text-base font-semibold text-slate-400 hover:text-slate-800 transition pb-1 cursor-pointer"
-            >
-              Đăng nhập
-            </button>
-            <button
-              type="button"
-              className="text-base font-bold text-orange-600 border-b-2 border-orange-500 pb-1"
-            >
-              Đăng ký tài khoản
-            </button>
-          </div>
-
-          <form onSubmit={handleRegister} className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                HỌ VÀ TÊN <span className="text-rose-600">*</span>
-              </label>
-              <input
-                className="auth-input"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Ví dụ: Nguyễn Văn A"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                ĐỊA CHỈ EMAIL <span className="text-rose-600">*</span>{' '}
-                <span className="text-[11px] text-orange-600 font-normal lowercase">(dùng đăng nhập & nhận vé)</span>
-              </label>
-              <input
-                className="auth-input"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="tenban@example.com"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                SỐ ĐIỆN THOẠI <span className="text-rose-600">*</span>{' '}
-                <span className="text-[11px] text-slate-400 font-normal">(tài xế liên hệ khi đón)</span>
-              </label>
-              <input
-                className="auth-input"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="0901234567"
-                inputMode="tel"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  MẬT KHẨU <span className="text-rose-600">*</span>
-                </label>
-                <input
-                  className="auth-input"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Tối thiểu 6 ký tự"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  XÁC NHẬN MẬT KHẨU <span className="text-rose-600">*</span>
-                </label>
-                <input
-                  className="auth-input"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Nhập lại mật khẩu"
-                  required
-                />
-              </div>
-            </div>
-
-            {errorMsg && (
-              <p className="text-xs text-rose-800 bg-rose-50 p-2.5 rounded-xl border border-rose-200 font-medium">
-                {errorMsg}
-              </p>
-            )}
-
-            <Button
-              type="submit"
+    <AuthShell
+      tab="register"
+      setView={setView}
+      heading="Đăng ký tài khoản để đặt vé nhanh hơn."
+      blurb="Chỉ cần họ tên, số điện thoại và mật khẩu. Chúng tôi sẽ gửi mã OTP để xác nhận số điện thoại của bạn."
+    >
+      {step === 'info' ? (
+        <form onSubmit={handleInfo} className="space-y-4" noValidate>
+          <div>
+            <label className="field-label" htmlFor="reg-name">
+              Họ và tên <span className="req">*</span>
+            </label>
+            <input
+              id="reg-name"
+              autoComplete="name"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Ví dụ: Nguyễn Văn A"
+              maxLength={100}
+              className="w-full"
               disabled={loading}
-              className="mt-4 w-full"
-            >
-              {loading ? 'Đang tạo tài khoản...' : 'Đăng ký tài khoản'} →
-            </Button>
-          </form>
-
-
-          <div className="my-6 flex items-center gap-3 text-xs font-semibold text-slate-400">
-            <span className="h-px flex-1 bg-slate-200" />
-            HOẶC ĐĂNG KÝ VỚI
-            <span className="h-px flex-1 bg-slate-200" />
+              required
+            />
+          </div>
+          <div>
+            <label className="field-label" htmlFor="reg-phone">
+              Số điện thoại <span className="req">*</span>
+            </label>
+            <input
+              id="reg-phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="0912345678"
+              className="w-full"
+              disabled={loading}
+              required
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="field-label" htmlFor="reg-pass">
+                Mật khẩu <span className="req">*</span>
+              </label>
+              <PasswordInput id="reg-pass" value={password} onChange={setPassword} placeholder="Tối thiểu 8 ký tự" autoComplete="new-password" disabled={loading} />
+            </div>
+            <div>
+              <label className="field-label" htmlFor="reg-confirm">
+                Xác nhận mật khẩu <span className="req">*</span>
+              </label>
+              <PasswordInput id="reg-confirm" value={confirm} onChange={setConfirm} placeholder="Nhập lại mật khẩu" autoComplete="new-password" disabled={loading} />
+            </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setView('google-signup')}
-            className="w-full flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white py-3 px-4 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer shadow-xs"
-          >
-            <span className="text-base">🌐</span> Đăng ký nhanh với Google
-          </button>
+          {error && <FormNote kind="error">{error}</FormNote>}
 
-          <p className="mt-6 text-center text-xs text-slate-500 font-medium">
+          <button type="submit" disabled={loading} className="cta-terracotta w-full h-11 text-sm font-bold text-paper rounded cursor-pointer">
+            {loading ? 'Đang gửi mã OTP…' : 'Tiếp tục →'}
+          </button>
+          <p className="pt-2 text-center text-xs text-ink-soft">
             Đã có tài khoản?{' '}
-            <button
-              type="button"
-              onClick={() => setView('login')}
-              className="text-orange-600 font-bold hover:underline cursor-pointer"
-            >
+            <button type="button" onClick={() => setView('login')} className="font-bold text-terracotta hover:underline cursor-pointer">
               Đăng nhập tại đây
             </button>
           </p>
-        </div>
-      </section>
-    </main>
+        </form>
+      ) : (
+        <form onSubmit={handleRegister} className="space-y-4" noValidate>
+          <FormNote kind="info">
+            Mã OTP gồm 6 chữ số đã được gửi tới <b>{cleanPhone(phone)}</b> và có hiệu lực trong{' '}
+            {Math.round((otpInfo?.expiresInSeconds ?? 0) / 60)} phút.
+          </FormNote>
+          {otpInfo?.testCode && (
+            <FormNote kind="info">
+              Máy chủ đang ở chế độ SMS thử nghiệm, mã OTP của bạn là <b className="font-mono">{otpInfo.testCode}</b>.
+            </FormNote>
+          )}
+          <div>
+            <label className="field-label" htmlFor="reg-otp">
+              Mã OTP
+            </label>
+            <input
+              id="reg-otp"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+              placeholder="000000"
+              className="w-full font-mono tracking-[.4em] text-center"
+              disabled={loading}
+              autoFocus
+              required
+            />
+          </div>
+
+          {error && <FormNote kind="error">{error}</FormNote>}
+
+          <button
+            type="submit"
+            disabled={loading || otp.length !== 6}
+            className="cta-terracotta w-full h-11 text-sm font-bold text-paper rounded cursor-pointer"
+          >
+            {loading ? 'Đang tạo tài khoản…' : 'Hoàn tất đăng ký'}
+          </button>
+          <div className="flex items-center justify-between text-xs">
+            <button type="button" onClick={() => setStep('info')} className="font-semibold text-ink-soft hover:text-ink cursor-pointer">
+              ← Sửa thông tin
+            </button>
+            <button type="button" onClick={resend} disabled={loading} className="font-semibold text-terracotta hover:underline cursor-pointer">
+              Gửi lại mã
+            </button>
+          </div>
+        </form>
+      )}
+    </AuthShell>
   )
 }

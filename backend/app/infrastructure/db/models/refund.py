@@ -11,6 +11,7 @@ class RefundModel(Base):
     __tablename__ = "refunds"  # HoanTien
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(50), unique=True, index=True)
     ticket_id: Mapped[int] = mapped_column(ForeignKey("tickets.id"))
     processed_by: Mapped[int | None] = mapped_column(ForeignKey("accounts.id"))
     amount: Mapped[Decimal] = mapped_column(Numeric(15, 2))

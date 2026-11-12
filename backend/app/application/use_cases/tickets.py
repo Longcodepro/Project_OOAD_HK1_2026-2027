@@ -20,11 +20,15 @@ class TicketService:
         return sorted(rows, key=lambda r: r.ticket.departure_at, reverse=True)
 
     def lookup(
-        self, qr: str | None, ticket_id: int | None, phone: str | None
+        self,
+        qr: str | None,
+        ticket_id: int | None,
+        phone: str | None,
+        code: str | None = None,
     ) -> list[TicketRecord]:
-        if not (qr or ticket_id or phone):
+        if not (qr or ticket_id or phone or code):
             raise BusinessRule("Cần mã vé, mã QR hoặc số điện thoại để tra cứu")
-        rows = self.repo.find_tickets(qr, ticket_id, phone)
+        rows = self.repo.find_tickets(qr, ticket_id, phone, code)
         if not rows:
             raise NotFound("Không tìm thấy vé")
         return rows

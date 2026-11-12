@@ -226,3 +226,15 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Archify diagrams & artifacts
+.archify/
+architecture.html
+architecture*.json
+
+# Local tooling & agents
+.playwright-mcp/
+backend/.venv/
+backend/.env
+frontend/.env
+

@@ -1,25 +1,49 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
 @import 'tailwindcss';
 
 :root {
-  --background: #f7f6f2;
-  --foreground: #252729;
-  --card: #ffffff;
-  --card-foreground: #252729;
-  --primary: #e56b3f;
-  --primary-foreground: #ffffff;
-  --secondary: #ecebe6;
-  --secondary-foreground: #252729;
-  --muted: #f0efea;
-  --muted-foreground: #6e716e;
-  --accent: #e56b3f;
-  --accent-foreground: #ffffff;
-  --border: #deddd6;
-  --ring: #e56b3f;
-  --radius: 1rem;
+  --paper: #F6F1E7;
+  --paper-deep: #EDE6D8;
+  --ink: #1C1A17;
+  --ink-soft: #6B655C;
+  --terracotta: #B4432E;
+  --terracotta-hover: #9E3623;
+  --celadon: #1F6A5E;
+  --celadon-light: #E8F3F1;
+  --bronze: #A07F33;
+  --hairline: #D8D0BF;
+  --ease: cubic-bezier(.22, .61, .36, 1);
+  --font: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+  --radius: 4px;
+
+  /* Theme mappings */
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: #FFFDF9;
+  --card-foreground: var(--ink);
+  --primary: var(--terracotta);
+  --primary-foreground: #FFFFFF;
+  --secondary: var(--paper-deep);
+  --secondary-foreground: var(--ink);
+  --muted: var(--paper-deep);
+  --muted-foreground: var(--ink-soft);
+  --accent: var(--celadon);
+  --accent-foreground: #FFFFFF;
+  --border: var(--hairline);
+  --ring: var(--terracotta);
 }
 
 @theme inline {
+  --color-paper: var(--paper);
+  --color-paper-deep: var(--paper-deep);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-terracotta: var(--terracotta);
+  --color-terracotta-hover: var(--terracotta-hover);
+  --color-celadon: var(--celadon);
+  --color-celadon-light: var(--celadon-light);
+  --color-bronze: var(--bronze);
+  --color-hairline: var(--hairline);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -34,4 +58,65 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-border: var(--border);
   --color-ring: var(--ring);
+}
+
+/* Gam màu Tailwind mặc định → bảng màu Đông Sơn.
+ * Các trang cũ dùng slate/orange/rose/emerald/amber tự ăn theo, không phải sửa từng class. */
+@theme {
+  --color-slate-50: #F9F5EC;
+  --color-slate-100: #F1EBDD;
+  --color-slate-200: #D8D0BF;
+  --color-slate-300: #C4BAA5;
+  --color-slate-400: #9A9284;
+  --color-slate-500: #7D766B;
+  --color-slate-600: #6B655C;
+  --color-slate-700: #4A453E;
+  --color-slate-800: #2E2B26;
+  --color-slate-900: #1C1A17;
+
+  --color-orange-50: #FBEFEA;
+  --color-orange-100: #F6DDD3;
+  --color-orange-200: #EBB9A8;
+  --color-orange-300: #DD9079;
+  --color-orange-400: #D0745C;
+  --color-orange-500: #C4533D;
+  --color-orange-600: #B4432E;
+  --color-orange-700: #9E3623;
+  --color-orange-900: #5C1E12;
+
+  --color-rose-50: #FBEDEA;
+  --color-rose-100: #F6DAD4;
+  --color-rose-200: #EBB5AA;
+  --color-rose-300: #DD8C7D;
+  --color-rose-400: #CC6655;
+  --color-rose-500: #B83A2A;
+  --color-rose-600: #A32D1F;
+  --color-rose-700: #8A2418;
+  --color-rose-800: #6E1C12;
+  --color-rose-900: #4F140D;
+
+  --color-emerald-50: #E8F3F1;
+  --color-emerald-100: #D3E8E4;
+  --color-emerald-200: #A9D2CB;
+  --color-emerald-400: #4FA396;
+  --color-emerald-500: #2A8374;
+  --color-emerald-600: #1F6A5E;
+  --color-emerald-700: #1A5A50;
+  --color-emerald-800: #154A42;
+  --color-emerald-900: #103A34;
+
+  --color-amber-50: #F8F1E1;
+  --color-amber-100: #F0E3C2;
+  --color-amber-200: #E3CC94;
+  --color-amber-300: #D2B168;
+  --color-amber-500: #A07F33;
+  --color-amber-700: #7E6326;
+  --color-amber-800: #664F1E;
+  --color-amber-900: #4D3C17;
+
+  /* Bo góc vuông vức kiểu khắc đồng thay vì bo tròn mềm */
+  --radius-lg: 6px;
+  --radius-xl: 6px;
+  --radius-2xl: 8px;
+  --radius-3xl: 8px;
 }

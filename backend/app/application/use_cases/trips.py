@@ -210,6 +210,28 @@ class TripService:
             ]
         return rows, suggestions
 
+    def route_offers(self) -> list[dict]:
+        """Mỗi tuyến còn chuyến sắp chạy, còn ghế: giá thấp nhất và số chuyến. Nhiều chuyến lên trước."""
+        now = now_vn()
+        best: dict[tuple[str, str], dict] = {}
+        # ponytail: gom trong Python trên mọi chuyến đang mở bán; đổi sang GROUP BY nếu số chuyến lên hàng chục nghìn
+        for v in self.repo.list_trips(None, None, TripStatus.OPEN, None):
+            if v.trip.departure_at <= now or v.available_seats == 0:
+                continue
+            o = best.setdefault(
+                (v.origin, v.destination),
+                {
+                    "origin": v.origin,
+                    "destination": v.destination,
+                    "expected_minutes": v.trip.expected_minutes,
+                    "from_price": v.trip.price,
+                    "upcoming_trips": 0,
+                },
+            )
+            o["from_price"] = min(o["from_price"], v.trip.price)
+            o["upcoming_trips"] += 1
+        return sorted(best.values(), key=lambda o: (-o["upcoming_trips"], o["from_price"]))
+
     def view(self, trip_id: int) -> TripView:
         self.repo.release_expired_holds(utcnow())
         v = self.repo.view(trip_id)

@@ -1,78 +1,106 @@
-import { useState } from 'react'
-
 export interface FilterOptions {
-  morning: boolean
-  afternoon: boolean
-  evening: boolean
+  earlyMorning: boolean // 00:00 - 06:00
+  morning: boolean      // 06:00 - 12:00
+  afternoon: boolean    // 12:00 - 18:00
+  evening: boolean      // 18:00 - 24:00
 }
 
 export interface FilterSidebarProps {
-  onFilterChange?: (filters: FilterOptions) => void
+  filters: FilterOptions
+  onFilterChange: (filters: FilterOptions) => void
 }
 
-export function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
-  const [filters, setFilters] = useState<FilterOptions>({
-    morning: true,
-    afternoon: true,
-    evening: true,
-  })
-
+export function FilterSidebar({ filters, onFilterChange }: FilterSidebarProps) {
   const handleChange = (key: keyof FilterOptions, value: boolean) => {
-    const updated = { ...filters, [key]: value }
-    setFilters(updated)
-    onFilterChange?.(updated)
+    onFilterChange({ ...filters, [key]: value })
+  }
+
+  const handleReset = () => {
+    onFilterChange({
+      earlyMorning: true,
+      morning: true,
+      afternoon: true,
+      evening: true,
+    })
   }
 
   return (
-    <aside className="hidden lg:block">
-      <div className="flex items-center justify-between mb-5">
-        <p className="font-mono text-xs tracking-widest text-white/50">BỘ LỌC CHUYẾN</p>
+    <aside className="w-full bg-[#FFFDF9] border border-hairline p-5 rounded space-y-5 shadow-2xs">
+      <div className="flex items-center justify-between border-b border-hairline pb-3">
+        <span className="text-[11px] font-bold tracking-widest text-ink uppercase">
+          BỘ LỌC CHUYẾN XE
+        </span>
         <button
           type="button"
-          onClick={() => {
-            const reset = { morning: true, afternoon: true, evening: true }
-            setFilters(reset)
-            onFilterChange?.(reset)
-          }}
-          className="text-[11px] text-violet-300 hover:text-white transition"
+          onClick={handleReset}
+          className="text-xs font-semibold text-terracotta hover:underline cursor-pointer"
         >
           Đặt lại
         </button>
       </div>
 
-      <div className="border-y border-white/10 py-5">
-        <div className="flex justify-between text-sm">
-          <b>Khoảng giờ xuất phát</b>
-          <span className="text-violet-300">▼</span>
-        </div>
-        <div className="mt-4 space-y-3 text-sm text-white/60">
-          <label className="flex items-center gap-2 cursor-pointer hover:text-white transition">
+      {/* Khoảng giờ xuất bến (4 khung giờ đầy đủ) */}
+      <div className="space-y-3">
+        <span className="text-xs font-bold text-ink block">Giờ khởi hành</span>
+        <div className="space-y-2.5 text-xs text-ink">
+          <label className="flex items-center gap-2.5 cursor-pointer hover:text-terracotta transition">
+            <input
+              type="checkbox"
+              checked={filters.earlyMorning}
+              onChange={(e) => handleChange('earlyMorning', e.target.checked)}
+              className="w-4 h-4 rounded border-hairline accent-terracotta"
+            />
+            <span>Sáng sớm (00:00 đến 06:00)</span>
+          </label>
+
+          <label className="flex items-center gap-2.5 cursor-pointer hover:text-terracotta transition">
             <input
               type="checkbox"
               checked={filters.morning}
               onChange={(e) => handleChange('morning', e.target.checked)}
-              className="accent-violet-400 rounded"
+              className="w-4 h-4 rounded border-hairline accent-terracotta"
             />
-            <span>Sáng (06:00 — 12:00)</span>
+            <span>Buổi sáng (06:00 đến 12:00)</span>
           </label>
-          <label className="flex items-center gap-2 cursor-pointer hover:text-white transition">
+
+          <label className="flex items-center gap-2.5 cursor-pointer hover:text-terracotta transition">
             <input
               type="checkbox"
               checked={filters.afternoon}
               onChange={(e) => handleChange('afternoon', e.target.checked)}
-              className="accent-violet-400 rounded"
+              className="w-4 h-4 rounded border-hairline accent-terracotta"
             />
-            <span>Chiều (12:00 — 18:00)</span>
+            <span>Buổi chiều (12:00 đến 18:00)</span>
           </label>
-          <label className="flex items-center gap-2 cursor-pointer hover:text-white transition">
+
+          <label className="flex items-center gap-2.5 cursor-pointer hover:text-terracotta transition">
             <input
               type="checkbox"
               checked={filters.evening}
               onChange={(e) => handleChange('evening', e.target.checked)}
-              className="accent-violet-400 rounded"
+              className="w-4 h-4 rounded border-hairline accent-terracotta"
             />
-            <span>Đêm (18:00 — 24:00 & sáng sớm)</span>
+            <span>Buổi tối (18:00 đến 24:00)</span>
           </label>
+        </div>
+      </div>
+
+      {/* Cam kết hệ thống */}
+      <div className="border-t border-hairline pt-4 space-y-2 text-xs text-ink-soft">
+        <span className="text-[11px] font-bold text-ink uppercase tracking-wider block">
+          Cam kết dịch vụ
+        </span>
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-sm text-celadon">check_circle</span>
+          <span>Chọn đúng ghế bạn muốn</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-sm text-bronze">timer</span>
+          <span>Giữ chỗ tạm thời khi đặt vé</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-sm text-terracotta">currency_exchange</span>
+          <span>Hoàn tiền theo thời điểm hủy</span>
         </div>
       </div>
     </aside>

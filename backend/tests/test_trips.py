@@ -112,3 +112,18 @@ def test_cannot_deactivate_vehicle_with_open_trip(client, make_user):
         f"/admin/vehicles/{v}/seats", headers=h, json={"floors": 1, "rows": 3, "seats_per_row": 2}
     )
     assert layout.status_code == 400  # xe đã có chuyến: không sửa sơ đồ ghế
+
+
+def test_public_route_offers_show_lowest_price_per_route(client, make_user):
+    h = setup_admin(make_user)
+    r = mk_route(client, h)
+    v1, v2 = mk_vehicle(client, h), mk_vehicle(client, h, plate="51B-999.99")
+    mk_trip(client, h, r, v1, at="08:00", price=400000)
+    mk_trip(client, h, r, v2, at="09:00", price=300000)
+    mk_trip(client, h, mk_route(client, h, "Hà Nội", "Vinh"), v1, at="20:00", price=200000)
+
+    offers = client.get("/routes").json()  # không cần đăng nhập
+    assert len(offers) == 2
+    hn_dn = next(o for o in offers if o["destination"] == "Đà Nẵng")
+    assert hn_dn["from_price"] == 300000 and hn_dn["upcoming_trips"] == 2
+    assert offers[0]["destination"] == "Đà Nẵng"  # nhiều chuyến hơn thì lên trước

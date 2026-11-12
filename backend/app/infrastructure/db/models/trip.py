@@ -12,6 +12,7 @@ class RouteModel(Base):
     __tablename__ = "routes"  # TuyenXe
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(30), unique=True, index=True)
     origin: Mapped[str] = mapped_column(String(100))
     destination: Mapped[str] = mapped_column(String(100))
     distance_km: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
@@ -23,6 +24,7 @@ class TripModel(Base):
     __tablename__ = "trips"  # ChuyenXe
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(50), unique=True, index=True)
     route_id: Mapped[int] = mapped_column(ForeignKey("routes.id"))
     vehicle_id: Mapped[int] = mapped_column(ForeignKey("vehicles.id"))
     departure_date: Mapped[date] = mapped_column(index=True)  # tra cứu theo ngày

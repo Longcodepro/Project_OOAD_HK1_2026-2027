@@ -1,4 +1,5 @@
 from datetime import datetime
+from uuid import uuid4
 
 from sqlalchemy import exists, or_, select, update
 from sqlalchemy.orm import Session
@@ -17,6 +18,7 @@ from app.domain.entities.booking import (
     TicketStatus,
 )
 from app.domain.entities.trip import SeatState
+from app.domain.rules.code_generator import gen_order_code, gen_ticket_code
 from app.infrastructure.db.models import (
     CounterSaleModel,
     CouponModel,
@@ -68,6 +70,7 @@ class SqlBookingRepository:
             pickup_stop_id=m.pickup_stop_id,
             dropoff_stop_id=m.dropoff_stop_id,
             qr_code=m.qr_code,
+            code=m.code,
             id=m.id,
             seat_code=seat.code,
             origin=trip.route.origin,
@@ -93,6 +96,7 @@ class SqlBookingRepository:
             account_id=m.account_id,
             coupon_id=m.coupon_id,
             note=m.note,
+            code=m.code,
             id=m.id,
             clerk_id=clerk,
             coupon_code=coupon.code if coupon else None,
@@ -171,6 +175,7 @@ class SqlBookingRepository:
             discount=order.discount,
             status=order.status,
             note=order.note,
+            code=order.code or f"TMP-{uuid4().hex[:12]}",
             tickets=[
                 TicketModel(
                     trip_id=t.trip_id,
@@ -183,6 +188,7 @@ class SqlBookingRepository:
                     discount=t.discount,
                     amount=t.amount,
                     status=t.status,
+                    code=t.code or f"TMP-{uuid4().hex[:12]}",
                 )
                 for t in tickets
             ],
@@ -190,6 +196,12 @@ class SqlBookingRepository:
         if clerk_id:
             m.counter_sale = CounterSaleModel(clerk_id=clerk_id, sold_at=order.created_at)
         self.db.add(m)
+        self.db.flush()
+        if not order.code or m.code.startswith("TMP-"):
+            m.code = gen_order_code(order.created_at, m.id)
+        for tm in m.tickets:
+            if tm.code.startswith("TMP-"):
+                tm.code = gen_ticket_code(order.created_at, tm.id)
         self.db.commit()
         return self._agg(m)
 
@@ -310,7 +322,9 @@ class SqlBookingRepository:
         )
         return [self._record(m) for m in self.db.scalars(stmt)]
 
-    def find_tickets(self, qr, ticket_id, phone) -> list[TicketRecord]:
+    def find_tickets(
+        self, qr, ticket_id, phone, code: str | None = None
+    ) -> list[TicketRecord]:
         stmt = (
             select(TicketModel)
             .join(OrderModel, OrderModel.id == TicketModel.order_id)
@@ -318,7 +332,9 @@ class SqlBookingRepository:
         )
         conds = []
         if qr:
-            conds.append(TicketModel.qr_code == qr)
+            conds.append(or_(TicketModel.qr_code == qr, TicketModel.code == qr))
+        if code:
+            conds.append(TicketModel.code == code)
         if ticket_id:
             conds.append(TicketModel.id == ticket_id)
         if phone:
@@ -365,7 +381,15 @@ class SqlBookingRepository:
         return [self._ticket(t) for t in m.tickets]
 
     def search_orders(
-        self, status, channel, date_from, date_to, phone, order_id, ticket_id
+        self,
+        status,
+        channel,
+        date_from,
+        date_to,
+        phone,
+        order_id,
+        ticket_id,
+        order_code: str | None = None,
     ) -> list[OrderAggregate]:
         from app.infrastructure.db.models import AccountModel
 
@@ -378,6 +402,8 @@ class SqlBookingRepository:
             stmt = stmt.where(OrderModel.created_at >= vn_day_range_utc(date_from, date_from)[0])
         if date_to:
             stmt = stmt.where(OrderModel.created_at < vn_day_range_utc(date_to, date_to)[1])
+        if order_code:
+            stmt = stmt.where(OrderModel.code == order_code)
         if order_id:
             stmt = stmt.where(OrderModel.id == order_id)
         if ticket_id:

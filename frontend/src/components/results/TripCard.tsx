@@ -1,5 +1,4 @@
 import type { Trip } from '../../types'
-import { Button } from '../common/Button'
 
 export interface TripCardProps {
   trip: Trip
@@ -8,40 +7,44 @@ export interface TripCardProps {
 
 export function TripCard({ trip, onSelectTrip }: TripCardProps) {
   return (
-    <article className="trip-card grid gap-5 rounded-[22px] border border-white/10 p-5 lg:grid-cols-[145px_1fr_160px] lg:items-center">
+    <article className="bg-[#FFFDF9] border border-hairline p-5 rounded grid gap-4 lg:grid-cols-[160px_1fr_160px] lg:items-center hover:border-terracotta transition shadow-2xs group">
+      {/* Cột 1: Giờ đi & Giờ đến */}
       <div>
         <div className="flex items-baseline gap-2">
-          <b className="font-mono text-2xl text-white">{trip.time}</b>
-          <span className="text-xs text-white/40">→ {trip.arrive}</span>
+          <span className="text-2xl font-black text-ink">{trip.time}</span>
+          {trip.arrive && <span className="text-xs text-ink-soft">→ {trip.arrive}</span>}
         </div>
-        <p className="mt-2 text-xs text-violet-200">{trip.duration}</p>
+        {trip.duration && <p className="mt-1 text-xs text-terracotta font-semibold">{trip.duration}</p>}
       </div>
 
-      <div>
-        <div className="flex flex-wrap gap-2">
-          <span className="rounded-full bg-white/8 px-2.5 py-1 text-xs text-white/75">
-            {trip.operator}
-          </span>
-          <span className="rounded-full bg-violet-300/10 px-2.5 py-1 text-xs text-violet-200">
-            {trip.amenities?.join(' · ') || 'Wi-Fi · Nước · USB-C'}
-          </span>
-        </div>
-        <p className="mt-3 text-sm text-white/50">
-          {trip.pickupPoint} <span className="mx-2">→</span> {trip.dropoffPoint}
-        </p>
+      {/* Cột 2: Loại xe & biển số */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-bold text-celadon bg-celadon/10 border border-celadon px-2.5 py-0.5 rounded">
+          {trip.operator}
+        </span>
+        <span className="text-xs font-medium text-ink-soft bg-paper-deep px-2 py-0.5 rounded">
+          Biển số {trip.plate}
+        </span>
       </div>
 
-      <div className="flex items-center justify-between lg:block lg:text-right">
+      {/* Cột 3: Giá vé & Nút chọn */}
+      <div className="flex items-center justify-between lg:block lg:text-right border-t lg:border-t-0 border-hairline pt-3 lg:pt-0">
         <div>
-          <b className="text-lg">{trip.priceFormatted}</b>
-          <p className="text-xs text-white/50">còn {trip.seats} chỗ trống</p>
+          <span className="text-xl font-black text-terracotta block">
+            {trip.priceFormatted}
+          </span>
+          <p className="text-[11px] text-ink-soft">
+            Còn <b className="text-ink font-semibold">{trip.seats}</b>/{trip.totalSeats} chỗ trống
+          </p>
         </div>
-        <Button
+        <button
+          type="button"
           onClick={() => onSelectTrip(trip)}
-          className="px-4 py-2.5 lg:mt-3"
+          disabled={trip.seats <= 0}
+          className="cta-terracotta px-4 py-2 text-xs font-bold text-paper rounded shadow-none hover:bg-terracotta-hover transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed lg:mt-2.5"
         >
-          Chọn chuyến
-        </Button>
+          {trip.seats <= 0 ? 'Hết chỗ' : 'Chọn ghế'}
+        </button>
       </div>
     </article>
   )
