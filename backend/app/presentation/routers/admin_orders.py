@@ -36,8 +36,11 @@ def list_orders(
     page: Page = Depends(),
 ):
     """Lấy danh sách đơn đặt vé và phân trang."""
-    all_rows = svc.search(status, channel, date_from, date_to, phone, order_id, ticket_id, order_code)
-    rows = page.apply(all_rows)
+    # Cắt trang ngay ở SQL (page.apply cắt sau khi đã dựng toàn bộ đơn: quá chậm khi có hàng nghìn đơn)
+    rows, total = svc.search(
+        status, channel, date_from, date_to, phone, order_id, ticket_id, order_code, page.limit, page.offset
+    )
+    page.response.headers["X-Total-Count"] = str(total)
     items = [
         OrderRow(
             id=a.order.id,
@@ -55,7 +58,7 @@ def list_orders(
         for a in rows
     ]
     return OrderListOut(
-        items=items, total=len(all_rows), message=None if items else "Không có đơn nào thỏa bộ lọc"
+        items=items, total=total, message=None if items else "Không có đơn nào thỏa bộ lọc"
     )
 
 
