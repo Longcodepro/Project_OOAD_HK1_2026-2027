@@ -12,8 +12,8 @@ export interface CheckoutPageProps {
   backendOnline: boolean
   onLogout?: () => void
   trip: Trip | null
-  chosenSeat: string
-  onBookingSuccess: (ticket: Ticket) => void
+  chosenSeats: string[]
+  onBookingSuccess: (tickets: Ticket[]) => void
 }
 
 type PayMethod = BookingRequest['paymentMethod']
@@ -32,18 +32,25 @@ export function CheckoutPage({
   backendOnline,
   onLogout,
   trip,
-  chosenSeat,
+  chosenSeats,
   onBookingSuccess,
 }: CheckoutPageProps) {
-  const [fullName, setFullName] = useState(user?.fullName ?? '')
-  const [phone, setPhone] = useState(user?.phone ?? '')
+  // Hành khách theo từng ghế; ghế đầu điền sẵn từ tài khoản, các ghế sau để trống cho người đặt nhập
+  const [passengers, setPassengers] = useState<Record<string, { name: string; phone: string }>>({})
+  const passengerOf = (label: string) =>
+    passengers[label] ??
+    (label === chosenSeats[0]
+      ? { name: user?.fullName ?? '', phone: user?.phone ?? '' }
+      : { name: '', phone: '' })
+  const setPassenger = (label: string, patch: Partial<{ name: string; phone: string }>) =>
+    setPassengers((prev) => ({ ...prev, [label]: { ...passengerOf(label), ...patch } }))
   const [payMethod, setPayMethod] = useState<PayMethod>('vietqr')
   const [pickupStops, setPickupStops] = useState<Stop[]>([])
   const [dropoffStops, setDropoffStops] = useState<Stop[]>([])
   const [pickupId, setPickupId] = useState('')
   const [dropoffId, setDropoffId] = useState('')
   const [stopsError, setStopsError] = useState('')
-  const [seatFloor, setSeatFloor] = useState<number | null>(null)
+  const [seatFloors, setSeatFloors] = useState<Record<string, number>>({})
   const [holdSeconds, setHoldSeconds] = useState<number | null>(null)
   const [holdError, setHoldError] = useState('')
   const [expired, setExpired] = useState(false)
@@ -55,7 +62,8 @@ export function CheckoutPage({
   const [couponError, setCouponError] = useState('')
 
   const tripId = trip?.id
-  const hasInput = !!tripId && !!chosenSeat
+  const hasInput = !!tripId && chosenSeats.length > 0
+  const seatCount = chosenSeats.length
 
   // Điểm đón/trả thật của chuyến
   useEffect(() => {
@@ -78,25 +86,29 @@ export function CheckoutPage({
 
   // Giữ chỗ thật và lấy thời gian còn lại từ backend
   useEffect(() => {
-    if (!tripId || !chosenSeat) return
+    if (!tripId || chosenSeats.length === 0) return
     let alive = true
     setHoldSeconds(null)
     setHoldError('')
     tripsApi
       .getSeats(tripId)
       .then(async (seats) => {
-        const seat = seats.find((s) => s.label === chosenSeat)
-        if (!seat) throw new Error(`Không tìm thấy ghế ${chosenSeat} của chuyến này`)
-        const hold = await bookingsApi.holdSeat(tripId, seat.id)
+        const picked = chosenSeats.map((label) => {
+          const seat = seats.find((s) => s.label === label)
+          if (!seat) throw new Error(`Không tìm thấy ghế ${label} của chuyến này`)
+          return seat
+        })
+        // Giữ cả tập ghế (đã giữ từ trang chọn ghế thì backend không gia hạn, chỉ trả thời gian còn lại)
+        const hold = await bookingsApi.holdSeats(tripId, picked.map((s) => s.id))
         if (!alive) return
-        setSeatFloor(seat.floor)
+        setSeatFloors(Object.fromEntries(picked.map((s) => [s.label, s.floor])))
         setHoldSeconds(hold.secondsLeft)
       })
       .catch((err) => alive && setHoldError(apiErrorMessage(err, 'Không giữ được chỗ')))
     return () => {
       alive = false
     }
-  }, [tripId, chosenSeat])
+  }, [tripId, chosenSeats])
 
   const onExpire = useCallback(() => {
     setExpired(true)
@@ -131,7 +143,8 @@ export function CheckoutPage({
 
   const pickupName = pickupStops.find((s) => String(s.id) === pickupId)?.name
   const dropoffName = dropoffStops.find((s) => String(s.id) === dropoffId)?.name
-  const payAmount = coupon ? coupon.finalAmount : trip.price
+  const subtotal = trip.price * seatCount
+  const payAmount = coupon ? coupon.finalAmount : subtotal
   const canPay = holdSeconds !== null && !holdError && !expired && !submitting
 
   const applyCoupon = async () => {
@@ -140,7 +153,7 @@ export function CheckoutPage({
     setCouponBusy(true)
     setCouponError('')
     try {
-      setCoupon(await couponsApi.validate(code, trip.price))
+      setCoupon(await couponsApi.validate(code, subtotal))
     } catch (err) {
       setCoupon(null)
       setCouponError(apiErrorMessage(err, 'Không áp dụng được mã giảm giá'))
@@ -157,26 +170,30 @@ export function CheckoutPage({
 
   const handlePayment = async () => {
     setErrorMessage('')
-    const name = fullName.trim()
-    const tel = phone.replace(/\s/g, '')
-    if (!name) return setErrorMessage('Vui lòng nhập họ và tên hành khách')
-    if (!PHONE_RE.test(tel)) return setErrorMessage('Số điện thoại phải bắt đầu bằng 0 và có 10 hoặc 11 chữ số')
+    const list = chosenSeats.map((label) => {
+      const p = passengerOf(label)
+      return { seatLabel: label, passengerName: p.name.trim(), passengerPhone: p.phone.replace(/\s/g, '') }
+    })
+    for (const p of list) {
+      if (!p.passengerName) return setErrorMessage(`Vui lòng nhập họ và tên hành khách ghế ${p.seatLabel}`)
+      if (!PHONE_RE.test(p.passengerPhone)) {
+        return setErrorMessage(`Số điện thoại ghế ${p.seatLabel} phải bắt đầu bằng 0 và có 10 hoặc 11 chữ số`)
+      }
+    }
     if (pickupStops.length > 1 && !pickupId) return setErrorMessage('Vui lòng chọn điểm đón')
     if (dropoffStops.length > 1 && !dropoffId) return setErrorMessage('Vui lòng chọn điểm trả')
 
     setSubmitting(true)
     try {
-      const ticket = await bookingsApi.create({
+      const tickets = await bookingsApi.create({
         tripId: trip.id,
-        seatLabel: chosenSeat,
-        passengerName: name,
-        passengerPhone: tel,
+        passengers: list,
         pickupStopId: pickupId ? Number(pickupId) : undefined,
         dropoffStopId: dropoffId ? Number(dropoffId) : undefined,
         paymentMethod: payMethod,
         couponCode: coupon?.code,
       })
-      onBookingSuccess(ticket)
+      onBookingSuccess(tickets)
       setView('success')
     } catch (err) {
       setErrorMessage(apiErrorMessage(err, 'Không thể tạo đơn đặt vé'))
@@ -221,7 +238,7 @@ export function CheckoutPage({
           </button>
 
           {holdSeconds !== null && !holdError && (
-            <BookingTimer key={`${tripId}-${chosenSeat}-${holdSeconds}`} initialSeconds={holdSeconds} onExpire={onExpire} />
+            <BookingTimer key={`${tripId}-${chosenSeats.join(',')}-${holdSeconds}`} initialSeconds={holdSeconds} onExpire={onExpire} />
           )}
         </div>
 
@@ -244,20 +261,48 @@ export function CheckoutPage({
                 <p className="text-xs text-ink-soft">Thông tin được ghi trên vé và dùng để làm thủ tục lên xe.</p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                <div className="space-y-1.5">
-                  <label className="field-label">
-                    Họ và tên hành khách <span className="req">*</span>
-                  </label>
-                  <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full" required />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="field-label">
-                    Số điện thoại <span className="req">*</span>
-                  </label>
-                  <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" className="w-full" required />
-                </div>
-              </div>
+              {chosenSeats.map((label) => {
+                const p = passengerOf(label)
+                return (
+                  <div key={label} className="space-y-2 pt-1">
+                    {seatCount > 1 && (
+                      <p className="text-xs font-bold text-terracotta">
+                        Ghế {label}
+                        {seatFloors[label] ? ` (Tầng ${seatFloors[label]})` : ''}
+                      </p>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="field-label" htmlFor={`pax-name-${label}`}>
+                          Họ và tên hành khách <span className="req">*</span>
+                        </label>
+                        <input
+                          id={`pax-name-${label}`}
+                          type="text"
+                          value={p.name}
+                          onChange={(e) => setPassenger(label, { name: e.target.value })}
+                          className="w-full"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="field-label" htmlFor={`pax-phone-${label}`}>
+                          Số điện thoại <span className="req">*</span>
+                        </label>
+                        <input
+                          id={`pax-phone-${label}`}
+                          type="tel"
+                          value={p.phone}
+                          onChange={(e) => setPassenger(label, { phone: e.target.value })}
+                          inputMode="tel"
+                          className="w-full"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
 
               {(pickupStops.length > 0 || dropoffStops.length > 0) && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -331,10 +376,11 @@ export function CheckoutPage({
                 <span className="font-bold text-ink">{trip.plate}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-hairline/60">
-                <span className="text-ink-soft">Ghế</span>
-                <span className="font-extrabold text-terracotta">
-                  {chosenSeat}
-                  {seatFloor && ` (Tầng ${seatFloor})`}
+                <span className="text-ink-soft">{seatCount > 1 ? `Ghế (${seatCount})` : 'Ghế'}</span>
+                <span className="font-extrabold text-terracotta text-right">
+                  {seatCount > 1
+                    ? chosenSeats.join(', ')
+                    : `${chosenSeats[0]}${seatFloors[chosenSeats[0]] ? ` (Tầng ${seatFloors[chosenSeats[0]]})` : ''}`}
                 </span>
               </div>
               {pickupName && (
@@ -390,8 +436,8 @@ export function CheckoutPage({
               </div>
 
               <div className="flex justify-between text-ink-soft">
-                <span>Giá vé (1 vé)</span>
-                <span>{trip.priceFormatted}</span>
+                <span>Giá vé ({seatCount} vé)</span>
+                <span>{formatVnd(subtotal)}</span>
               </div>
               {coupon && (
                 <div className="flex justify-between text-celadon font-semibold">
@@ -443,7 +489,9 @@ export function CheckoutPage({
             </button>
           }
         >
-          <p className="text-sm text-ink">Ghế {chosenSeat} không còn được giữ cho bạn. Vui lòng chọn lại ghế.</p>
+          <p className="text-sm text-ink">
+            {seatCount > 1 ? `Các ghế ${chosenSeats.join(', ')} không còn được giữ` : `Ghế ${chosenSeats[0]} không còn được giữ`} cho bạn. Vui lòng chọn lại ghế.
+          </p>
         </Modal>
       )}
     </>

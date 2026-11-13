@@ -71,11 +71,17 @@ export interface Seat {
   status: 'available' | 'held' | 'booked'
 }
 
-export interface BookingRequest {
-  tripId: string
+/** Một ghế trong đơn và hành khách ngồi ghế đó. */
+export interface BookingPassenger {
   seatLabel: string
   passengerName: string
   passengerPhone: string
+}
+
+export interface BookingRequest {
+  tripId: string
+  /** Mỗi ghế một hành khách (tối đa 10 ghế/đơn, theo backend). */
+  passengers: BookingPassenger[]
   pickupStopId?: number
   dropoffStopId?: number
   paymentMethod: 'e-wallet' | 'domestic-card' | 'vietqr'

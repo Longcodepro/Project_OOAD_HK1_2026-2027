@@ -330,15 +330,7 @@ const toHold = (d: { trip_id: number; seats: Array<{ seat_id: number; code: stri
 })
 
 export const bookingsApi = {
-  /** Giữ chỗ tạm thời; trả về số giây còn lại theo backend. */
-  holdSeat: async (tripId: string | number, seatId: string | number): Promise<{ secondsLeft: number }> => {
-    const res = await apiClient.post<{ seconds_left?: number }>(`/trips/${tripId}/hold`, {
-      seat_ids: [Number(seatId)],
-    })
-    return { secondsLeft: res.data?.seconds_left ?? 0 }
-  },
-
-  /** Giữ nhiều ghế một lúc (bán vé tại quầy). */
+  /** Giữ cả tập ghế một lúc (tối đa 10, tất cả hoặc không ghế nào); trả về số giây còn lại theo backend. */
   holdSeats: async (tripId: string | number, seatIds: Array<string | number>): Promise<HoldInfo> => {
     const res = await apiClient.post(`/trips/${tripId}/hold`, { seat_ids: seatIds.map(Number) })
     return toHold(res.data)
@@ -360,24 +352,27 @@ export const bookingsApi = {
     await apiClient.post(`/trips/${tripId}/release`, { seat_ids: seatIds ? seatIds.map(Number) : null })
   },
 
-  create: async (data: BookingRequest): Promise<Ticket> => {
-    const seat = (await tripsApi.getSeats(data.tripId)).find((s) => s.label === data.seatLabel)
-    if (!seat) throw new Error(`Không tìm thấy ghế ${data.seatLabel} của chuyến này`)
+  /** Tạo một đơn gồm nhiều vé (mỗi ghế một hành khách) rồi thanh toán; trả về các vé của đơn theo thứ tự ghế. */
+  create: async (data: BookingRequest): Promise<Ticket[]> => {
+    const allSeats = await tripsApi.getSeats(data.tripId)
+    const picked = data.passengers.map((p) => {
+      const seat = allSeats.find((s) => s.label === p.seatLabel)
+      if (!seat) throw new Error(`Không tìm thấy ghế ${p.seatLabel} của chuyến này`)
+      return { seat, p }
+    })
 
-    // Giữ chỗ (nếu đã giữ rồi thì backend gia hạn); lỗi thật được ném ra cho giao diện
-    await bookingsApi.holdSeat(data.tripId, seat.id)
+    // Giữ cả tập ghế (đã giữ rồi thì backend không gia hạn); lỗi thật được ném ra cho giao diện
+    await bookingsApi.holdSeats(data.tripId, picked.map(({ seat }) => seat.id))
 
     const orderRes = await apiClient.post<BackendOrderOut>('/orders', {
       trip_id: Number(data.tripId),
-      items: [
-        {
-          seat_id: Number(seat.id),
-          passenger_name: data.passengerName,
-          passenger_phone: data.passengerPhone,
-          pickup_stop_id: data.pickupStopId ?? null,
-          dropoff_stop_id: data.dropoffStopId ?? null,
-        },
-      ],
+      items: picked.map(({ seat, p }) => ({
+        seat_id: Number(seat.id),
+        passenger_name: p.passengerName,
+        passenger_phone: p.passengerPhone,
+        pickup_stop_id: data.pickupStopId ?? null,
+        dropoff_stop_id: data.dropoffStopId ?? null,
+      })),
       coupon_code: data.couponCode?.trim() ? data.couponCode.trim().toUpperCase() : null,
     })
 
@@ -389,9 +384,9 @@ export const bookingsApi = {
     })
     if (pay.data.result === 'THAT_BAI') throw new Error(pay.data.message || 'Thanh toán không thành công')
 
-    const ticket = pay.data.order.tickets[0]
-    if (!ticket) throw new Error('Đơn hàng không có vé')
-    return { ...toTicket(ticket), orderId: pay.data.order.id }
+    const tickets = pay.data.order.tickets
+    if (!tickets.length) throw new Error('Đơn hàng không có vé')
+    return tickets.map((t) => ({ ...toTicket(t), orderId: pay.data.order.id }))
   },
 }
 

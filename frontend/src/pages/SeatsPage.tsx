@@ -13,9 +13,12 @@ export interface SeatsPageProps {
   backendOnline: boolean
   onLogout?: () => void
   trip: Trip | null
-  chosenSeat: string
-  onSelectSeat: (seat: string) => void
+  chosenSeats: string[]
+  onSelectSeats: (seats: string[]) => void
 }
+
+/** Backend giữ tối đa 10 ghế/chuyến cho mỗi tài khoản. */
+const MAX_SEATS = 10
 
 export function SeatsPage({
   setView,
@@ -23,8 +26,8 @@ export function SeatsPage({
   backendOnline,
   onLogout,
   trip,
-  chosenSeat,
-  onSelectSeat,
+  chosenSeats,
+  onSelectSeats,
 }: SeatsPageProps) {
   const [seats, setSeats] = useState<SeatType[]>([])
   const [tripDetail, setTripDetail] = useState<TripDetail | null>(null)
@@ -62,13 +65,13 @@ export function SeatsPage({
 
   // Khôi phục thời gian giữ chỗ nếu tài khoản đang giữ ghế từ trước
   useEffect(() => {
-    if (!trip || !chosenSeat || !user) return
+    if (!trip || chosenSeats.length === 0 || !user) return
     let alive = true
     bookingsApi
       .myHold(trip.id)
       .then((hold) => {
         if (!alive) return
-        if (hold && hold.seatCodes.includes(chosenSeat)) {
+        if (hold && chosenSeats.every((label) => hold.seatCodes.includes(label))) {
           setHoldSeconds(hold.secondsLeft)
         }
       })
@@ -76,46 +79,45 @@ export function SeatsPage({
     return () => {
       alive = false
     }
-  }, [trip, chosenSeat, user])
+  }, [trip, chosenSeats, user])
 
   const handleHoldExpire = () => {
     setExpired(true)
     setHoldSeconds(null)
-    onSelectSeat('')
+    onSelectSeats([])
     if (trip) {
       bookingsApi.releaseSeats(trip.id).catch(() => undefined)
     }
   }
 
   const handleSeatClick = async (seat: SeatType) => {
-    if (seat.status !== 'available' && seat.label !== chosenSeat) return
+    const selected = chosenSeats.includes(seat.label)
+    if (seat.status !== 'available' && !selected) return
 
-    // Bấm lại ghế đang chọn -> nhả ghế
-    if (chosenSeat === seat.label) {
-      onSelectSeat('')
+    const next = selected ? chosenSeats.filter((l) => l !== seat.label) : [...chosenSeats, seat.label]
+    if (next.length > MAX_SEATS) return setHoldError(`Tối đa ${MAX_SEATS} ghế mỗi lần đặt`)
+    setHoldError('')
+    onSelectSeats(next)
+    if (!user || !trip) return
+
+    // Bỏ hết ghế -> nhả chỗ
+    if (next.length === 0) {
       setHoldSeconds(null)
-      setHoldError('')
-      if (user && trip) {
-        bookingsApi.releaseSeats(trip.id, [seat.id]).catch(() => undefined)
-      }
+      bookingsApi.releaseSeats(trip.id).catch(() => undefined)
       return
     }
 
-    // Chọn ghế mới
-    onSelectSeat(seat.label)
-    setHoldError('')
-
-    // Nếu đã đăng nhập, gọi bookingsApi.holdSeat() để giữ chỗ và lấy secondsLeft
-    if (user && trip) {
-      setHoldLoading(true)
-      try {
-        const hold = await bookingsApi.holdSeat(trip.id, seat.id)
-        setHoldSeconds(hold.secondsLeft)
-      } catch (err) {
-        setHoldError(apiErrorMessage(err, 'Không giữ được ghế này. Có thể ghế vừa có người giữ.'))
-      } finally {
-        setHoldLoading(false)
-      }
+    // Backend giữ theo cả tập ghế (tất cả hoặc không ghế nào) nên luôn gửi đủ các ghế đang chọn
+    setHoldLoading(true)
+    try {
+      const ids = seats.filter((s) => next.includes(s.label)).map((s) => s.id)
+      const hold = await bookingsApi.holdSeats(trip.id, ids)
+      setHoldSeconds(hold.secondsLeft)
+    } catch (err) {
+      onSelectSeats(chosenSeats) // không giữ được tập mới: giữ nguyên lựa chọn cũ (chỗ đã giữ không đổi)
+      setHoldError(apiErrorMessage(err, 'Không giữ được ghế này. Có thể ghế vừa có người giữ.'))
+    } finally {
+      setHoldLoading(false)
     }
   }
 
@@ -152,8 +154,8 @@ export function SeatsPage({
             <div key={seat.id} className="[&>button]:w-full" style={{ gridRow: seat.row, gridColumn: seat.col - minCol + 1 }}>
               <SeatItem
                 label={seat.label}
-                active={chosenSeat === seat.label}
-                unavailable={seat.status !== 'available' && chosenSeat !== seat.label}
+                active={chosenSeats.includes(seat.label)}
+                unavailable={seat.status !== 'available' && !chosenSeats.includes(seat.label)}
                 held={seat.status === 'held'}
                 onClick={() => handleSeatClick(seat)}
               />
@@ -164,7 +166,7 @@ export function SeatsPage({
     )
   }
 
-  const chosen = seats.find((s) => s.label === chosenSeat)
+  const chosen = seats.filter((s) => chosenSeats.includes(s.label))
   const durationText = tripDetail?.duration || trip.duration
   const pickupPoints = tripDetail?.pickupStops || []
   const dropoffPoints = tripDetail?.dropoffStops || []
@@ -184,7 +186,7 @@ export function SeatsPage({
 
           {holdSeconds !== null && !holdError && (
             <BookingTimer
-              key={`${trip.id}-${chosenSeat}-${holdSeconds}`}
+              key={`${trip.id}-${chosenSeats.join(',')}-${holdSeconds}`}
               initialSeconds={holdSeconds}
               onExpire={handleHoldExpire}
             />
@@ -263,17 +265,25 @@ export function SeatsPage({
           </section>
 
           <aside className="order-card h-fit p-5">
-            <p className="eyebrow">Chỗ đang chọn</p>
-            {chosen ? (
-              <div className="mt-4 flex items-center justify-between">
-                <div>
-                  <b className="text-2xl text-terracotta">{chosen.label}</b>
-                  <p className="text-sm text-ink-soft">Tầng {chosen.floor}</p>
-                </div>
-                <b className="text-ink">{trip.priceFormatted}</b>
-              </div>
+            <p className="eyebrow">
+              Chỗ đang chọn{chosen.length > 0 && ` (${chosen.length}/${MAX_SEATS})`}
+            </p>
+            {chosen.length > 0 ? (
+              <ul className="mt-4 space-y-3">
+                {chosen.map((s) => (
+                  <li key={s.id} className="flex items-center justify-between">
+                    <div>
+                      <b className="text-2xl text-terracotta">{s.label}</b>
+                      <p className="text-sm text-ink-soft">Tầng {s.floor}</p>
+                    </div>
+                    <b className="text-ink">{trip.priceFormatted}</b>
+                  </li>
+                ))}
+              </ul>
             ) : (
-              <p className="mt-4 text-sm text-ink-soft">Bạn chưa chọn ghế. Hãy bấm vào một ghế còn trống trên sơ đồ.</p>
+              <p className="mt-4 text-sm text-ink-soft">
+                Bạn chưa chọn ghế. Hãy bấm vào các ghế còn trống trên sơ đồ (tối đa {MAX_SEATS} ghế).
+              </p>
             )}
 
             {holdLoading && <p className="mt-2 text-xs text-ink-soft">Đang giữ chỗ...</p>}
@@ -287,11 +297,11 @@ export function SeatsPage({
             <div className="my-5 border-t border-dashed border-hairline" />
             <div className="flex justify-between text-sm text-ink-soft">
               <span>Tạm tính</span>
-              <b className="text-ink">{chosen ? trip.priceFormatted : '—'}</b>
+              <b className="text-ink">{chosen.length > 0 ? formatVnd(trip.price * chosen.length) : '—'}</b>
             </div>
             <Button
               onClick={() => setView('checkout')}
-              disabled={!chosen || !!holdError || holdLoading}
+              disabled={chosen.length === 0 || holdLoading}
               className="mt-6 w-full cursor-pointer"
             >
               Tiếp tục đặt chỗ →
