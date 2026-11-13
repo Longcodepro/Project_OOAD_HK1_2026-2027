@@ -19,7 +19,6 @@ export interface AdminDashboardPageProps {
 }
 
 interface ExtraData {
-  pendingRefunds: number
   recent: Ticket[]
 }
 
@@ -71,6 +70,26 @@ export function AdminDashboardPage({ setView }: AdminDashboardPageProps) {
   const [extra, setExtra] = useState<ExtraData | null>(null)
   const [extraError, setExtraError] = useState('')
 
+  // Số lệnh hoàn tiền chờ xử lý tải RIÊNG (không phụ thuộc danh sách vé gần đây, vốn nặng hơn)
+  const [pendingRefunds, setPendingRefunds] = useState<number | null>(null)
+  const [refundError, setRefundError] = useState(false)
+  const [refundTry, setRefundTry] = useState(0)
+  useEffect(() => {
+    let alive = true
+    adminRefundsApi
+      .list()
+      .then((r) => alive && setPendingRefunds(r.length))
+      .catch(() => alive && setRefundError(true))
+    return () => {
+      alive = false
+    }
+  }, [refundTry])
+  const retryRefunds = () => {
+    setRefundError(false)
+    setPendingRefunds(null)
+    setRefundTry((n) => n + 1)
+  }
+
   const [exporting, setExporting] = useState<Partial<Record<ReportFormat, boolean>>>({})
   const [exportError, setExportError] = useState('')
 
@@ -78,8 +97,9 @@ export function AdminDashboardPage({ setView }: AdminDashboardPageProps) {
 
   useEffect(() => {
     let alive = true
-    Promise.all([adminRefundsApi.list(), adminTicketsApi.list(10)])
-      .then(([refunds, recent]) => alive && setExtra({ pendingRefunds: refunds.length, recent }))
+    adminTicketsApi
+      .list(10)
+      .then((recent) => alive && setExtra({ recent }))
       .catch((err) => alive && setExtraError(apiErrorMessage(err, 'Không tải được vé gần đây')))
     adminRoutesApi
       .list()
@@ -119,7 +139,7 @@ export function AdminDashboardPage({ setView }: AdminDashboardPageProps) {
 
   const routes = (report?.by_route ?? []).slice(0, 6)
   const maxNet = Math.max(...routes.map((r) => r.net), 1)
-  const pending = extra?.pendingRefunds ?? 0
+  const pending = pendingRefunds ?? 0
   const picked = routeOptions.find((r) => String(r.id) === routeId)
   const routeLabel = picked ? `${picked.origin} → ${picked.destination}` : ''
   const fmtDate =(s: string) => fromYmd(s.slice(0, 10)).toLocaleDateString('vi-VN')
@@ -234,17 +254,23 @@ export function AdminDashboardPage({ setView }: AdminDashboardPageProps) {
 
             <button
               type="button"
-              onClick={() => setView('admin-tickets')}
+              onClick={refundError ? retryRefunds : () => setView('admin-tickets')}
               className={`${cardCls} cursor-pointer text-left transition hover:border-bronze ${
                 pending > 0 ? 'border-bronze bg-paper-deep' : ''
               }`}
             >
               <span className="text-xs font-semibold text-ink-soft">HOÀN TIỀN CHỜ XỬ LÝ</span>
               <p className={`mt-2 font-mono text-2xl font-extrabold ${pending > 0 ? 'text-terracotta' : ''}`}>
-                {extra ? `${pending} lệnh` : '—'}
+                {pendingRefunds !== null ? `${pending} lệnh` : '—'}
               </p>
-              <p className="mt-1 text-[11px] font-semibold text-ink-soft">
-                {!extra ? 'Đang tải...' : pending > 0 ? 'Bấm để xử lý →' : 'Không có lệnh tồn đọng'}
+              <p className={`mt-1 text-[11px] font-semibold ${refundError ? 'text-terracotta' : 'text-ink-soft'}`}>
+                {refundError
+                  ? 'Không tải được — bấm để thử lại'
+                  : pendingRefunds === null
+                    ? 'Đang tải...'
+                    : pending > 0
+                      ? 'Bấm để xử lý →'
+                      : 'Không có lệnh tồn đọng'}
               </p>
             </button>
 
