@@ -1021,12 +1021,25 @@ export interface AdminTrip extends Trip {
   vehicleId: number
 }
 
-export const adminTripsApi = {
-  list: async (): Promise<AdminTrip[]> => adminTripsApi.getAll(),
+/** Bộ lọc danh sách chuyến của admin: `date` = đúng một ngày, `dateFrom` = từ ngày này trở đi (YYYY-MM-DD). */
+export interface AdminTripQuery {
+  date?: string
+  dateFrom?: string
+}
 
-  getAll: async (): Promise<AdminTrip[]> => {
-    const res = await apiClient.get<BackendTripOut[]>('/admin/trips')
-    return (res.data || []).map((t) => ({ ...toTrip(t), routeId: t.route_id, vehicleId: t.vehicle_id }))
+export const adminTripsApi = {
+  list: async (query?: AdminTripQuery): Promise<AdminTrip[]> => (await adminTripsApi.listPage(query)).items,
+
+  /**
+   * Chuyến xe, sắp theo ngày giờ đi tăng dần. Backend cắt tối đa 500 dòng/lần nên phải lọc theo ngày
+   * (seed có hàng nghìn chuyến, phần lớn đã chạy); `total` là tổng số chuyến khớp bộ lọc.
+   */
+  listPage: async (query: AdminTripQuery = {}): Promise<{ items: AdminTrip[]; total: number }> => {
+    const res = await apiClient.get<BackendTripOut[]>('/admin/trips', {
+      params: { limit: 500, date: query.date, date_from: query.dateFrom },
+    })
+    const items = (res.data || []).map((t) => ({ ...toTrip(t), routeId: t.route_id, vehicleId: t.vehicle_id }))
+    return { items, total: Number(res.headers['x-total-count'] ?? items.length) }
   },
 
   create: async (data: {

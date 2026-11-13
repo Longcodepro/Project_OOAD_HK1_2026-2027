@@ -241,12 +241,18 @@ class SqlTripRepository:
             for m, f, t in rows
         ]
 
-    def list_trips(self, route_id, day, status, plate) -> list[TripView]:
+    def list_trips(
+        self, route_id, day, status, plate, date_from=None, date_to=None
+    ) -> list[TripView]:
         stmt = select(TripModel).join(VehicleModel, VehicleModel.id == TripModel.vehicle_id)
         if route_id:
             stmt = stmt.where(TripModel.route_id == route_id)
         if day:
             stmt = stmt.where(TripModel.departure_date == day)
+        if date_from:
+            stmt = stmt.where(TripModel.departure_date >= date_from)
+        if date_to:
+            stmt = stmt.where(TripModel.departure_date <= date_to)
         if status:
             stmt = stmt.where(TripModel.status == status)
         if plate:
