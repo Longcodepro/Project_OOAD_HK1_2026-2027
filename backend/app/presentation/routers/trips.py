@@ -195,11 +195,14 @@ def list_trips(
     date: date | None = Query(None, description="Lọc theo ngày khởi hành (YYYY-MM-DD)"),
     status: TripStatus | None = Query(None, description="Lọc theo trạng thái chuyến: MO_BAN, DANG_CHAY, HOAN_THANH, HUY"),
     plate: str | None = Query(None, description="Lọc theo biển số xe"),
+    date_from: date | None = Query(None, description="Từ ngày khởi hành (YYYY-MM-DD), gồm cả ngày này"),
+    date_to: date | None = Query(None, description="Đến ngày khởi hành (YYYY-MM-DD), gồm cả ngày này"),
     svc: TripService = Depends(get_trip_service),
     page: Page = Depends(),
 ):
-    """Danh sách chuyến xe dành cho quản trị viên."""
-    return [trip_out(v) for v in page.apply(svc.repo.list_trips(route_id, date, status, plate))]
+    """Danh sách chuyến xe dành cho quản trị viên (sắp theo ngày giờ đi tăng dần)."""
+    rows = svc.repo.list_trips(route_id, date, status, plate, date_from, date_to)
+    return [trip_out(v) for v in page.apply(rows)]
 
 
 @admin.post(

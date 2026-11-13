@@ -25,6 +25,7 @@ export function AdminPricingPage() {
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
   const [togglingId, setTogglingId] = useState<number | null>(null)
+  const [tripTotal, setTripTotal] = useState(0) // tổng chuyến từ hôm nay (có thể nhiều hơn số đã tải)
 
   const [showAddModal, setShowAddModal] = useState(false)
   const [code, setCode] = useState('')
@@ -41,9 +42,14 @@ export function AdminPricingPage() {
     setLoading(true)
     setLoadError('')
     try {
-      const [v, t] = await Promise.all([adminCouponsApi.list(), adminTripsApi.list()])
+      // Chỉ chuyến từ hôm nay: nếu lấy từ đầu thì 500 dòng đầu toàn chuyến đã chạy xong
+      const [v, t] = await Promise.all([
+        adminCouponsApi.list(),
+        adminTripsApi.listPage({ dateFrom: toYmd(new Date()) }),
+      ])
       setVouchers(v)
-      setTrips(t)
+      setTrips(t.items)
+      setTripTotal(t.total)
     } catch (err) {
       setLoadError(apiErrorMessage(err, 'Không tải được dữ liệu giá vé và mã giảm giá'))
     } finally {
@@ -181,6 +187,11 @@ export function AdminPricingPage() {
           <p className="text-xs text-slate-500 font-medium">Chỉ gồm chuyến đang mở bán và chưa khởi hành.</p>
         </div>
 
+        {!loading && tripTotal > trips.length && (
+          <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800">
+            Đang hiển thị {trips.length}/{tripTotal} chuyến sớm nhất kể từ hôm nay. Chuyến còn lại sẽ hiện khi các chuyến trên đã chạy.
+          </p>
+        )}
         {loading ? (
           <p className="py-4 text-center text-xs text-slate-400">Đang tải giá vé...</p>
         ) : groups.length === 0 ? (

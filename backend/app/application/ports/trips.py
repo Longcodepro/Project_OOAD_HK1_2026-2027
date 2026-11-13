@@ -30,7 +30,13 @@ class TripRepository(Protocol):
     # xem / tra cứu
     def release_expired_holds(self, now: datetime) -> None: ...
     def list_trips(
-        self, route_id: int | None, day: date | None, status: TripStatus | None, plate: str | None
+        self,
+        route_id: int | None,
+        day: date | None,
+        status: TripStatus | None,
+        plate: str | None,
+        date_from: date | None = None,
+        date_to: date | None = None,
     ) -> list[TripView]: ...
     def search(
         self,

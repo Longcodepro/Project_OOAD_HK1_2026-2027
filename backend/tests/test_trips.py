@@ -127,3 +127,21 @@ def test_public_route_offers_show_lowest_price_per_route(client, make_user):
     hn_dn = next(o for o in offers if o["destination"] == "Đà Nẵng")
     assert hn_dn["from_price"] == 300000 and hn_dn["upcoming_trips"] == 2
     assert offers[0]["destination"] == "Đà Nẵng"  # nhiều chuyến hơn thì lên trước
+
+
+def test_admin_list_filters_by_date_range(client, make_user):
+    """date_from/date_to lọc theo ngày đi (gồm cả hai đầu); danh sách sắp theo ngày tăng dần."""
+    h = setup_admin(make_user)
+    r, v = mk_route(client, h), mk_vehicle(client, h)
+    for d in (3, 5, 9):
+        mk_trip(client, h, r, v, day=tomorrow(d))
+
+    def days(qs=""):
+        return [t["departure_date"] for t in client.get(f"/admin/trips{qs}", headers=h).json()]
+
+    assert days() == [tomorrow(3), tomorrow(5), tomorrow(9)]
+    assert days(f"?date_from={tomorrow(5)}") == [tomorrow(5), tomorrow(9)]
+    assert days(f"?date_to={tomorrow(5)}") == [tomorrow(3), tomorrow(5)]
+    assert days(f"?date_from={tomorrow(4)}&date_to={tomorrow(8)}") == [tomorrow(5)]
+    assert days(f"?date={tomorrow(9)}") == [tomorrow(9)]
+    assert days(f"?date_from={tomorrow(10)}") == []
