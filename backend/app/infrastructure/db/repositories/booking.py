@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import uuid4
 
-from sqlalchemy import exists, or_, select, update
+from sqlalchemy import exists, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.domain.clock import vn_day_range_utc
@@ -390,10 +390,12 @@ class SqlBookingRepository:
         order_id,
         ticket_id,
         order_code: str | None = None,
-    ) -> list[OrderAggregate]:
+        limit: int | None = None,
+        offset: int = 0,
+    ) -> tuple[list[OrderAggregate], int]:
         from app.infrastructure.db.models import AccountModel
 
-        stmt = select(OrderModel).order_by(OrderModel.id.desc())
+        stmt = select(OrderModel)
         if status:
             stmt = stmt.where(OrderModel.status == status)
         if channel:
@@ -418,4 +420,9 @@ class SqlBookingRepository:
                 )
             )
             stmt = stmt.where(or_(OrderModel.id.in_(by_ticket), OrderModel.id.in_(by_owner)))
-        return [self._agg(m) for m in self.db.scalars(stmt)]
+        # Đếm và cắt trang ngay ở SQL: chỉ dựng aggregate (nhiều truy vấn/đơn) cho các đơn của trang này
+        total = self.db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+        stmt = stmt.order_by(OrderModel.id.desc()).offset(offset)
+        if limit is not None:
+            stmt = stmt.limit(limit)
+        return [self._agg(m) for m in self.db.scalars(stmt)], total
