@@ -47,8 +47,9 @@ export default function App() {
 
   const [searchParams, setSearchParams] = useState({ from: '', to: '', date: '' })
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null)
-  const [chosenSeat, setChosenSeat] = useState('')
+  const [chosenSeats, setChosenSeats] = useState<string[]>([]) // nhãn ghế đang chọn (tối đa 10)
   const [currentTicket, setCurrentTicket] = useState<Ticket | null>(null)
+  const [orderTickets, setOrderTickets] = useState<Ticket[]>([]) // các vé của đơn vừa đặt
 
   // Xác thực lại token đã lưu với backend (token hết hạn/bị thu hồi thì bỏ phiên)
   useEffect(() => {
@@ -119,7 +120,7 @@ export default function App() {
 
   const handleSelectTrip = (trip: Trip) => {
     setSelectedTrip(trip)
-    setChosenSeat('')
+    setChosenSeats([])
     setViewState('seats')
   }
 
@@ -215,8 +216,8 @@ export default function App() {
             backendOnline={backendOnline}
             onLogout={handleCustomerLogout}
             trip={selectedTrip}
-            chosenSeat={chosenSeat}
-            onSelectSeat={setChosenSeat}
+            chosenSeats={chosenSeats}
+            onSelectSeats={setChosenSeats}
           />
         )
       case 'checkout':
@@ -227,8 +228,11 @@ export default function App() {
             backendOnline={backendOnline}
             onLogout={handleCustomerLogout}
             trip={selectedTrip}
-            chosenSeat={chosenSeat}
-            onBookingSuccess={setCurrentTicket}
+            chosenSeats={chosenSeats}
+            onBookingSuccess={(tickets) => {
+              setOrderTickets(tickets)
+              setCurrentTicket(tickets[0] ?? null)
+            }}
           />
         )
       case 'success':
@@ -239,6 +243,8 @@ export default function App() {
             backendOnline={backendOnline}
             onLogout={handleCustomerLogout}
             ticket={currentTicket}
+            orderTickets={orderTickets}
+            onSelectTicket={setCurrentTicket}
           />
         )
       case 'profile':

@@ -10,6 +10,9 @@ export interface SuccessPageProps {
   backendOnline: boolean
   onLogout?: () => void
   ticket: Ticket | null
+  /** Các vé của đơn vừa đặt (đơn nhiều ghế): hiện thanh chọn vé khi `ticket` thuộc danh sách này. */
+  orderTickets?: Ticket[]
+  onSelectTicket?: (ticket: Ticket) => void
 }
 
 const STATUS: Record<string, { label: string; tone: string }> = {
@@ -25,6 +28,8 @@ export function SuccessPage({
   backendOnline,
   onLogout,
   ticket,
+  orderTickets = [],
+  onSelectTicket,
 }: SuccessPageProps) {
   if (!ticket) {
     return (
@@ -59,6 +64,7 @@ export function SuccessPage({
   }
 
   const activeTicket: Ticket = ticket
+  const siblings = orderTickets.length > 1 && orderTickets.some((t) => t.ticketCode === ticket.ticketCode) ? orderTickets : []
   const status = STATUS[activeTicket.status] ?? { label: activeTicket.status, tone: 'text-ink-soft bg-paper-deep border-hairline' }
   const craneSvg = renderFigureSvg(CRANE)
 
@@ -99,6 +105,33 @@ export function SuccessPage({
             badge={status.label}
           />
         </div>
+
+        {/* Đơn nhiều ghế: chọn vé muốn xem */}
+        {siblings.length > 0 && (
+          <div className="mt-6 w-full" role="group" aria-label="Các vé trong đơn">
+            <p className="mb-2 text-xs font-semibold text-ink-soft">Đơn gồm {siblings.length} vé — chọn vé để xem:</p>
+            <div className="flex flex-wrap gap-2">
+              {siblings.map((t) => {
+                const active = t.ticketCode === activeTicket.ticketCode
+                return (
+                  <button
+                    key={t.ticketCode}
+                    type="button"
+                    onClick={() => onSelectTicket?.(t)}
+                    aria-pressed={active}
+                    className={`cursor-pointer rounded border px-3 py-1.5 text-xs font-bold transition ${
+                      active
+                        ? 'border-terracotta bg-terracotta text-paper'
+                        : 'border-hairline bg-paper text-ink hover:border-terracotta'
+                    }`}
+                  >
+                    Ghế {t.seatNumber} · {t.passengerName}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* CUỐNG VÉ ĐIỆN TỬ (BOARDING PASS CARD VỚI NÉT KHẮC ĐÔNG SƠN) */}
         <article className="w-full bg-[#FFFDF9] border border-dashed border-bronze/60 rounded p-6 md:p-8 relative overflow-hidden shadow-xs mt-4">
