@@ -3,6 +3,7 @@ import type { Ticket, Trip, User, View } from './types'
 import { authApi, checkBackendHealth } from './services/api'
 import { ADMIN_HASH, currentPortal, loadUser, type Portal } from './services/session'
 import { Footer } from './components/layout/Footer'
+import { BottomBar } from './components/layout/BottomBar'
 import { DongSonDrum } from './components/dongson/DongSonDrum'
 import { DrumRippleListener } from './components/dongson/DrumRippleListener'
 
@@ -282,7 +283,12 @@ export default function App() {
   const showFooter = customerView !== 'login' && customerView !== 'register'
 
   return (
-    <div className="app-shell flex flex-col justify-between min-h-screen relative bg-paper text-ink selection:bg-terracotta selection:text-paper overflow-x-hidden">
+    // overflow-x-clip (không phải hidden): hidden biến vùng bọc thành scroll container làm header sticky không dính
+    <div
+      className={`app-shell flex flex-col justify-between min-h-screen relative bg-paper text-ink selection:bg-terracotta selection:text-paper overflow-x-clip ${
+        showFooter ? 'pb-14 md:pb-9' : '' // chừa chỗ cho thanh đáy cố định
+      }`}
+    >
       {/* Mặt trống đồng Đông Sơn làm nền toàn trang */}
       <DongSonDrum fixed size={1680} opacity={0.22} />
 
@@ -290,7 +296,8 @@ export default function App() {
       <DrumRippleListener />
 
       <div className="flex-1 relative z-10">{renderPage()}</div>
-      {showFooter && <Footer setView={navigate} />}
+      {customerView === 'home' && <Footer setView={navigate} />}
+      {showFooter && <BottomBar currentView={customerView} setView={navigate} />}
     </div>
   )
 }

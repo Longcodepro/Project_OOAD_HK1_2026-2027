@@ -6,16 +6,9 @@ export interface AdminSidebarProps {
   setView: (v: View) => void
   user: User
   pendingRefunds: number
-  onLogout: () => void
 }
 
-export function AdminSidebar({
-  currentView,
-  setView,
-  user,
-  pendingRefunds,
-  onLogout,
-}: AdminSidebarProps) {
+export function AdminSidebar({ currentView, setView, user, pendingRefunds }: AdminSidebarProps) {
   const adminItems: { id: View; label: string; icon: string; badge?: number }[] = [
     {
       id: 'admin-dashboard',
@@ -74,7 +67,7 @@ export function AdminSidebar({
   const initials = user.fullName.trim().split(/\s+/).slice(-2).map((w) => w[0]).join('').toUpperCase()
 
   return (
-    <aside className="w-[240px] shrink-0 bg-paper-deep border-r border-hairline flex flex-col justify-between p-4 min-h-screen text-ink select-none">
+    <aside className="w-[240px] shrink-0 bg-paper-deep border-r border-hairline flex flex-col justify-between p-4 h-screen overflow-y-auto text-ink select-none">
       <div className="space-y-5">
         {/* Brand */}
         <div className="pb-4 border-b border-hairline">
@@ -133,25 +126,15 @@ export function AdminSidebar({
 
       {/* Admin Profile bottom */}
       <div className="pt-4 border-t border-hairline space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            {/* Avatar tròn chữ cái đầu của tên */}
-            <div className="w-8 h-8 rounded-full bg-paper border border-hairline text-ink font-bold text-xs flex items-center justify-center">
-              {initials}
-            </div>
-            <div className="overflow-hidden">
-              <p className="text-xs font-bold text-ink truncate">{user.fullName}</p>
-              <p className="text-[10.5px] text-celadon font-semibold">{roleLabel}</p>
-            </div>
+        <div className="flex items-center gap-2.5">
+          {/* Avatar tròn chữ cái đầu của tên; đăng xuất nằm trong menu tài khoản ở header */}
+          <div className="w-8 h-8 rounded-full bg-paper border border-hairline text-ink font-bold text-xs flex items-center justify-center">
+            {initials}
           </div>
-          <button
-            type="button"
-            onClick={onLogout}
-            title="Đăng xuất"
-            className="p-1 text-ink-soft hover:text-terracotta transition cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-base">logout</span>
-          </button>
+          <div className="overflow-hidden">
+            <p className="text-xs font-bold text-ink truncate">{user.fullName}</p>
+            <p className="text-[10.5px] text-celadon font-semibold">{roleLabel}</p>
+          </div>
         </div>
       </div>
     </aside>
