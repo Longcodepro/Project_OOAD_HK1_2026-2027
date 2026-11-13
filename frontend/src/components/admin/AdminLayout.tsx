@@ -3,6 +3,7 @@ import type { View, User } from '../../types'
 import { adminRefundsApi } from '../../services/api'
 import { AdminSidebar } from './AdminSidebar'
 import { DongSonDrum } from '../dongson/DongSonDrum'
+import { AccountMenu } from '../common/AccountMenu'
 
 export interface AdminLayoutProps {
   currentView: View
@@ -41,14 +42,14 @@ export function AdminLayout({
   }, [currentView])
 
   return (
-    <div className="flex min-h-screen bg-paper text-ink relative overflow-hidden">
+    // h-screen + cột nội dung tự cuộn: sidebar và header luôn đứng yên, chỉ <main> cuộn
+    <div className="flex h-screen bg-paper text-ink relative overflow-hidden">
       {/* Sidebar 240px cố định */}
       <AdminSidebar
         currentView={currentView}
         setView={setView}
         user={user}
         pendingRefunds={pendingRefunds}
-        onLogout={onLogout}
       />
 
       {/* Main Content Area */}
@@ -80,10 +81,14 @@ export function AdminLayout({
               </button>
             )}
 
-            <div className="flex items-center gap-2 rounded border border-hairline bg-paper-deep px-3 py-1 text-ink-soft">
-              <span>Đang đăng nhập:</span>
-              <span className="font-bold text-ink">{user.fullName}</span>
-            </div>
+            <AccountMenu
+              user={user}
+              subtitle={user.role === 'admin' ? 'Quản trị viên' : 'Nhân viên bán vé'}
+              items={[
+                { label: 'Về trang khách', icon: 'arrow_back', onSelect: () => setView('home') },
+                { label: 'Đăng xuất', icon: 'logout', onSelect: onLogout, danger: true, separatorBefore: true },
+              ]}
+            />
           </div>
         </header>
 

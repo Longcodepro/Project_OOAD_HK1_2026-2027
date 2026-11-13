@@ -15,6 +15,30 @@ const KEYS: Record<Portal, { token: string; user: string }> = {
 
 export const ADMIN_HASH = '#/admin'
 
+/** Menu tài khoản chọn sẵn tab của trang Hồ sơ (kể cả khi trang đó đang mở). */
+export const PROFILE_TAB_EVENT = 'vexe:profile-tab'
+const PROFILE_TAB_KEY = 'vexe_profile_tab'
+
+export const requestProfileTab = (tab: string) => {
+  try {
+    sessionStorage.setItem(PROFILE_TAB_KEY, tab)
+  } catch {
+    /* không lưu được thì mở tab mặc định */
+  }
+  window.dispatchEvent(new Event(PROFILE_TAB_EVENT))
+}
+
+/** Lấy (và xoá) tab được yêu cầu. */
+export const takeProfileTab = (): string | null => {
+  try {
+    const tab = sessionStorage.getItem(PROFILE_TAB_KEY)
+    sessionStorage.removeItem(PROFILE_TAB_KEY)
+    return tab
+  } catch {
+    return null
+  }
+}
+
 /** Cổng đang mở, suy ra từ URL. */
 export const currentPortal = (): Portal =>
   window.location.hash.startsWith(ADMIN_HASH) ? 'admin' : 'customer'

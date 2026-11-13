@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Order, Ticket, TicketRefund, View, User } from '../types'
 import { authApi, ordersApi, ticketsApi, apiErrorMessage, formatVnd } from '../services/api'
+import { PROFILE_TAB_EVENT, takeProfileTab } from '../services/session'
 import { Header } from '../components/layout/Header'
 import { Button } from '../components/common/Button'
 import { Modal } from '../components/common/Modal'
@@ -433,7 +434,19 @@ export function ProfilePage({
   onLogout,
   onUserUpdate,
 }: ProfilePageProps) {
-  const [tab, setTab] = useState('Lịch sử chuyến')
+  const [tab, setTab] = useState(() => {
+    const wanted = takeProfileTab() // menu tài khoản có thể chọn sẵn tab
+    return wanted && TABS.includes(wanted) ? wanted : 'Lịch sử chuyến'
+  })
+  useEffect(() => {
+    // Đang ở trang Hồ sơ mà chọn mục khác trong menu tài khoản: đổi tab ngay
+    const onRequest = () => {
+      const wanted = takeProfileTab()
+      if (wanted && TABS.includes(wanted)) setTab(wanted)
+    }
+    window.addEventListener(PROFILE_TAB_EVENT, onRequest)
+    return () => window.removeEventListener(PROFILE_TAB_EVENT, onRequest)
+  }, [])
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
