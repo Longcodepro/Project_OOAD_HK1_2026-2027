@@ -443,7 +443,10 @@ export interface CounterItem {
 }
 
 export const counterApi = {
-  /** Lập phiếu bán vé tại quầy. Nhân viên phải giữ chỗ ghế trước (bookingsApi.holdSeats). */
+  /**
+   * Lập phiếu bán vé tại quầy và thu tiền mặt luôn (backend: tạo đơn chờ → pay TIEN_MAT → vé CHUA_DI).
+   * Nhân viên phải giữ chỗ ghế trước (bookingsApi.holdSeats).
+   */
   createOrder: async (tripId: number, items: CounterItem[], couponCode?: string): Promise<Order> => {
     const res = await apiClient.post<BackendOrderOut>('/counter/orders', {
       trip_id: tripId,
@@ -456,7 +459,15 @@ export const counterApi = {
       })),
       coupon_code: couponCode?.trim() ? couponCode.trim().toUpperCase() : null,
     })
-    return toOrder(res.data)
+    // Thu tiền mặt để chốt đơn; không chốt được thì nhả ghế, tránh đơn kẹt CHO_THANH_TOAN giữ ghế mãi
+    try {
+      const pay = await apiClient.post<BackendPayOut>(`/orders/${res.data.id}/pay`, { method: 'TIEN_MAT' })
+      if (pay.data.result !== 'THANH_CONG') throw new Error(pay.data.message || 'Thu tiền mặt không thành công')
+      return toOrder(pay.data.order)
+    } catch (err) {
+      await apiClient.post(`/orders/${res.data.id}/cancel-pending`).catch(() => undefined)
+      throw err
+    }
   },
 
   /** Đối soát doanh thu quầy của chính nhân viên trong ngày (mặc định hôm nay). */
