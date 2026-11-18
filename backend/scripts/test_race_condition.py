@@ -11,6 +11,7 @@ Kịch bản:
 from __future__ import annotations
 
 import concurrent.futures
+from datetime import datetime, timedelta
 import time
 import requests
 
@@ -49,9 +50,10 @@ def main():
     print("=" * 80)
 
     # 1. Lấy thông tin chuyến xe demo
+    target_date = (datetime.now().date() + timedelta(days=3)).strftime("%Y-%m-%d")
     trips_res = requests.get(
         f"{BASE_URL}/trips/search",
-        params={"origin": "TP. Hồ Chí Minh", "destination": "Đà Lạt", "date": "2026-11-15"},
+        params={"origin": "TP. Hồ Chí Minh", "destination": "Đà Lạt", "date": target_date},
     )
     items = trips_res.json().get("items", []) if trips_res.status_code == 200 else []
     if not items:

@@ -46,7 +46,14 @@ class PayResult:
 
 
 class BookingService:
-    """UC02 (đặt vé) + UC22 (thanh toán). Kênh quầy dùng lại cùng các hàm này (UC04)."""
+    """Ca sử dụng UC02 (Đặt vé trực tuyến) + UC22 (Thanh toán) + UC04 (Bán vé tại quầy).
+
+    Quản lý trọn vẹn vòng đời đơn hàng:
+    - Tạo đơn đặt vé từ các ghế đã được khóa tạm (Hold).
+    - Áp dụng mã giảm giá và phân bổ chiết khấu chính xác theo từng vé.
+    - Xử lý thanh toán đa kênh (VietQR, MoMo, ZaloPay, Thẻ, Tiền mặt) kèm cơ chế mô phỏng (Mock Gateway).
+    - Xử lý ngoại lệ quá hạn giữ chỗ, đổi phương thức thanh toán, hoàn tiền khi tiền về muộn (Late Webhook).
+    """
 
     def __init__(
         self,
@@ -76,6 +83,23 @@ class BookingService:
         buyer_id: int | None,
         clerk_id: int | None = None,
     ) -> OrderAggregate:
+        """Tạo đơn đặt vé mới ở trạng thái CHO_THANH_TOAN.
+
+        Các bước xử lý logic:
+        1. Kiểm tra chuyến xe tồn tại, trạng thái OPEN và chưa khởi hành.
+        2. Kiểm tra tính hợp lệ của danh sách ghế:
+           - Không được chọn trùng ghế trong cùng một đơn.
+           - Tất cả các ghế BẮT BUỘC phải đang được giữ chỗ bởi chính tài khoản này (now_held_by).
+           - Không có vé nào khác đang sử dụng các ghế này.
+        3. Kiểm tra các điểm đón/trả có thuộc chuyến xe hay không (StopKind.PICKUP / DROPOFF).
+        4. Tính toán tiền và áp dụng khuyến mãi:
+           - subtotal = trip.price * số lượng ghế.
+           - Nếu có coupon_code: Kiểm tra tính hợp lệ (thời hạn, số lượt còn lại, giá trị đơn tối thiểu).
+           - Giữ trước 1 lượt dùng coupon (coupons.use_one) ngay khi tạo đơn để tránh vượt hạn mức.
+           - Gọi `allocate_discount` để chia đều mức giảm giá vào từng vé, dồn số dư cent vào vé cuối.
+        5. Tạo các bản ghi vé (Ticket) ở trạng thái PENDING (CHO_THANH_TOAN) gắn với từng hành khách.
+        6. Tạo bản ghi đơn hàng (Order) ở trạng thái PENDING (CHO_THANH_TOAN).
+        """
         trip = self.trips.get_trip(trip_id)
         if trip is None:
             raise NotFound("Không tìm thấy chuyến")
@@ -202,6 +226,22 @@ class BookingService:
     def pay(
         self, order_id: int, actor: Account, method: PaymentMethod, simulate: str | None
     ) -> PayResult:
+        """Xử lý thanh toán cho đơn hàng.
+
+        Luồng xử lý:
+        1. Tải đơn hàng và kiểm tra quyền truy cập. Kiểm tra hết hạn giữ chỗ (expire_if_needed).
+        2. Ràng buộc nghiệp vụ:
+           - Đơn phải ở trạng thái CHO_THANH_TOAN (PENDING).
+           - Phương thức TIEN_MAT chỉ được phép sử dụng tại kênh quầy (COUNTER).
+        3. Nếu đổi phương thức thanh toán trong khi giao dịch trước đang PROCESSING:
+           - Hủy giao dịch cũ (CANCELLED) để vô hiệu hóa mã QR cũ.
+        4. Thực hiện thu tiền:
+           - Nếu TIEN_MAT (tại quầy): Ghi nhận giao dịch SUCCESS ngay, gọi `_finalize`.
+           - Nếu thanh toán điện tử (VIETQR/MOMO/ZALOPAY/THE): Gọi PaymentGateway.charge.
+             + Nếu cổng báo SUCCESS: Ghi nhận SUCCESS, gọi `_finalize` xuất vé.
+             + Nếu cổng báo PROCESSING: Tạo bản ghi thanh toán PROCESSING, trả về mã QR cho client.
+             + Nếu cổng báo FAILED: Ghi nhận FAILED, giữ nguyên đơn hàng để khách thử thanh toán lại trước khi hết giờ.
+        """
         agg = self.load(order_id, actor)
         o = agg.order
         if o.status == OrderStatus.FAILED:
@@ -251,7 +291,14 @@ class BookingService:
         return PayResult(self.repo.get_order(order_id), "THAT_BAI", r.message)
 
     def _finalize(self, agg: OrderAggregate) -> None:
-        """Thanh toán thành công: phát vé (mã QR ngẫu nhiên), ghế thành đã bán, gửi vé qua SMS."""
+        """Hoàn tất đơn hàng khi thanh toán thành công.
+
+        Các thao tác chuyển đổi trạng thái:
+        1. Vé (Tickets): Chuyển từ PENDING sang UNUSED (CHUA_DI), sinh mã QR ngẫu nhiên (token_urlsafe).
+        2. Ghế chuyến (TripSeat): Chuyển trạng thái từ TAM_KHOA (HELD) sang DA_BAN (SOLD).
+        3. Đơn hàng (Order): Chuyển từ CHO_THANH_TOAN (PENDING) sang DA_THANH_TOAN (PAID).
+        4. Thông báo: Gửi tin nhắn SMS chứa thông tin vé, ghế, giờ chạy và mã vé/QR đến SĐT từng hành khách.
+        """
         for t in agg.tickets:
             self.repo.set_ticket_status(
                 t.id, TicketStatus.UNUSED, qr_code=secrets.token_urlsafe(16)
@@ -325,8 +372,9 @@ class BookingService:
     def my_orders(self, account: Account) -> list[OrderAggregate]:
         out = []
         for agg in self.repo.list_orders_of_account(account.id):
-            self.expire_if_needed(agg)
-            out.append(self.repo.get_order(agg.order.id))
+            if agg.order.status == OrderStatus.PENDING and self.expire_if_needed(agg):
+                agg = self.repo.get_order(agg.order.id)
+            out.append(agg)
         return out
 
     # ---- UC04: bán vé tại quầy ----

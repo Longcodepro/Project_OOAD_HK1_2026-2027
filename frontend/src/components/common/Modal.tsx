@@ -1,13 +1,34 @@
+/**
+ * @file Modal.tsx
+ * @description Thành phần Hộp thoại Nổi Đa dụng (Accessible Modal Dialog Component).
+ *
+ * TÍNH NĂNG TIÊU BIỂU:
+ * 1. Quản lý Ngăn xếp Modal (Stack-based Escape Key Handling):
+ *    - Quản lý danh sách các modal đang mở bằng mảng `openModals: symbol[]`.
+ *    - Khi người dùng nhấn phím `Escape`, chỉ đóng modal nằm trên cùng của ngăn xếp.
+ * 2. Khóa cuộn trang nền (Scroll Lock):
+ *    - Tự động đặt `document.body.style.overflow = 'hidden'` khi mở và phục hồi khi đóng.
+ * 3. Hỗ trợ biểu mẫu linh hoạt (Form Support):
+ *    - Nếu có prop `onSubmit`, thẻ bọc sẽ tự động chuyển thành `<form>` để các nút `type="submit"` ở footer
+ *      có thể submit biểu mẫu một cách tự nhiên.
+ * 4. Đóng khi click ngoài (Click Outside Overlay to Close):
+ *    - Bắt sự kiện `onMouseDown` trên lớp phủ nền `dlg-overlay`.
+ */
+
 import { useEffect, useRef, type FormEvent, type ReactNode } from 'react'
 
 export interface ModalProps {
+  /** Tiêu đề hộp thoại */
   title: ReactNode
+  /** Callback đóng hộp thoại */
   onClose: () => void
+  /** Nội dung thân hộp thoại */
   children: ReactNode
-  /** Hàng nút ở chân cửa sổ. */
+  /** Hàng nút ở chân cửa sổ (Footer) */
   footer?: ReactNode
-  /** Truyền vào thì cửa sổ là <form>; nút type="submit" ở footer sẽ gửi form. */
+  /** Truyền vào thì cửa sổ là <form>; nút type="submit" ở footer sẽ gửi form */
   onSubmit?: (e: FormEvent) => void
+  /** Độ rộng tối đa (px), mặc định 448px */
   maxWidth?: number
 }
 

@@ -1,5 +1,23 @@
+/**
+ * @file Header.tsx
+ * @description Thanh tiêu đề cố định trên đầu trang Cổng Khách hàng (Sticky Application Header).
+ *
+ * TÍNH NĂNG CHÍNH:
+ * 1. Logo nhận diện thương hiệu: Nhấp chuột điều hướng về trang chủ (`setView('home')`).
+ * 2. Thanh điều hướng liên kết chính (Desktop Navigation):
+ *    - Tìm chuyến (`home`), Tra cứu vé của tôi (`lookup`), Hành trình của tôi (`profile`).
+ *    - Tự động gạch chân và đổi màu đất nung cho mục đang hoạt động (`currentView`).
+ * 3. Menu Tài khoản thông minh (`AccountMenu`):
+ *    - Khi chưa đăng nhập: Hiển thị các nút "Đăng nhập" và "Đăng ký tài khoản".
+ *    - Khi đã đăng nhập: Hiển thị avatar viết tắt họ tên, số điện thoại, và các mục menu nhanh:
+ *      Hồ sơ cá nhân, Hành trình của tôi, Đổi mật khẩu (gọi `requestProfileTab` để mở đúng tab trên ProfilePage),
+ *      và nút Đăng xuất.
+ */
+
 import type { View, User } from '../../types'
 import { Logo } from '../common/Logo'
+import { AccountMenu, type AccountMenuItem } from '../common/AccountMenu'
+import { requestProfileTab } from '../../services/session'
 
 export interface HeaderProps {
   currentView?: View
@@ -23,18 +41,28 @@ export function Header({
     { label: 'Hành trình của tôi', view: 'profile' },
   ]
 
-  // Get initials for user avatar circle (e.g. "Nguyễn Văn An" -> "NA")
-  const getInitials = (name?: string) => {
-    if (!name) return 'KH'
-    const parts = name.trim().split(/\s+/)
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  const openProfile = (tab: string) => () => {
+    requestProfileTab(tab)
+    setView('profile')
   }
+  const accountItems: AccountMenuItem[] = user
+    ? [
+        { label: 'Hồ sơ cá nhân', icon: 'person', onSelect: openProfile('Thông tin cá nhân') },
+        { label: 'Hành trình của tôi', icon: 'confirmation_number', onSelect: openProfile('Lịch sử chuyến') },
+        { label: 'Đổi mật khẩu', icon: 'lock', onSelect: openProfile('Đổi mật khẩu') },
+        ...(onLogout
+          ? [{ label: 'Đăng xuất', icon: 'logout', onSelect: onLogout, danger: true, separatorBefore: true }]
+          : []),
+      ]
+    : [
+        { label: 'Đăng nhập', icon: 'login', onSelect: () => setView('login') },
+        { label: 'Đăng ký tài khoản', icon: 'person_add', onSelect: () => setView('register') },
+      ]
 
   return (
     <header className="sticky top-0 left-0 w-full z-50 bg-paper/95 backdrop-blur-sm border-b border-hairline">
       <div className="h-16 max-w-[1080px] mx-auto px-4 md:px-6 flex items-center justify-between gap-4">
-        {/* Logo */}
+        {/* Logo thương hiệu */}
         <div
           onClick={() => setView('home')}
           className="cursor-pointer flex items-center gap-2.5"
@@ -43,7 +71,7 @@ export function Header({
           <Logo size="md" />
         </div>
 
-        {/* Navigation */}
+        {/* Thanh liên kết điều hướng desktop */}
         <nav className="hidden md:flex items-center gap-7">
           {navLinks.map((item) => {
             const isActive = currentView === item.view
@@ -63,51 +91,8 @@ export function Header({
           })}
         </nav>
 
-        {/* User / Actions */}
-        <div className="flex items-center gap-3">
-          {user ? (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setView('profile')}
-                className="flex items-center gap-2 p-1 rounded hover:bg-paper-deep transition cursor-pointer"
-                title="Hồ sơ cá nhân"
-              >
-                {/* Avatar tròn chữ cái đầu - không dùng ảnh người thật */}
-                <div className="w-8 h-8 rounded-full bg-paper-deep border border-hairline text-ink font-bold text-xs flex items-center justify-center select-none ring-1 ring-hairline hover:ring-terracotta">
-                  {getInitials(user.fullName)}
-                </div>
-                <span className="text-xs font-semibold text-ink hidden sm:inline max-w-[120px] truncate">
-                  {user.fullName}
-                </span>
-              </button>
-              {onLogout && (
-                <button
-                  type="button"
-                  onClick={onLogout}
-                  title="Đăng xuất"
-                  className="p-1.5 text-xs text-ink-soft hover:text-terracotta transition cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-base">logout</span>
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setView('login')}
-                className="inline-flex items-center justify-center h-9 px-3.5 rounded border border-hairline bg-transparent text-xs font-semibold text-ink hover:border-ink transition cursor-pointer"
-              >
-                Đăng nhập
-              </button>
-              <button
-                onClick={() => setView('register')}
-                className="cta-terracotta inline-flex items-center justify-center h-9 px-3.5 rounded text-xs font-semibold text-paper shadow-none hover:bg-terracotta-hover transition cursor-pointer"
-              >
-                Đăng ký
-              </button>
-            </div>
-          )}
-        </div>
+        {/* Menu tài khoản / Hành động đăng nhập */}
+        <AccountMenu user={user} subtitle={user?.phone} items={accountItems} />
       </div>
     </header>
   )

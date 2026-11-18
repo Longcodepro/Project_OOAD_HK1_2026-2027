@@ -1,6 +1,27 @@
+/**
+ * @file ProfilePage.tsx
+ * @description Màn hình Quản trị Tài khoản Khách hàng & Hành trình của tôi (Customer Profile & Bookings History).
+ *
+ * TỔNG QUAN CHỨC NĂNG:
+ * 1. Điều hướng Tab trực quan (5 phân hệ):
+ *    - 'Tổng quan': Thống kê tổng số vé, vé chờ thanh toán, vé chưa đi, vé hoàn thành, vé đã hủy.
+ *    - 'Lịch sử chuyến': Danh sách vé đã mua, xem mã QR, tải vé PDF, dự toán phí và thực hiện hủy vé online.
+ *    - 'Đơn hàng': Quản lý danh sách các đơn hàng, chi tiết các vé và thanh toán trong đơn, hủy đơn chờ thanh toán.
+ *    - 'Thông tin cá nhân': Xem và cập nhật họ tên, ngày sinh, địa chỉ; đổi số điện thoại 2 bước qua mã OTP.
+ *    - 'Đổi mật khẩu': Đổi mật khẩu tài khoản trực tiếp với backend (tự động cập nhật token mới).
+ * 2. Cơ chế chuyển Tab tức thời từ Header (`PROFILE_TAB_EVENT`):
+ *    - Khi người dùng đang ở bất kỳ đâu (hoặc ngay tại trang Profile) mà nhấp chọn một mục trong AccountMenu
+ *      (ví dụ: "Đổi mật khẩu" hoặc "Hành trình của tôi"), sự kiện `vexe:profile-tab` sẽ kích hoạt
+ *      chuyển đúng tab mà không cần tải lại toàn bộ trang.
+ * 3. Hủy vé trực tuyến có hoàn tiền (Online Ticket Cancellation):
+ *    - Sử dụng `CancelTicketModal` để hiển thị trước báo giá phí hủy vé (mặc định 15% trước 24h).
+ *    - Khi xác nhận, gọi `ticketsApi.cancel(ticketId)`: backend tự động hoàn tiền và cập nhật trạng thái `DA_HUY`.
+ */
+
 import { useCallback, useEffect, useState } from 'react'
 import type { Order, Ticket, TicketRefund, View, User } from '../types'
 import { authApi, ordersApi, ticketsApi, apiErrorMessage, formatVnd } from '../services/api'
+import { PROFILE_TAB_EVENT, takeProfileTab } from '../services/session'
 import { Header } from '../components/layout/Header'
 import { Button } from '../components/common/Button'
 import { Modal } from '../components/common/Modal'
@@ -44,7 +65,12 @@ const inputCls =
   'w-full rounded border border-hairline bg-paper p-2.5 text-xs text-ink focus:bg-white focus:outline-none focus:border-terracotta font-medium'
 
 
-/** Hộp thoại đổi số điện thoại: bước 1 nhập số mới, bước 2 nhập OTP + mật khẩu. */
+/**
+ * Hộp thoại Đổi số điện thoại 2 bước:
+ * - Bước 1: Khách hàng nhập số điện thoại mới, gọi `authApi.requestPhoneChangeOtp` để gửi OTP xác thực.
+ * - Bước 2: Khách hàng nhập mã OTP 6 số và mật khẩu tài khoản hiện tại để xác nhận.
+ * - Sau khi thành công: Cập nhật token và user mới, tự động reload lại trang sau 1.5 giây.
+ */
 function PhoneChangeModal({ onClose, onUserUpdate }: { onClose: () => void; onUserUpdate?: (u: User) => void }) {
   const [step, setStep] = useState<1 | 2>(1)
   const [newPhone, setNewPhone] = useState('')
@@ -199,17 +225,30 @@ function ProfileInfoTab({ user, onUserUpdate }: { user: User | null; onUserUpdat
   const [phoneOpen, setPhoneOpen] = useState(false)
   const today = toYmd(new Date())
 
+  // Đồng bộ thông tin khi prop user thay đổi hoặc phục hồi từ phiên đăng nhập
+  useEffect(() => {
+    if (user) {
+      setFullName(user.fullName ?? '')
+      setBirthDate(user.birthDate ?? '')
+      setAddress(user.address ?? '')
+    }
+  }, [user])
+
   const save = async (e: React.FormEvent) => {
     e.preventDefault()
     setOk('')
     const name = fullName.trim()
     if (!name) return setError('Vui lòng nhập họ và tên')
     if (birthDate && birthDate > today) return setError('Ngày sinh không được sau hôm nay')
-    if (address.length > 255) return setError('Địa chỉ tối đa 255 ký tự')
+    if (address.trim().length > 255) return setError('Địa chỉ tối đa 255 ký tự')
     setSaving(true)
     setError('')
     try {
-      const updated = await authApi.updateProfile('customer', { fullName: name, birthDate, address })
+      const updated = await authApi.updateProfile('customer', {
+        fullName: name,
+        birthDate: birthDate || null,
+        address: address.trim() || null,
+      })
       setOk('Đã lưu thông tin cá nhân thành công.')
       if (onUserUpdate) onUserUpdate(updated)
     } catch (err) {
@@ -288,7 +327,7 @@ function OrderDetailModal({
   orderId: number
   startConfirm: boolean
   onClose: () => void
-  onChanged: () => void
+  onChanged: (successMsg?: string) => void
   onViewTicket: (t: Ticket) => void
 }) {
   const [order, setOrder] = useState<Order | null>(null)
@@ -312,7 +351,7 @@ function OrderDetailModal({
     setError('')
     try {
       await ordersApi.cancelPending(orderId)
-      onChanged()
+      onChanged(`Đã hủy đơn hàng #${orderId} thành công. Toàn bộ ghế đang giữ đã được nhả lại hệ thống.`)
       onClose()
     } catch (err) {
       setError(apiErrorMessage(err, 'Không thể hủy đơn'))
@@ -322,24 +361,37 @@ function OrderDetailModal({
 
   const canCancel = order?.status === 'CHO_THANH_TOAN'
 
-  if (confirming && canCancel) {
+  if (confirming) {
     return (
       <Modal
-        title={`Hủy đơn #${orderId}`}
+        title={`Hủy đơn hàng #${orderId}`}
         onClose={onClose}
         footer={
           <>
             <button type="button" className="btn btn-ghost cursor-pointer" onClick={() => setConfirming(false)} disabled={busy}>
-              Giữ đơn
+              Quay lại
             </button>
-            <button type="button" className="btn btn-primary cursor-pointer" onClick={cancelOrder} disabled={busy}>
-              {busy ? 'Đang hủy...' : 'Xác nhận hủy đơn'}
-            </button>
+            {canCancel && (
+              <button type="button" className="btn btn-primary cursor-pointer" onClick={cancelOrder} disabled={busy}>
+                {busy ? 'Đang hủy...' : 'Xác nhận hủy đơn'}
+              </button>
+            )}
           </>
         }
       >
-        <div className="space-y-3">
-          <p className="text-sm text-ink">Hủy đơn chưa thanh toán sẽ nhả các ghế đang giữ cho người khác. Thao tác này không hoàn tác được.</p>
+        <div className="space-y-3 text-xs">
+          {!order && !error && <p className="text-ink-soft">Đang kiểm tra thông tin đơn hàng...</p>}
+          {order && canCancel && (
+            <p className="text-sm text-ink leading-relaxed">
+              Bạn có chắc muốn hủy đơn hàng <b className="text-ink">#{orderId}</b> ({order.tickets.length} vé · {formatVnd(order.total)})?
+              Hủy đơn chưa thanh toán sẽ lập tức nhả các ghế đang giữ cho hành khách khác. Thao tác này không thể hoàn tác.
+            </p>
+          )}
+          {order && !canCancel && (
+            <div className="p-3 rounded border border-terracotta/30 bg-terracotta/10 text-terracotta font-semibold">
+              Đơn hàng này hiện ở trạng thái <b>{ORDER_STATUS[order.status]?.label ?? order.status}</b> nên không thể hủy.
+            </div>
+          )}
           {error && <FormNote kind="error">{error}</FormNote>}
         </div>
       </Modal>
@@ -433,7 +485,19 @@ export function ProfilePage({
   onLogout,
   onUserUpdate,
 }: ProfilePageProps) {
-  const [tab, setTab] = useState('Lịch sử chuyến')
+  const [tab, setTab] = useState(() => {
+    const wanted = takeProfileTab() // menu tài khoản có thể chọn sẵn tab
+    return wanted && TABS.includes(wanted) ? wanted : 'Lịch sử chuyến'
+  })
+  useEffect(() => {
+    // Đang ở trang Hồ sơ mà chọn mục khác trong menu tài khoản: đổi tab ngay
+    const onRequest = () => {
+      const wanted = takeProfileTab()
+      if (wanted && TABS.includes(wanted)) setTab(wanted)
+    }
+    window.addEventListener(PROFILE_TAB_EVENT, onRequest)
+    return () => window.removeEventListener(PROFILE_TAB_EVENT, onRequest)
+  }, [])
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -493,6 +557,11 @@ export function ProfilePage({
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault()
     setPwStatus('')
+    setPwError('')
+    if (!currentPass) {
+      setPwError('Vui lòng nhập mật khẩu hiện tại')
+      return
+    }
     if (newPass.length < 8 || newPass.length > 72) {
       setPwError('Mật khẩu mới phải từ 8 đến 72 ký tự')
       return
@@ -501,11 +570,14 @@ export function ProfilePage({
       setPwError('Xác nhận mật khẩu mới không khớp')
       return
     }
+    if (newPass === currentPass) {
+      setPwError('Mật khẩu mới không được trùng với mật khẩu hiện tại')
+      return
+    }
     setPwLoading(true)
-    setPwError('')
     try {
       await authApi.changePassword('customer', currentPass, newPass)
-      setPwStatus('Đổi mật khẩu thành công.')
+      setPwStatus('Đổi mật khẩu thành công. Mật khẩu mới đã được cập nhật.')
       setCurrentPass('')
       setNewPass('')
       setConfirmPass('')
@@ -517,7 +589,13 @@ export function ProfilePage({
   }
 
   const handleCancelled = (refund: TicketRefund) => {
-    setCancelMessage(`Đã hủy vé ${cancelTicket?.ticketCode}. ${refundText(refund)}`)
+    if (cancelTicket) {
+      const cid = cancelTicket.id
+      setTickets((prev) =>
+        prev.map((t) => (t.id === cid ? { ...t, status: 'DA_HUY', refund } : t))
+      )
+    }
+    setCancelMessage(`Đã hủy vé ${cancelTicket?.ticketCode} thành công. ${refundText(refund)}`)
     setCancelTicket(null)
     loadTickets()
   }
@@ -581,8 +659,15 @@ export function ProfilePage({
           <h1 className="mt-2 text-3xl font-extrabold text-ink">{tab}</h1>
 
           {cancelMessage && (
-            <div className="mt-4 rounded border border-celadon bg-celadon/10 p-3.5 text-xs text-celadon font-semibold">
-              ✓ {cancelMessage}
+            <div className="mt-4 flex items-center justify-between gap-3 rounded border border-celadon bg-celadon/10 p-3.5 text-xs text-celadon font-semibold">
+              <span>✓ {cancelMessage}</span>
+              <button
+                type="button"
+                onClick={() => setCancelMessage('')}
+                className="cursor-pointer text-celadon hover:text-ink font-bold text-sm leading-none shrink-0"
+              >
+                ✕
+              </button>
             </div>
           )}
 
@@ -780,7 +865,11 @@ export function ProfilePage({
               orderId={openOrder.id}
               startConfirm={openOrder.confirm}
               onClose={() => setOpenOrder(null)}
-              onChanged={loadOrders}
+              onChanged={(msg) => {
+                loadOrders()
+                loadTickets()
+                if (msg) setCancelMessage(msg)
+              }}
               onViewTicket={(t) => {
                 onViewTicket(t)
                 setView('success')

@@ -45,6 +45,17 @@ class LoginResult:
 
 
 class AuthService:
+    """Ca sử dụng Quản lý Định danh & Xác thực (UC08 Đăng ký, UC09 Đăng nhập/Đăng xuất, UC10 Khôi phục mật khẩu, UC11 Đổi SĐT/Hồ sơ, UC12 Đổi mật khẩu).
+
+    Cơ chế an ninh & chính sách nghiệp vụ:
+    - Quản lý OTP (One-Time Password): Mã 6 chữ số ngẫu nhiên, hạn dùng 120s, chống spam gửi lại trong 60s, tối đa 5 lần thử sai.
+    - Chống Brute-force đăng nhập: Khóa tài khoản tạm thời 15 phút nếu nhập sai mật khẩu 5 lần liên tiếp.
+    - Thu hồi phiên tức thì (Instant Session Revocation): Quản lý phiên bằng `token_version`. Khi đổi mật khẩu,
+      đổi SĐT hoặc khóa tài khoản, `token_version` tăng lên khiến mọi JWT token cũ bị vô hiệu ngay lập tức.
+    - Bảo mật thông tin số điện thoại (Anti-Enumeration): API yêu cầu OTP quên mật khẩu luôn trả về thành công
+      kể cả khi số điện thoại không tồn tại để ngăn kẻ xấu dò quét danh sách khách hàng.
+    """
+
     def __init__(
         self,
         accounts: AccountRepository,
@@ -65,6 +76,9 @@ class AuthService:
 
     # ---- UC20: OTP dùng chung ----
     def _issue_otp(self, phone: str, purpose: OtpPurpose) -> str:
+        """Sinh mã OTP 6 chữ số và gửi qua tin nhắn SMS (Mock).
+        Kiểm tra chống spam: Không cho phép gửi lại nếu mã cũ chưa hết hạn và mới gửi dưới 60 giây.
+        """
         now = utcnow()
         last = self.otps.latest(phone, purpose)
         # chống spam SMS: OTP chưa dùng còn "mới" thì chưa cho gửi lại
@@ -85,6 +99,10 @@ class AuthService:
         return code
 
     def _consume_otp(self, phone: str, purpose: OtpPurpose, code: str) -> None:
+        """Xác thực và tiêu thụ mã OTP.
+        Kiểm tra: Tồn tại, chưa sử dụng, chưa quá hạn 120s, số lần thử sai < 5.
+        Nếu sai mã: Tăng wrong_count lên 1. Nếu đúng: Đánh dấu used = True.
+        """
         otp = self.otps.latest(phone, purpose)
         if (
             otp is None
@@ -102,11 +120,13 @@ class AuthService:
 
     # ---- UC08: đăng ký ----
     def request_register_otp(self, phone: str) -> str:
+        """Yêu cầu mã OTP đăng ký tài khoản khách hàng mới."""
         if self.accounts.get_by_phone(phone):
             raise PhoneAlreadyRegistered
         return self._issue_otp(phone, OtpPurpose.REGISTER)
 
     def register(self, full_name: str, phone: str, password: str, otp_code: str) -> Account:
+        """Đăng ký tài khoản: kiểm tra độ mạnh mật khẩu, kiểm tra trùng SĐT, xác thực OTP và lưu tài khoản."""
         if not is_strong_password(password):
             raise WeakPassword
         if self.accounts.get_by_phone(phone):
@@ -118,6 +138,16 @@ class AuthService:
 
     # ---- UC09: đăng nhập / đăng xuất ----
     def login(self, phone: str, password: str) -> LoginResult:
+        """Đăng nhập hệ thống bằng SĐT và mật khẩu.
+
+        Quy trình kiểm tra:
+        1. Kiểm tra tài khoản tồn tại (nếu không: ném InvalidCredentials 401).
+        2. Kiểm tra trạng thái tài khoản: Nếu bị Admin khóa (LOCKED), ném AccountDisabled 403.
+        3. Kiểm tra khóa tạm thời: Nếu đang trong 15 phút khóa sau 5 lần sai, ném LoginTemporarilyLocked 423.
+        4. Kiểm tra mật khẩu:
+           - Nếu sai: Tăng số lần sai failed_login_count. Nếu đủ 5 lần, khóa trong 15 phút. Ném InvalidCredentials.
+           - Nếu đúng: Reset failed_login_count về 0, gỡ locked_until, ghi nhật ký, cấp JWT token mới.
+        """
         account = self.accounts.get_by_phone(phone)
         if account is None:
             raise InvalidCredentials

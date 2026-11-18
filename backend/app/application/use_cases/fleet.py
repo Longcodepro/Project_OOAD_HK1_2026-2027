@@ -6,7 +6,15 @@ from app.domain.rules.seat_layout import generate_layout
 
 
 class FleetService:
-    """UC14: quản lý xe và sơ đồ ghế (Admin)."""
+    """Ca sử dụng UC14: Quản trị Đội xe & Sơ đồ ghế (Admin).
+
+    Quy tắc nghiệp vụ:
+    - Tạo xe luôn đi kèm sơ đồ ghế (Seat Layout): Một chiếc xe không thể tồn tại nếu không có ghế.
+    - Không thể chuyển xe sang trạng thái NGỪNG HOẠT ĐỘNG (INACTIVE) nếu xe đang có chuyến sắp chạy
+      (bắt buộc phải đổi xe hoặc hủy chuyến trước).
+    - Không thể chỉnh sửa hoặc thay thế sơ đồ ghế nếu xe đã từng được gán cho bất kỳ chuyến xe nào
+      (nhằm tránh làm sai lệch dữ liệu vé và sơ đồ ghế đã bán cho hành khách).
+    """
 
     def __init__(self, repo: FleetRepository):
         self.repo = repo

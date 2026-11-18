@@ -1,3 +1,15 @@
+/**
+ * @file Logo.tsx
+ * @description Biểu trưng Nhận diện Thương hiệu VéXe Việt (Brand Logo Component).
+ *
+ * ĐẶC ĐIỂM THIẾT KẾ:
+ * 1. Biểu tượng Nón lá cách điệu (`NonLaHat`):
+ *    - Tích hợp hiệu ứng hoạt họa tuần hoàn lượn sóng (`periodic={true}`, chu kỳ 8.5s).
+ * 2. Kiểu chữ Typography mang đậm chất Việt:
+ *    - Chữ "VéXe" tông màu mực in (`ink`), chữ "Việt" tông màu đất nung (`terracotta`).
+ * 3. Hỗ trợ 3 kích cỡ linh hoạt: 'sm' (nhỏ), 'md' (vừa - tiêu chuẩn Header), 'lg' (lớn).
+ */
+
 import { NonLaHat } from '../dongson/NonLaHat'
 
 interface LogoProps {

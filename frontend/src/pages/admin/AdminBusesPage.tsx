@@ -1,3 +1,21 @@
+/**
+ * @file AdminBusesPage.tsx
+ * @description Màn hình Quản Trị Đội Xe & Thiết Kế Sơ Đồ Ghế Xe Khách (Fleet & Seat Layout Management).
+ *
+ * TÍNH NĂNG CHÍNH:
+ * 1. Quản lý Đội xe khách:
+ *    - Liệt kê toàn bộ phương tiện: Biển số xe, nhãn hiệu, dòng xe, số ghế, năm sản xuất và trạng thái hoạt động.
+ *    - Thêm xe mới vào đội (`adminVehiclesApi.create`).
+ *    - Cập nhật thông tin thông số xe (`adminVehiclesApi.update`).
+ *    - Kích hoạt hoặc ngừng sử dụng xe (`adminVehiclesApi.activate` / `deactivate`).
+ * 2. Cấu hình Sơ đồ Ghế (Interactive Layout Generator):
+ *    - Thiết lập số tầng (1 hoặc 2 tầng), số hàng ghế (1 - 30 hàng), và số ghế trên mỗi hàng (1 - 6 ghế).
+ *    - Tạo lại toàn bộ ma trận ghế ngồi (`adminVehiclesApi.replaceLayout`).
+ *    - Hiển thị bản vẽ sơ đồ ghế trực quan theo từng tầng.
+ * 3. Quản lý Loại phương tiện:
+ *    - Định nghĩa thêm các loại phương tiện mới: Xe Limousine VIP, Giường nằm cao cấp, Ghế ngồi tiêu chuẩn...
+ */
+
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import {
   adminVehicleTypesApi,

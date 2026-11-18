@@ -43,7 +43,17 @@ class TripCancelResult:
 
 
 class RefundService:
-    """UC05/UC06 (hủy vé), UC23 (hoàn tiền) và phần hoàn 100% khi nhà xe hủy chuyến (UC13)."""
+    """Ca sử dụng UC05/UC06 (Hủy vé), UC23 (Hoàn tiền) và UC13 (Nhà xe hủy chuyến hoàn 100%).
+
+    Chính sách hoàn hủy vé:
+    - Hạn chót hủy vé: Ít nhất 24 giờ trước giờ xe khởi hành (HAN_HUY_VE_GIO = 24).
+    - Tỷ lệ khấu trừ phí: 15% trên số tiền thực trả của vé (PHI_HUY_PHAN_TRAM = 15).
+    - Dưới 24 giờ: Hệ thống từ chối hủy vé để đảm bảo doanh thu cho nhà xe.
+    - Vé thanh toán tiền mặt: Bắt buộc hủy tại quầy (UC06), không được hủy online.
+    - Khi nhà xe chủ động hủy chuyến: Toàn bộ hành khách được hoàn trả 100% (phí = 0).
+    - Quản lý thất bại hoàn tiền: Nếu cổng thanh toán từ chối, vé VẪN được hủy và chuyển lệnh hoàn
+      sang trạng thái CHO_XU_LY_THU_CONG để Admin đối soát và hoàn thủ công (UC18).
+    """
 
     def __init__(
         self,
@@ -76,6 +86,17 @@ class RefundService:
         )
 
     def quote(self, ticket_id: int, actor: Account) -> CancelQuote:
+        """Kiểm tra điều kiện và báo giá phí hủy vé trước khi xác nhận.
+
+        Điều kiện hủy vé hợp lệ:
+        1. Vé phải ở trạng thái CHUA_DI (UNUSED) và thuộc về tài khoản yêu cầu.
+        2. Thời gian còn lại tính từ hiện tại đến giờ khởi hành >= HAN_HUY_VE_GIO (24 giờ).
+        3. Vé thanh toán bằng TIEN_MAT chỉ được hủy bởi nhân viên tại quầy.
+
+        Công thức:
+        - fee = cancellation_fee(amount, 15%)
+        - refund_amount = amount - fee
+        """
         rec = self._record(ticket_id, actor)
         t = rec.ticket
         limit = self.settings.get_int("HAN_HUY_VE_GIO", 24)
@@ -101,6 +122,17 @@ class RefundService:
 
     # ---- UC05 / UC06 ----
     def cancel_ticket(self, ticket_id: int, actor: Account, simulate: str | None = None) -> Refund:
+        """Thực hiện hủy vé và tạo lệnh hoàn tiền.
+
+        Các bước xử lý:
+        1. Gọi `quote` để kiểm tra toàn bộ điều kiện hủy. Nếu không đủ điều kiện, ném lỗi BusinessRule.
+        2. Tạo lệnh hoàn tiền (Refund) và gửi yêu cầu hoàn tiền qua cổng thanh toán / tiền mặt.
+        3. Thu hồi vé và giải phóng ghế (`_release_ticket`):
+           - Chuyển trạng thái vé sang CANCELLED (DA_HUY).
+           - Chuyển trạng thái ghế trên chuyến từ SOLD sang FREE (TRONG) để người khác có thể mua lại.
+           - Nếu tất cả vé trong đơn hàng đều đã hủy, chuyển trạng thái đơn hàng sang CANCELLED.
+        4. Gửi SMS thông báo số tiền hoàn và phí hủy đến số điện thoại hành khách.
+        """
         q = self.quote(ticket_id, actor)
         if not q.can_cancel:
             raise BusinessRule(q.reason)
@@ -167,6 +199,20 @@ class RefundService:
     def cancel_trip(
         self, trip_id: int, reason: str, simulate: str | None = None
     ) -> TripCancelResult:
+        """Admin hủy toàn bộ chuyến xe (UC13) do sự cố kỹ thuật hoặc thiên tai.
+
+        Quy trình xử lý hoàn tiền 100%:
+        1. Kiểm tra chuyến xe tồn tại, chưa bị hủy trước đó và chưa khởi hành.
+        2. Khóa chuyến: Đổi trạng thái sang CANCELLED, lưu lý do hủy, ngừng bán ngay lập tức.
+        3. Quét tất cả vé đã thanh toán (paid_tickets_of_trip):
+           - Hoàn 100% tiền vé (RefundReason.OPERATOR, phí = 0).
+           - Giải phóng ghế và hủy vé.
+           - Gửi tin nhắn SMS xin lỗi và báo hoàn 100% cho từng hành khách.
+        4. Quét tất cả đơn hàng đang chờ thanh toán (pending_orders_of_trip):
+           - Hủy các giao dịch thanh toán đang xử lý.
+           - Hủy vé tạm và nhả ghế giữ chỗ ngay lập tức.
+           - Đóng đơn hàng với trạng thái CANCELLED.
+        """
         trip = self.trips.get_trip(trip_id)
         if trip is None:
             raise NotFound("Không tìm thấy chuyến")
@@ -211,6 +257,7 @@ class RefundService:
 
     # ---- UC18 → UC23: xử lý lại lệnh hoàn bị từ chối ----
     def retry(self, refund_id: int, admin: Account, simulate: str | None = None) -> Refund:
+        """Admin xử lý lại lệnh hoàn tiền đang bị kẹt ở trạng thái CHO_XU_LY_THU_CONG (UC18)."""
         r = self.refunds.get(refund_id)
         if r is None:
             raise NotFound("Không tìm thấy lệnh hoàn")

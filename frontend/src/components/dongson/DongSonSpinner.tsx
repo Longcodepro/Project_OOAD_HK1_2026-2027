@@ -1,9 +1,25 @@
+/**
+ * @file DongSonSpinner.tsx
+ * @description Biểu tượng Tải Trang Hoạt Họa Trống Đồng (Dong Son Loading Spinner).
+ *
+ * CÁC VÀNH HỌA TIẾT XOAY ĐỒNG TÂM:
+ * 1. Vành răng cưa ngoài cùng (`s-saw`).
+ * 2. Vành chấm tiếp tuyến ở giữa (`s-tan`).
+ * 3. Ngôi sao trung tâm (`s-star`).
+ */
+
 interface DongSonSpinnerProps {
+  /** Kích thước đường kính spinner (px hoặc chuỗi CSS, mặc định 48px) */
   size?: number | string
+  /** Lớp CSS tùy biến */
   className?: string
+  /** Nhãn chữ hiển thị bên dưới spinner */
   label?: string
 }
 
+/**
+ * Spinner hiển thị trạng thái chờ tải dữ liệu mang phong cách họa tiết trống đồng Đông Sơn.
+ */
 export function DongSonSpinner({
   size = 48,
   className = '',

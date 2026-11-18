@@ -72,6 +72,25 @@ def test_list_filter_and_detail(client, make_user):
     )
 
 
+def test_list_pagination_total(client, make_user):
+    """Phân trang cắt ở SQL: items chỉ là trang hiện tại, total là tổng thật theo bộ lọc, id giảm dần."""
+    admin, trip, seats = world(client, make_user)
+    _, cust = make_user(Role.CUSTOMER)
+    _, clerk = make_user(Role.TICKET_CLERK)
+    o1 = online(client, cust, trip, seats[:1])
+    o2 = at_counter(client, clerk, trip, seats[1:2])
+    o3 = online(client, cust, trip, seats[2:3])
+    page1 = client.get("/admin/orders?limit=2&offset=0", headers=admin)
+    assert [r["id"] for r in page1.json()["items"]] == [o3, o2]
+    assert page1.json()["total"] == 3 and page1.headers["x-total-count"] == "3"
+    page2 = client.get("/admin/orders?limit=2&offset=2", headers=admin).json()
+    assert [r["id"] for r in page2["items"]] == [o1] and page2["total"] == 3
+    counter = client.get("/admin/orders?channel=TAI_QUAY&limit=1", headers=admin).json()
+    assert [r["id"] for r in counter["items"]] == [o2] and counter["total"] == 1
+    beyond = client.get("/admin/orders?limit=2&offset=10", headers=admin).json()
+    assert beyond["items"] == [] and beyond["total"] == 3
+
+
 def test_manual_refund_queue_retry_flow(client, make_user):
     admin, trip, seats = world(client, make_user)
     _, cust = make_user(Role.CUSTOMER)

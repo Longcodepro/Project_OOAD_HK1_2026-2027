@@ -1,8 +1,26 @@
+/**
+ * @file AdminLayout.tsx
+ * @description Khung Bố Cục Chung cho Toàn Bộ Cổng Quản Trị & Nhân Viên (Admin Shell Layout).
+ *
+ * ĐẶC TÍNH KIẾN TRÚC:
+ * 1. Bố cục 2 cột cố định (`h-screen overflow-hidden`):
+ *    - Sidebar cố định 240px bên trái (`AdminSidebar`).
+ *    - Khu vực nội dung bên phải độc lập cuộn dọc (`overflow-y-auto`).
+ * 2. Giám sát tự động hàng đợi hoàn tiền (`pendingRefunds`):
+ *    - Kiểm tra danh sách lệnh hoàn tiền đang chờ thủ công (`adminRefundsApi.list()`).
+ *    - Tự động thăm dò định kỳ mỗi 30 giây và làm mới khi chuyển màn hình.
+ *    - Hiển thị nút cảnh báo màu đồng (bronze) trực tiếp trên Top Header nếu có lệnh cần xử lý,
+ *      nhấp chuột mở ngay màn hình `admin-tickets`.
+ * 3. Họa tiết Mỹ thuật Trống đồng Đông Sơn mờ 6% ở góc trên bên phải.
+ * 4. Header tích hợp Menu Tài khoản: chuyển nhanh về "Trang khách" và nút "Đăng xuất".
+ */
+
 import { useEffect, useState } from 'react'
 import type { View, User } from '../../types'
 import { adminRefundsApi } from '../../services/api'
 import { AdminSidebar } from './AdminSidebar'
 import { DongSonDrum } from '../dongson/DongSonDrum'
+import { AccountMenu } from '../common/AccountMenu'
 
 export interface AdminLayoutProps {
   currentView: View
@@ -23,14 +41,14 @@ export function AdminLayout({
 
   // Làm mới khi đổi trang (vừa xử lý xong ở trang vé) và định kỳ 30 giây
   useEffect(() => {
-    if (user.role !== 'admin') return // nhân viên quầy không có quyền xem lệnh hoàn tiền
+    if (user.role !== 'admin') return // Nhân viên quầy không có quyền xem lệnh hoàn tiền
     let alive = true
     const load = () =>
       adminRefundsApi
         .list()
         .then((r) => alive && setPendingRefunds(r.length))
         .catch(() => {
-          // lỗi tạm thời: giữ số cũ, lần sau thử lại
+          // Lỗi tạm thời: giữ số cũ, lần sau thử lại
         })
     load()
     const timer = setInterval(load, 30000)
@@ -41,14 +59,14 @@ export function AdminLayout({
   }, [currentView])
 
   return (
-    <div className="flex min-h-screen bg-paper text-ink relative overflow-hidden">
+    // h-screen + cột nội dung tự cuộn: sidebar và header luôn đứng yên, chỉ <main> cuộn
+    <div className="flex h-screen bg-paper text-ink relative overflow-hidden">
       {/* Sidebar 240px cố định */}
       <AdminSidebar
         currentView={currentView}
         setView={setView}
         user={user}
         pendingRefunds={pendingRefunds}
-        onLogout={onLogout}
       />
 
       {/* Main Content Area */}
@@ -80,10 +98,14 @@ export function AdminLayout({
               </button>
             )}
 
-            <div className="flex items-center gap-2 rounded border border-hairline bg-paper-deep px-3 py-1 text-ink-soft">
-              <span>Đang đăng nhập:</span>
-              <span className="font-bold text-ink">{user.fullName}</span>
-            </div>
+            <AccountMenu
+              user={user}
+              subtitle={user.role === 'admin' ? 'Quản trị viên' : 'Nhân viên bán vé'}
+              items={[
+                { label: 'Về trang khách', icon: 'arrow_back', onSelect: () => setView('home') },
+                { label: 'Đăng xuất', icon: 'logout', onSelect: onLogout, danger: true, separatorBefore: true },
+              ]}
+            />
           </div>
         </header>
 

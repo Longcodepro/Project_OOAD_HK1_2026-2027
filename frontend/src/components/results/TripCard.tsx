@@ -1,7 +1,20 @@
+/**
+ * @file TripCard.tsx
+ * @description Thẻ hiển thị tóm tắt thông tin một chuyến xe trong danh sách kết quả tìm kiếm (Trip Search Result Card).
+ *
+ * THÔNG TIN HIỂN THỊ:
+ * 1. Khung giờ & Thời lượng: Giờ xuất bến, giờ đến dự kiến và tổng thời gian di chuyển (ví dụ: "6 giờ 30 phút").
+ * 2. Phương tiện vận chuyển: Dòng xe (Limousine, Giường nằm...), biển số xe kiểm soát.
+ * 3. Giá vé & Tình trạng ghế: Giá vé niêm yết (VNĐ), số lượng ghế còn trống trên tổng số ghế xe.
+ * 4. Nút hành động: "Chọn ghế" (chuyển sang SeatsPage) hoặc "Hết chỗ" (nếu số ghế trống <= 0).
+ */
+
 import type { Trip } from '../../types'
 
 export interface TripCardProps {
+  /** Dữ liệu chuyến xe */
   trip: Trip
+  /** Callback kích hoạt khi bấm nút "Chọn ghế" */
   onSelectTrip: (trip: Trip) => void
 }
 

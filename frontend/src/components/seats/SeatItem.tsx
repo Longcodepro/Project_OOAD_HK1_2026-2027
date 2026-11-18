@@ -1,9 +1,24 @@
+/**
+ * @file SeatItem.tsx
+ * @description Thành phần biểu diễn một Vị trí Ghế ngồi / Giường nằm trên Sơ đồ xe (Seat Grid Cell).
+ *
+ * TRẠNG THÁI HIỂN THỊ:
+ * 1. Ghế trống (Available): Nền giấy sáng, viền hairline, hiệu ứng hover viền màu đất nung (terracotta).
+ * 2. Ghế đang chọn (Active): Nền màu đất nung nổi bật, chữ trắng, kèm chấm tròn xanh ngọc celadon ở góc trên.
+ * 3. Ghế đang giữ / Đã bán (Unavailable/Held): Nền xám mờ, con trỏ `not-allowed`, tooltip giải thích rõ
+ *    "Ghế đang được giữ" (held) hay "Ghế đã có người đặt" (booked).
+ */
+
 export interface SeatItemProps {
+  /** Nhãn định danh ghế (ví dụ: "A01", "B04") */
   label: string
+  /** Ghế đang được hành khách chọn */
   active?: boolean
+  /** Ghế không khả dụng (đã bán hoặc đang bị người khác giữ) */
   unavailable?: boolean
-  /** Ghế đang được người khác giữ tạm (khác với đã bán). */
+  /** Ghế đang được giữ tạm thời bởi phiên khác */
   held?: boolean
+  /** Callback khi nhấp chọn ghế */
   onClick?: () => void
 }
 

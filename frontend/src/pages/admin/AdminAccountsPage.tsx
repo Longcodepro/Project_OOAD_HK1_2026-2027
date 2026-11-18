@@ -1,3 +1,23 @@
+/**
+ * @file AdminAccountsPage.tsx
+ * @description Màn hình Quản Trị Tài Khoản Người Dùng & Phân Quyền Nhân Viên (User Accounts & IAM Management).
+ *
+ * TÍNH NĂNG CHÍNH:
+ * 1. Quản lý Danh sách Tài khoản:
+ *    - Liệt kê toàn bộ tài khoản trong hệ thống: Họ tên, Số điện thoại, Vai trò (Admin / Clerk / Customer),
+ *      trạng thái Hoạt động / Đã khóa.
+ * 2. Tạo Tài khoản Nhân viên mới (`adminUsersApi.createStaff`):
+ *    - Cấp tài khoản nhân viên bán vé (clerk) hoặc quản trị viên (admin).
+ *    - Hệ thống sinh mật khẩu tạm thời ngẫu nhiên và chỉ hiển thị một lần duy nhất.
+ * 3. Nhật ký hoạt động & Xem chi tiết (`adminUsersApi.getDetail`):
+ *    - Thống kê số lượng vé chưa đi của tài khoản.
+ *    - Xem dòng thời gian nhật ký thao tác (Audit Activity Log): Đổi vai trò, sửa hồ sơ, đặt lại mật khẩu, khóa/mở khóa.
+ * 4. Đặt lại Mật khẩu & Khóa tài khoản:
+ *    - Đặt lại mật khẩu (`adminUsersApi.resetPassword`): Cấp mật khẩu tạm mới cho người dùng.
+ *    - Khóa tài khoản (`adminUsersApi.lock`): Có cảnh báo nếu khách hàng còn vé hợp lệ chưa khởi hành.
+ *    - Mở khóa tài khoản (`adminUsersApi.unlock`).
+ */
+
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { adminUsersApi, apiErrorMessage, type AdminAccount, type AdminAccountDetail } from '../../services/api'
 import { Modal } from '../../components/common/Modal'

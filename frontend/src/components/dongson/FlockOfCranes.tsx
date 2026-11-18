@@ -1,3 +1,12 @@
+/**
+ * @file FlockOfCranes.tsx
+ * @description Thành phần Băng Chuyền Đàn Chim Lạc Bay Ngang (Animated Flock of Lac Cranes Banner).
+ *
+ * Ý NGHĨA BIỂU TƯỢNG & ĐẶC TÍNH:
+ * - 5 chú chim Lạc bay với kích thước, độ trễ (`delay`) và chu kỳ bay (`dur`) khác nhau, tạo chiều sâu phối cảnh.
+ * - Biểu tượng chim Lạc dẫn lối hành trình phương Nam & Bắc, kết nối 42+ tỉnh thành khắp dải đất hình chữ S.
+ */
+
 import { useMemo } from 'react'
 import { CRANE, renderFigureSvg } from './dongsonData'
 
@@ -8,6 +17,9 @@ interface FlockOfCranesProps {
   badge?: string
 }
 
+/**
+ * Thành phần Dải hoạt họa đàn chim Lạc bay ngang qua màn hình.
+ */
 export function FlockOfCranes({
   className = '',
   title = 'HÀNH TRÌNH PHƯƠNG NAM & BẮC',

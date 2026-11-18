@@ -1,3 +1,22 @@
+/**
+ * @file AdminTripsPage.tsx
+ * @description Màn hình Điều Hành & Quản Lý Lịch Chạy Chuyến Xe (Trip Scheduling & Dispatch Operations).
+ *
+ * CHỨC NĂNG NGHIỆP VỤ:
+ * 1. Danh sách chuyến xe:
+ *    - Liệt kê các chuyến xe theo ngày/khoảng ngày, sắp xếp theo thứ tự khởi hành tăng dần.
+ *    - Hiển thị biển số xe, loại xe, tuyến đường, giờ chạy, giá vé và số ghế còn trống.
+ * 2. Lập lịch chuyến xe mới (`adminTripsApi.create`):
+ *    - Chọn tuyến đường, xe khách vận hành, ngày khởi hành, giờ khởi hành, giá vé cơ sở.
+ *    - Cấu hình các điểm dừng đón và trả khách dọc tuyến.
+ * 3. Điều chỉnh chuyến xe (`adminTripsApi.update`):
+ *    - Đổi ngày/giờ xuất bến, đổi xe thay thế hoặc cập nhật ghi chú chuyến.
+ *    - Backend tự động gửi tin nhắn SMS thông báo thay đổi lịch trình tới toàn bộ hành khách đã mua vé.
+ * 4. Hủy chuyến xe (`adminTripsApi.cancel`):
+ *    - Nhập lý do hủy chuyến (thời tiết xấu, sự cố kỹ thuật...).
+ *    - Backend tự động hoàn tiền 100% (không thu phí) cho toàn bộ hành khách đã đặt vé.
+ */
+
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import {
   adminBusesApi,
@@ -10,7 +29,7 @@ import {
 } from '../../services/api'
 import { Button } from '../../components/common/Button'
 import { Modal } from '../../components/common/Modal'
-import { toYmd } from '../../components/common/PickerFields'
+import { DatePicker, toYmd } from '../../components/common/PickerFields'
 
 const STATUS_LABEL: Record<string, string> = {
   MO_BAN: 'Đang mở bán',
@@ -69,12 +88,22 @@ export function AdminTripsPage() {
   const [priceError, setPriceError] = useState('')
   const [updatingPrice, setUpdatingPrice] = useState(false)
 
+  // '' = các chuyến từ hôm nay trở đi; có giá trị = đúng ngày đó. Không tải từ đầu vì chuyến cũ nhất
+  // đứng trước (seed có hàng nghìn chuyến đã chạy xong) và backend chỉ trả tối đa 500 dòng.
+  const [day, setDay] = useState('')
+  const [tripTotal, setTripTotal] = useState(0)
+
   const load = useCallback(async () => {
     setLoading(true)
     setLoadError('')
     try {
-      const [t, r, b] = await Promise.all([adminTripsApi.list(), adminRoutesApi.list(), adminBusesApi.getAll()])
-      setTrips(t)
+      const [t, r, b] = await Promise.all([
+        adminTripsApi.listPage(day ? { date: day } : { dateFrom: toYmd(new Date()) }),
+        adminRoutesApi.list(),
+        adminBusesApi.getAll(),
+      ])
+      setTrips(t.items)
+      setTripTotal(t.total)
       setRoutes(r.filter((x) => x.status === 'HOAT_DONG'))
       setBuses(b.filter((x) => x.active))
     } catch (err) {
@@ -82,7 +111,7 @@ export function AdminTripsPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [day])
 
   useEffect(() => {
     load()
@@ -119,7 +148,8 @@ export function AdminTripsPage() {
       })
       setShowAddModal(false)
       setToastMsg(`Đã tạo chuyến #${created.id}: ${created.fromCity} → ${created.toCity} lúc ${created.time} ngày ${created.date}`)
-      await load()
+      if (!day || date === day) await load()
+      else setDay(date) // chuyển sang ngày của chuyến vừa tạo để thấy nó ngay (đổi `day` tự tải lại)
     } catch (err) {
       setFormError(apiErrorMessage(err, 'Không thể tạo chuyến'))
     } finally {
@@ -220,6 +250,17 @@ export function AdminTripsPage() {
           </p>
         </div>
 
+        <div className="flex items-end gap-2">
+          <div className="w-56">
+            <DatePicker label={day ? 'Ngày khởi hành' : 'Từ hôm nay (chọn để xem một ngày)'} value={day || toYmd(new Date())} onChange={setDay} />
+          </div>
+          {day && (
+            <button type="button" onClick={() => setDay('')} className="pb-2 text-xs font-bold text-orange-600 underline cursor-pointer">
+              Xem tất cả sắp tới
+            </button>
+          )}
+        </div>
+
         <Button
           onClick={openAdd}
           disabled={loading || !!loadError}
@@ -240,6 +281,12 @@ export function AdminTripsPage() {
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-800 font-semibold flex items-center justify-between">
           <span>{loadError}</span>
           <button type="button" onClick={load} className="underline cursor-pointer">Thử lại</button>
+        </div>
+      )}
+
+      {!loading && tripTotal > trips.length && (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-3 text-xs font-semibold text-amber-800">
+          Đang hiển thị {trips.length}/{tripTotal} chuyến sớm nhất từ hôm nay. Chọn một ngày cụ thể để xem các chuyến còn lại.
         </div>
       )}
 
@@ -266,7 +313,7 @@ export function AdminTripsPage() {
               ) : trips.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="p-8 text-center text-slate-400">
-                    {loadError ? 'Không có dữ liệu do lỗi tải.' : 'Chưa có chuyến xe nào.'}
+                    {loadError ? 'Không có dữ liệu do lỗi tải.' : day ? 'Không có chuyến xe nào trong ngày này.' : 'Chưa có chuyến xe nào sắp chạy.'}
                   </td>
                 </tr>
               ) : (

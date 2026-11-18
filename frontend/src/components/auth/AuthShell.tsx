@@ -1,3 +1,22 @@
+/**
+ * @file AuthShell.tsx
+ * @description Khung Bố Cục Xác Thực Người Dùng (Authentication Shell Layout) & Các Thành phần Form Bổ trợ.
+ *
+ * CÁC THÀNH PHẦN EXPORT:
+ * 1. `AuthShell`:
+ *    - Khung giao diện 2 cột dùng chung cho Đăng nhập, Đăng ký và Quên mật khẩu.
+ *    - Cột trái: Giới thiệu thương hiệu VéXe Việt, hoa văn quỹ đạo Đông Sơn (`auth-orbit`),
+ *      và 3 cam kết dịch vụ cốt lõi.
+ *    - Cột phải: Form nhập liệu với thanh chuyển tab Đăng nhập / Đăng ký.
+ * 2. `FormNote`:
+ *    - Hộp hiển thị thông báo với 3 tông màu văn hóa:
+ *      + 'error': Viền đất nung (terracotta) báo lỗi.
+ *      + 'ok': Viền men lam ngọc (celadon) báo thành công.
+ *      + 'info': Viền đồng (bronze) hiển thị hướng dẫn / ghi chú.
+ * 3. `PasswordInput`:
+ *    - Ô nhập mật khẩu có sẵn nút bật/tắt hiển thị mật khẩu dạng con mắt (`visibility` / `visibility_off`).
+ */
+
 import { useState, type ReactNode } from 'react'
 import type { View } from '../../types'
 import { Logo } from '../common/Logo'

@@ -69,7 +69,16 @@ class Report:
 
 
 class ReportService:
-    """UC17: thống kê doanh thu, vé bán/hủy, tỷ lệ lấp đầy. Chỉ đọc."""
+    """Ca sử dụng UC17: Báo cáo Thống kê Doanh thu, Vé bán/hủy và Tỷ lệ lấp đầy ghế (Read-Only).
+
+    Công thức tài chính & thống kê:
+    1. Doanh thu gộp (Gross Revenue): Tổng tiền từ các giao dịch thanh toán thành công trong kỳ.
+    2. Tiền đã hoàn (Refunded): Tổng số tiền đã hoàn trả cho hành khách do hủy vé hoặc nhà xe hủy chuyến.
+    3. Doanh thu thực thu (Net Revenue): Net = Gross - Refunded.
+    4. Tỷ lệ hủy vé (Cancellation Rate): tickets_cancelled / tickets_sold (làm tròn 4 chữ số thập phân).
+    5. Tỷ lệ lấp đầy ghế (Occupancy Rate): sum(sold_seats) / sum(total_seats) trên các chuyến xe trong kỳ.
+    6. Phân bổ theo kênh: Doanh thu thực thu được bóc tách riêng cho kênh TRUC_TUYEN và TAI_QUAY.
+    """
 
     def __init__(self, repo: ReportRepository):
         self.repo = repo

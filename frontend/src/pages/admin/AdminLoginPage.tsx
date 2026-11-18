@@ -1,3 +1,18 @@
+/**
+ * @file AdminLoginPage.tsx
+ * @description Màn hình Đăng nhập Dành riêng cho Cổng Quản trị & Nhân viên bán vé (#/admin).
+ *
+ * ĐẶC TÍNH BẢO MẬT:
+ * 1. Đăng nhập vào cổng `admin` thông qua `authApi.login('admin', phone, password)`:
+ *    - Xác thực vai trò: Backend chỉ chấp thuận các tài khoản có vai trò 'ADMIN' hoặc 'NHAN_VIEN_BAN_VE'.
+ *    - Tài khoản khách hàng thường nếu cố tình đăng nhập tại đây sẽ bị từ chối và thu hồi token ngay lập tức.
+ * 2. Lưu trữ phiên độc lập (`vexe_admin_token`):
+ *    - Không gây ảnh hưởng hay ghi đè lên phiên đặt vé khách hàng (`vexe_token`).
+ * 3. Phân luồng điều hướng sau đăng nhập:
+ *    - Nhân viên bán vé ('clerk'): Chuyển thẳng vào màn hình Quầy bán vé POS (`admin-counter`).
+ *    - Quản trị viên ('admin'): Chuyển vào Bảng điều khiển trung tâm (`admin-dashboard`).
+ */
+
 import { useState, type FormEvent } from 'react'
 import type { User } from '../../types'
 import { authApi, apiErrorMessage } from '../../services/api'

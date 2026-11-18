@@ -43,9 +43,29 @@ class SqlSeatHoldRepository:
         )
 
     def hold(self, trip_id, seat_ids, account_id, until: datetime, now: datetime) -> list[int]:
+        """Cơ chế khóa ghế nguyên tử Atomic CAS (Compare-And-Swap) ở mức cơ sở dữ liệu.
+
+        Nguyên lý chống Race Condition (Tranh chấp đồng thời):
+        - Khi hai người dùng cùng bấm giữ một ghế tại cùng một phần nghìn giây,
+          hệ thống thực hiện câu lệnh UPDATE kèm mệnh đề WHERE điều kiện (CAS):
+              UPDATE trip_seats
+              SET status = 'TAM_KHOA', held_by = account_id, hold_until = until
+              WHERE trip_id = trip_id AND seat_id = sid AND (
+                  status = 'TRONG' OR (status = 'TAM_KHOA' AND hold_until < now)
+              )
+        - Cơ sở dữ liệu quan hệ (PostgreSQL / SQLite) sử dụng Row-Level Lock đảm bảo chỉ DUY NHẤT
+          MỘT tiến trình thực hiện UPDATE thành công (rowcount == 1).
+        - Tiến trình thứ hai sẽ nhận rowcount == 0. Lúc này hệ thống kiểm tra nếu ghế không thuộc về
+          tài khoản của mình thì đánh dấu là ghế xung đột (bad.append(sid)).
+        - Nếu có bất kỳ ghế nào trong tập hợp bị xung đột, thực hiện ROLLBACK toàn bộ phiên làm việc,
+          đảm bảo tính toàn vẹn (All-or-Nothing / Nguyên tử).
+
+        Returns:
+            Danh sách ID các ghế không thể giữ chỗ (rỗng nếu thành công 100%).
+        """
         bad: list[int] = []
         for sid in seat_ids:
-            # UPDATE có điều kiện = nguyên tử: hai người bấm cùng lúc thì chỉ một người thắng
+            # UPDATE có điều kiện = nguyên tử (Atomic CAS): hai người bấm cùng lúc thì chỉ một người thắng
             res = self.db.execute(
                 update(TripSeatModel)
                 .where(
