@@ -1,37 +1,12 @@
-/* Font icon nạp vào layer `base`: nếu để ngoài layer, font-size:24px của Google thắng mọi class text-* của Tailwind */
-@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap') layer(base);
+@import "tailwindcss";
 
-/* ========================================================
- * VIOLETLINE DESIGN SYSTEM
- * Hệ thống CSS được phân tách thành từng module rõ ràng
- * ======================================================== */
+:root {
+  --font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+}
 
-/* 1. Thiết lập biến, theme tokens & Tailwind */
-@import './styles/variables.css';
-
-/* 2. Resets, typography & elements cơ bản */
-@import './styles/base.css';
-
-/* 3. Bố cục tổng thể & trang trí Hero */
-@import './styles/layout.css';
-
-/* 4. Cửa sổ (dialog), popover chọn tỉnh/ngày, dải chọn ngày */
-@import './styles/dialog.css';
-
-/* 6. Sơ đồ xe & ghế ngồi */
-@import './styles/seats.css';
-
-/* 7. Quy trình thanh toán & Vé điện tử */
-@import './styles/checkout.css';
-
-/* 8. Trang cá nhân & lịch sử đặt vé */
-@import './styles/profile.css';
-
-/* 9. Đăng nhập, OTP & Google auth */
-@import './styles/auth.css';
-
-/* 10. Chế độ soát vé của nhân viên (Crew) */
-@import './styles/scanner.css';
-
-/* 11. Tương thích màn hình di động (Responsive) */
-@import './styles/responsive.css';
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  background-color: #f8fafc;
+  color: #0f172a;
+}

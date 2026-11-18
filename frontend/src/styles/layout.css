@@ -1,7 +1,0 @@
-/* Khung ứng dụng: nền giấy dó, ánh son nhẹ phía trên */
-.app-shell {
-  min-height: 100vh;
-  background:
-    radial-gradient(ellipse 60% 40% at 52% -10%, rgba(180, 67, 46, .10) 0%, transparent 65%),
-    var(--paper);
-}

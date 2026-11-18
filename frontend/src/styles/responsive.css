@@ -1,8 +1,0 @@
-@media (max-width: 640px) {
-  .bus-shell { padding: 12px; }
-  .seat-grid { gap: 7px 12px; }
-  .auth-card { margin-top: 32px; }
-  .auth-aside { display: none; }
-  .pop { left: 0; }
-  .cal { width: min(288px, calc(100vw - 32px)); min-width: 0; }
-}
