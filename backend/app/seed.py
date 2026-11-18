@@ -1,11 +1,15 @@
-"""Script nạp dữ liệu mẫu (Seed Data) chuẩn xác, thực tế ngoài đời.
+"""Script nạp dữ liệu mẫu (Seed Data) quy mô lớn, bao phủ toàn quốc chuẩn xác ngoài đời.
 
-Dữ liệu bao gồm các nhà xe lớn (Phương Trang FUTA, Thành Bưởi, Sao Việt, HK Buslines),
-các bến xe thực tế (Bến xe Miền Đông, Bến xe Miền Tây, Bến xe Giáp Bát, Bến xe Mỹ Đình,
-Bến xe Trung tâm Đà Nẵng, Bến xe Liên tỉnh Đà Lạt, Bến xe Nha Trang...),
-các tuyến xe trải dài khắp 3 miền Bắc - Trung - Nam - Tây Nguyên - Miền Tây,
-các dòng xe thực tế (Limousine 34 phòng, Giường nằm 40 chỗ, Cung điện 24 phòng, Ghế VIP 28 chỗ)
-kèm tài khoản nhân viên, tài xế, khách hàng và lịch trình các chuyến xe.
+Bao gồm:
+- 90 Tuyến xe khách liên tỉnh thực tế bao phủ khắp 3 miền Bắc - Trung - Nam, Tây Nguyên và Miền Tây
+- 30 Phương tiện thực tế với biển số theo tỉnh thành (TP.HCM, Hà Nội, Đà Nẵng, Lâm Đồng, Cần Thơ, Hải Phòng, Quảng Ninh, Lào Cai...)
+- 4 Dòng xe chuyên dụng (Limousine 34 phòng, Giường nằm 40 chỗ, Cung điện 24 phòng VIP, Ghế ngồi VIP 28 chỗ)
+- Hơn 900+ ghế vật lý với mã số và sơ đồ tầng chính xác
+- Hơn 160+ chuyến xe khởi hành từ hôm nay trở đi với các khung giờ thực tế
+- 6 Vai trò RBAC, 12 Chức năng và ma trận phân quyền
+- Đội ngũ tài khoản Nhân viên, Tài xế, Quản trị và Khách hàng
+- Mã voucher khuyến mãi thực tế (FUTA, Chào Bạn Mới, Tết...)
+- Các đơn đặt vé mẫu đã thanh toán (VNPay, Tiền mặt tại quầy) và đơn đang chờ thanh toán.
 """
 
 from datetime import date, datetime, time, timedelta
@@ -42,12 +46,12 @@ def hash_pw(password: str) -> str:
 
 
 def seed_all():
-    print("[seed] Bắt đầu nạp dữ liệu mẫu thực tế...")
+    print("[seed] Bắt đầu nạp mạng lưới dữ liệu xe khách toàn quốc...")
     db = SessionLocal()
 
     try:
         # 1. Dọn sạch dữ liệu cũ theo thứ tự khóa ngoại
-        print("[seed] Xóa dữ liệu cũ...")
+        print("[seed] Dọn sạch dữ liệu cũ...")
         db.execute(text("SET FOREIGN_KEY_CHECKS = 0;"))
         for tbl in [
             "LichSuVe",
@@ -71,8 +75,8 @@ def seed_all():
         db.execute(text("SET FOREIGN_KEY_CHECKS = 1;"))
         db.commit()
 
-        # 2. Vai Trò (6 vai trò theo RDM)
-        print("[seed] Nạp VaiTro...")
+        # 2. Vai Trò
+        print("[seed] Nạp danh mục VaiTro...")
         vaitro_data = [
             ("QuanTri", "Quản trị viên toàn quyền hệ thống"),
             ("NhanVienBanVe", "Nhân viên bán vé và xử lý nghiệp vụ tại quầy bến xe"),
@@ -89,7 +93,7 @@ def seed_all():
         db.flush()
 
         # 3. Chức Năng (12 chức năng hệ thống)
-        print("[seed] Nạp ChucNang...")
+        print("[seed] Nạp danh mục ChucNang...")
         chucnang_data = [
             ("QL_TuyenXe", "Quản lý danh mục tuyến đường và điểm dừng"),
             ("QL_ChuyenXe", "Quản lý lịch xuất bến và điều phối chuyến xe"),
@@ -112,7 +116,7 @@ def seed_all():
         db.flush()
 
         # 4. Phân Quyền
-        print("[seed] Nạp PhanQuyen...")
+        print("[seed] Nạp ma trận PhanQuyen...")
         for ten_cn, cn in chucnang_map.items():
             # QuanTri có toàn quyền
             db.add(
@@ -166,7 +170,7 @@ def seed_all():
         print("[seed] Nạp TaiKhoan, NhanVien, KhachHang...")
         matkhau_mac_dinh = hash_pw("MatKhau@123")
 
-        # Admin
+        # Quản trị viên
         tk_admin = TaiKhoan(
             MaVaiTro=vaitro_map["QuanTri"].MaVaiTro,
             TenDangNhap="admin",
@@ -186,12 +190,16 @@ def seed_all():
         )
         db.add(nv_admin)
 
-        # Nhân viên bán vé
+        # Nhân viên bán vé các bến trọng điểm
         danh_sach_nv = [
-            ("nv_miendong", "Nguyễn Thị Mai Anh", "0912345678", date(1995, 8, 20), "Nhân viên Bến xe Miền Đông"),
+            ("nv_miendong", "Nguyễn Thị Mai Anh", "0912345678", date(1995, 8, 20), "Nhân viên Bến xe Miền Đông mới"),
             ("nv_mientay", "Lê Văn Phúc", "0987654321", date(1993, 3, 14), "Nhân viên Bến xe Miền Tây"),
-            ("nv_mydinh", "Phạm Hồng Sơn", "0934567890", date(1996, 11, 28), "Nhân viên Bến xe Mỹ Đình"),
-            ("nv_danang", "Hoàng Lan Hương", "0978901234", date(1997, 6, 5), "Nhân viên Bến xe Đà Nẵng"),
+            ("nv_mydinh", "Phạm Hồng Sơn", "0934567890", date(1996, 11, 28), "Nhân viên Bến xe Mỹ Đình Hà Nội"),
+            ("nv_giapbat", "Đặng Thùy Dung", "0923456789", date(1998, 2, 17), "Nhân viên Bến xe Giáp Bát"),
+            ("nv_danang", "Hoàng Lan Hương", "0978901234", date(1997, 6, 5), "Nhân viên Bến xe Trung tâm Đà Nẵng"),
+            ("nv_dalat", "Ngô Đức Trọng", "0967890123", date(1994, 9, 30), "Nhân viên Bến xe Liên tỉnh Đà Lạt"),
+            ("nv_cantho", "Trần Kim Oanh", "0945678901", date(1996, 12, 15), "Nhân viên Bến xe Trung tâm Cần Thơ"),
+            ("nv_nhatrang", "Vũ Minh Tâm", "0932109876", date(1995, 4, 22), "Nhân viên Bến xe Phía Nam Nha Trang"),
         ]
         nv_map: dict[str, NhanVien] = {}
         for username, hoten, sdt, ngaysinh, chucvu in danh_sach_nv:
@@ -218,7 +226,9 @@ def seed_all():
         danh_sach_tx = [
             ("tx_nguyenvanhai", "Nguyễn Văn Hải", "0909112233", date(1982, 4, 18), "Tài xế chính (Dấu E)"),
             ("tx_tranquoctuan", "Trần Quốc Tuấn", "0918223344", date(1985, 9, 25), "Tài xế chính (Dấu E)"),
-            ("tx_vothanhliem", "Võ Thanh Liêm", "0933445566", date(1989, 12, 10), "Tài xế phụ"),
+            ("tx_vothanhliem", "Võ Thanh Liêm", "0933445566", date(1989, 12, 10), "Tài xế chính (Dấu E)"),
+            ("tx_phamvandong", "Phạm Văn Đồng", "0912113355", date(1984, 7, 19), "Tài xế chính (Dấu E)"),
+            ("tx_buithehung", "Bùi Thế Hùng", "0977224466", date(1987, 10, 8), "Tài xế phụ"),
         ]
         for username, hoten, sdt, ngaysinh, chucvu in danh_sach_tx:
             tk = TaiKhoan(
@@ -239,13 +249,15 @@ def seed_all():
             )
             db.add(nv)
 
-        # Khách hàng có tài khoản
+        # Khách hàng cá nhân trực tuyến
         danh_sach_kh = [
             ("kh_dangvulong", "Đặng Vũ Long", "0908889999", "Quận 1, TP. Hồ Chí Minh"),
             ("kh_nguyenminhtri", "Nguyễn Minh Trí", "0911223344", "Cầu Giấy, Hà Nội"),
             ("kh_lethithuy", "Lê Thị Thúy", "0988776655", "Hải Châu, TP. Đà Nẵng"),
             ("kh_tranthuha", "Trần Thu Hà", "0944556677", "Phường 1, TP. Đà Lạt"),
             ("kh_buiducanh", "Bùi Đức Anh", "0966332211", "Ninh Kiều, TP. Cần Thơ"),
+            ("kh_nguyenhoanganh", "Nguyễn Hoàng Anh", "0933557799", "Hồng Bàng, Hải Phòng"),
+            ("kh_duongquocbao", "Dương Quốc Bảo", "0918991122", "Hạ Long, Quảng Ninh"),
         ]
         kh_map: dict[str, KhachHang] = {}
         for username, hoten, sdt, diachi in danh_sach_kh:
@@ -266,7 +278,7 @@ def seed_all():
             db.add(kh)
             kh_map[username] = kh
 
-        # Thêm 2 khách hàng vãng lai (MaTK = NULL)
+        # Khách hàng vãng lai mua tại quầy không có tài khoản
         kh_vang_lai_1 = KhachHang(
             MaTK=None,
             HoTen="Võ Hoàng Nam (Khách vãng lai)",
@@ -279,15 +291,21 @@ def seed_all():
             SDT="0982334455",
             DiaChi="TP. Nha Trang",
         )
-        db.add_all([kh_vang_lai_1, kh_vang_lai_2])
+        kh_vang_lai_3 = KhachHang(
+            MaTK=None,
+            HoTen="Nguyễn Văn Bình (Khách vãng lai)",
+            SDT="0971224466",
+            DiaChi="TP. Sa Pa",
+        )
+        db.add_all([kh_vang_lai_1, kh_vang_lai_2, kh_vang_lai_3])
         db.flush()
 
-        # 6. Loại Xe & Xe & Ghế
-        print("[seed] Nạp LoaiXe, Xe, Ghe...")
+        # 6. Loại Xe & 30 Xe Thực Tế Khắp Các Tỉnh Thành & Hơn 900 Ghế
+        print("[seed] Nạp LoaiXe, 30 Xe thực tế và Ghế...")
         loai_xe_data = [
-            ("Limousine 34 Phòng", 34, "Xe giường phòng Limousine VIP, rèm riêng tư, cổng sạc, massage"),
+            ("Limousine 34 Phòng", 34, "Xe giường phòng Limousine VIP, rèm che riêng tư, cổng sạc, massage"),
             ("Giường Nằm 40 Chỗ", 40, "Xe giường nằm 2 tầng tiêu chuẩn FUTA, wifi, nước suối, khăn lạnh"),
-            ("Cung Điện 24 Phòng", 24, "Xe cabin phòng đôi/đơn hoàng gia chuyên tuyến du lịch Sa Pa, Đà Lạt"),
+            ("Cung Điện 24 Phòng", 24, "Xe cabin phòng hoàng gia chuyên tuyến du lịch Sa Pa, Đà Lạt"),
             ("Ghế Ngồi Cao Cấp 28 Chỗ", 28, "Xe ghế ngồi ngả lưng bọc da cao cấp chuyên tuyến cự ly ngắn"),
         ]
         loai_xe_map: dict[str, LoaiXe] = {}
@@ -297,18 +315,46 @@ def seed_all():
             loai_xe_map[ten] = lx
         db.flush()
 
-        # Danh sách Xe thực tế
+        # 30 Xe thực tế với biển số theo vùng miền
         xe_data = [
+            # Đội xe TP.HCM (51B)
             ("51B-289.45", "Limousine 34 Phòng", "Thaco Mobihome", 2023),
             ("51B-305.18", "Giường Nằm 40 Chỗ", "Hyundai Universe", 2022),
             ("51B-412.79", "Cung Điện 24 Phòng", "Tracomeco", 2024),
+            ("51B-520.11", "Limousine 34 Phòng", "Thaco Mobihome", 2023),
+            ("51B-631.84", "Giường Nằm 40 Chỗ", "Hyundai Universe", 2022),
+            ("51B-745.92", "Ghế Ngồi Cao Cấp 28 Chỗ", "Hyundai Solati", 2023),
+            # Đội xe Lâm Đồng - Đà Lạt (49B)
             ("49B-018.66", "Limousine 34 Phòng", "Thaco Mobihome", 2023),
+            ("49B-025.33", "Cung Điện 24 Phòng", "Tracomeco", 2024),
+            ("49B-039.78", "Giường Nằm 40 Chỗ", "Hyundai Universe", 2022),
+            # Đội xe Hà Nội (29B)
             ("29B-188.92", "Cung Điện 24 Phòng", "Hyundai Universe", 2023),
             ("29B-605.34", "Giường Nằm 40 Chỗ", "Thaco Mobihome", 2022),
+            ("29B-712.45", "Limousine 34 Phòng", "Tracomeco", 2024),
+            ("29B-823.19", "Ghế Ngồi Cao Cấp 28 Chỗ", "Hyundai Solati", 2023),
+            ("29B-934.56", "Cung Điện 24 Phòng", "Thaco Mobihome", 2023),
+            # Đội xe Lào Cai - Sa Pa (24B)
+            ("24B-012.88", "Cung Điện 24 Phòng", "Tracomeco", 2024),
+            ("24B-023.45", "Giường Nằm 40 Chỗ", "Hyundai Universe", 2023),
+            # Đội xe Đà Nẵng & Miền Trung (43B, 75B, 79B, 77B)
             ("43B-047.82", "Limousine 34 Phòng", "Tracomeco", 2023),
-            ("72B-029.11", "Ghế Ngồi Cao Cấp 28 Chỗ", "Hyundai Solati", 2023),
-            ("65B-019.55", "Giường Nằm 40 Chỗ", "Thaco Mobihome", 2022),
+            ("43B-058.91", "Giường Nằm 40 Chỗ", "Thaco Mobihome", 2022),
+            ("75B-019.23", "Limousine 34 Phòng", "Thaco Mobihome", 2023),
             ("79B-031.48", "Limousine 34 Phòng", "Hyundai Universe", 2023),
+            ("79B-042.19", "Giường Nằm 40 Chỗ", "Thaco Mobihome", 2022),
+            ("77B-018.67", "Giường Nằm 40 Chỗ", "Hyundai Universe", 2022),
+            # Đội xe Tây Nguyên (47B Đắk Lắk, 81B Gia Lai)
+            ("47B-028.90", "Limousine 34 Phòng", "Thaco Mobihome", 2023),
+            ("81B-019.45", "Giường Nằm 40 Chỗ", "Hyundai Universe", 2022),
+            # Đội xe Đông Nam Bộ (72B Vũng Tàu, 70B Tây Ninh)
+            ("72B-029.11", "Ghế Ngồi Cao Cấp 28 Chỗ", "Hyundai Solati", 2023),
+            ("72B-038.54", "Ghế Ngồi Cao Cấp 28 Chỗ", "Hyundai Solati", 2023),
+            ("70B-015.67", "Ghế Ngồi Cao Cấp 28 Chỗ", "Ford Transit", 2023),
+            # Đội xe Miền Tây (65B Cần Thơ, 68B Kiên Giang, 69B Cà Mau)
+            ("65B-019.55", "Giường Nằm 40 Chỗ", "Thaco Mobihome", 2022),
+            ("68B-022.34", "Giường Nằm 40 Chỗ", "Thaco Mobihome", 2023),
+            ("69B-017.89", "Limousine 34 Phòng", "Tracomeco", 2024),
         ]
         xe_map: dict[str, Xe] = {}
         for bienso, ten_loai, hangxe, namsx in xe_data:
@@ -323,155 +369,674 @@ def seed_all():
             xe_map[bienso] = x
         db.flush()
 
-        # Sinh danh sách Ghế cho từng xe theo loại xe
+        # Tự động sinh ghế cho toàn bộ 30 xe
         for bienso, x in xe_map.items():
             loai_ten = next(k for k, v in loai_xe_map.items() if v.MaLoaiXe == x.MaLoaiXe)
             if "34" in loai_ten:
-                # 34 phòng: A01 - A17 (Tầng 1), B01 - B17 (Tầng 2)
                 for i in range(1, 18):
                     db.add(Ghe(MaXe=x.MaXe, SoGhe=f"A{i:02d}", Tang=1, TrangThai="Trong"))
-                for i in range(1, 18):
                     db.add(Ghe(MaXe=x.MaXe, SoGhe=f"B{i:02d}", Tang=2, TrangThai="Trong"))
             elif "40" in loai_ten:
-                # 40 chỗ: A01 - A20 (Tầng 1), B01 - B20 (Tầng 2)
                 for i in range(1, 21):
                     db.add(Ghe(MaXe=x.MaXe, SoGhe=f"A{i:02d}", Tang=1, TrangThai="Trong"))
-                for i in range(1, 21):
                     db.add(Ghe(MaXe=x.MaXe, SoGhe=f"B{i:02d}", Tang=2, TrangThai="Trong"))
             elif "24" in loai_ten:
-                # 24 phòng VIP: A01 - A12 (Tầng 1), B01 - B12 (Tầng 2)
                 for i in range(1, 13):
                     db.add(Ghe(MaXe=x.MaXe, SoGhe=f"A{i:02d}", Tang=1, TrangThai="Trong"))
-                for i in range(1, 13):
                     db.add(Ghe(MaXe=x.MaXe, SoGhe=f"B{i:02d}", Tang=2, TrangThai="Trong"))
             elif "28" in loai_ten:
-                # 28 ghế ngồi: 01 - 28 (Tầng 1)
                 for i in range(1, 29):
                     db.add(Ghe(MaXe=x.MaXe, SoGhe=f"{i:02d}", Tang=1, TrangThai="Trong"))
         db.flush()
 
-        # 7. Tuyến Xe (Phủ khắp Việt Nam)
-        print("[seed] Nạp TuyenXe...")
-        tuyen_data = [
+        # 7. Danh Mục 90 Tuyến Xe Khách Toàn Quốc (Phủ kín mọi miền đất nước)
+        print("[seed] Nạp danh mục 90 TuyenXe phủ kín toàn quốc...")
+        tuyen_raw_data = [
+            # --- Nhóm 1: TP.HCM <-> Tây Nguyên ---
             (
                 "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
                 "Bến xe Liên tỉnh Đà Lạt (Lâm Đồng)",
-                Decimal("305.00"),
+                305,
                 390,
                 "Lộ trình: BX Miền Đông Mới -> Cao tốc Long Thành -> QL20 -> Đèo Prenn -> Bến xe Đà Lạt",
             ),
             (
                 "Bến xe Liên tỉnh Đà Lạt (Lâm Đồng)",
                 "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
-                Decimal("305.00"),
+                305,
                 390,
                 "Lộ trình: Bến xe Đà Lạt -> Đèo Prenn -> QL20 -> Cao tốc Long Thành -> BX Miền Đông Mới",
             ),
             (
                 "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                "Bến xe Bảo Lộc (Lâm Đồng)",
+                190,
+                240,
+                "Lộ trình: BX Miền Đông Mới -> QL20 -> Đèo Chuối -> Đèo Bảo Lộc -> Bến xe Bảo Lộc",
+            ),
+            (
+                "Bến xe Bảo Lộc (Lâm Đồng)",
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                190,
+                240,
+                "Lộ trình: Bến xe Bảo Lộc -> QL20 -> Cao tốc Long Thành -> BX Miền Đông Mới",
+            ),
+            (
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                "Bến xe Buôn Ma Thuột (Đắk Lắk)",
+                350,
+                450,
+                "Lộ trình: QL13 -> QL14 (Đường Hồ Chí Minh) qua Bình Phước, Đắk Nông -> Bến xe Buôn Ma Thuột",
+            ),
+            (
+                "Bến xe Buôn Ma Thuột (Đắk Lắk)",
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                350,
+                450,
+                "Lộ trình: Bến xe Buôn Ma Thuột -> QL14 -> QL13 -> BX Miền Đông Mới",
+            ),
+            (
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                "Bến xe Đức Long Gia Lai (Pleiku)",
+                500,
+                600,
+                "Lộ trình: QL14 qua Đắk Nông, Buôn Ma Thuột -> TP. Pleiku Gia Lai",
+            ),
+            (
+                "Bến xe Đức Long Gia Lai (Pleiku)",
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                500,
+                600,
+                "Lộ trình: Bến xe Đức Long Gia Lai -> QL14 -> BX Miền Đông Mới",
+            ),
+            (
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                "Bến xe Kon Tum",
+                550,
+                660,
+                "Lộ trình: Trục QL14 qua Buôn Ma Thuột, Pleiku -> Bến xe TP. Kon Tum",
+            ),
+            (
+                "Bến xe Kon Tum",
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                550,
+                660,
+                "Lộ trình: Bến xe Kon Tum -> QL14 -> BX Miền Đông Mới",
+            ),
+            (
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                "Bến xe Gia Nghĩa (Đắk Nông)",
+                230,
+                300,
+                "Lộ trình: QL13 -> Ngã 4 Sở Sao -> QL14 -> Bến xe Gia Nghĩa",
+            ),
+            # --- Nhóm 2: TP.HCM <-> Nam Trung Bộ & Miền Trung ---
+            (
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
                 "Bến xe Phía Nam Nha Trang (Khánh Hòa)",
-                Decimal("435.00"),
+                435,
                 450,
                 "Lộ trình: Cao tốc Long Thành - Dầu Giây - Phan Thiết - Vĩnh Hảo - Cam Lâm -> Bến xe Nha Trang",
             ),
             (
                 "Bến xe Phía Nam Nha Trang (Khánh Hòa)",
                 "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
-                Decimal("435.00"),
+                435,
                 450,
                 "Lộ trình: Bến xe Nha Trang -> Cao tốc Cam Lâm - Vĩnh Hảo - Phan Thiết -> BX Miền Đông Mới",
             ),
             (
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                "Bến xe Phan Thiết (Bình Thuận)",
+                200,
+                210,
+                "Lộ trình: Cao tốc TP.HCM - Long Thành - Dầu Giây - Phan Thiết -> Bến xe Phan Thiết",
+            ),
+            (
+                "Bến xe Phan Thiết (Bình Thuận)",
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                200,
+                210,
+                "Lộ trình: Bến xe Phan Thiết -> Cao tốc Phan Thiết - Dầu Giây -> BX Miền Đông Mới",
+            ),
+            (
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                "Bến xe Mũi Né (Bình Thuận)",
+                220,
+                240,
+                "Lộ trình: Cao tốc Phan Thiết -> Đường ven biển Huỳnh Thúc Kháng -> Bến xe Mũi Né",
+            ),
+            (
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                "Bến xe Phan Rang (Ninh Thuận)",
+                330,
+                360,
+                "Lộ trình: Cao tốc Phan Thiết - Vĩnh Hảo -> QL1A -> Bến xe Phan Rang - Tháp Chàm",
+            ),
+            (
+                "Bến xe Phan Rang (Ninh Thuận)",
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                330,
+                360,
+                "Lộ trình: Bến xe Phan Rang -> QL1A -> Cao tốc Vĩnh Hảo - Phan Thiết -> BX Miền Đông Mới",
+            ),
+            (
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                "Bến xe Nam Tuy Hòa (Phú Yên)",
+                540,
+                570,
+                "Lộ trình: Cao tốc Cam Lâm - Vĩnh Hảo -> Hầm Đèo Cả -> Bến xe Nam Tuy Hòa",
+            ),
+            (
+                "Bến xe Nam Tuy Hòa (Phú Yên)",
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                540,
+                570,
+                "Lộ trình: Bến xe Tuy Hòa -> Hầm Đèo Cả -> Cao tốc Cam Lâm - Phan Thiết -> BX Miền Đông",
+            ),
+            (
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                "Bến xe Trung tâm Quy Nhơn (Bình Định)",
+                650,
+                690,
+                "Lộ trình: Trục QL1A Nam Trung Bộ -> Đèo Cù Mông -> Bến xe Quy Nhơn",
+            ),
+            (
+                "Bến xe Trung tâm Quy Nhơn (Bình Định)",
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                650,
+                690,
+                "Lộ trình: Bến xe Quy Nhơn -> QL1A -> Cao tốc Cam Lâm - Phan Thiết -> BX Miền Đông",
+            ),
+            (
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                "Bến xe Quảng Ngãi",
+                780,
+                840,
+                "Lộ trình: QL1A qua Phú Yên, Bình Định -> Bến xe Trung tâm Quảng Ngãi",
+            ),
+            (
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                "Bến xe Trung tâm Đà Nẵng",
+                950,
+                1020,
+                "Lộ trình: Trục QL1A xuyên Nam Trung Bộ qua Bình Thuận, Khánh Hòa, Bình Định, Đà Nẵng",
+            ),
+            (
+                "Bến xe Trung tâm Đà Nẵng",
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                950,
+                1020,
+                "Lộ trình: Bến xe Đà Nẵng -> QL1A xuôi Nam -> BX Miền Đông Mới",
+            ),
+            (
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                "Bến xe Phía Nam Huế",
+                1050,
+                1140,
+                "Lộ trình: QL1A qua Đà Nẵng, hầm Hải Vân -> Bến xe Phía Nam Huế",
+            ),
+            # --- Nhóm 3: TP.HCM <-> Đông Nam Bộ ---
+            (
+                "Bến xe Miền Đông cũ (TP. Hồ Chí Minh)",
+                "Bến xe Vũng Tàu (Bà Rịa - Vũng Tàu)",
+                105,
+                135,
+                "Lộ trình: Hàng Xanh -> Mai Chí Thọ -> Cao tốc Long Thành -> QL51 -> Bến xe Vũng Tàu",
+            ),
+            (
+                "Bến xe Vũng Tàu (Bà Rịa - Vũng Tàu)",
+                "Bến xe Miền Đông cũ (TP. Hồ Chí Minh)",
+                105,
+                135,
+                "Lộ trình: Bến xe Vũng Tàu -> QL51 -> Cao tốc Long Thành -> Bến xe Miền Đông Cũ",
+            ),
+            (
+                "Bến xe An Sương (TP. Hồ Chí Minh)",
+                "Bến xe Tây Ninh",
+                95,
+                120,
+                "Lộ trình: Bến xe An Sương -> QL22 (Xuyên Á) qua Củ Chi, Trảng Bàng -> Bến xe Tây Ninh",
+            ),
+            (
+                "Bến xe Tây Ninh",
+                "Bến xe An Sương (TP. Hồ Chí Minh)",
+                95,
+                120,
+                "Lộ trình: Bến xe Tây Ninh -> QL22 -> Bến xe An Sương",
+            ),
+            (
+                "Bến xe Miền Đông (TP. Hồ Chí Minh)",
+                "Bến xe Đồng Xoài (Bình Phước)",
+                110,
+                150,
+                "Lộ trình: QL13 -> ĐT741 qua Phú Giáo -> Bến xe TP. Đồng Xoài",
+            ),
+            # --- Nhóm 4: TP.HCM <-> Miền Tây (13 Tỉnh Đồng Bằng Sông Cửu Long) ---
+            (
                 "Bến xe Miền Tây (TP. Hồ Chí Minh)",
                 "Bến xe Trung tâm Cần Thơ",
-                Decimal("165.00"),
+                165,
                 210,
                 "Lộ trình: BX Miền Tây -> Cao tốc Trung Lương - Mỹ Thuận -> Cầu Cần Thơ -> Bến xe Cần Thơ",
             ),
             (
                 "Bến xe Trung tâm Cần Thơ",
                 "Bến xe Miền Tây (TP. Hồ Chí Minh)",
-                Decimal("165.00"),
+                165,
                 210,
                 "Lộ trình: Bến xe Cần Thơ -> Cầu Cần Thơ -> Cao tốc Mỹ Thuận - Trung Lương -> BX Miền Tây",
             ),
             (
-                "Bến xe Miền Đông cũ (TP. Hồ Chí Minh)",
-                "Bến xe Vũng Tàu (Bà Rịa - Vũng Tàu)",
-                Decimal("105.00"),
-                135,
-                "Lộ trình: Hàng Xanh -> Cao tốc Long Thành -> QL51 -> Bến xe Vũng Tàu",
-            ),
-            (
-                "Bến xe Vũng Tàu (Bà Rịa - Vũng Tàu)",
-                "Bến xe Miền Đông cũ (TP. Hồ Chí Minh)",
-                Decimal("105.00"),
-                135,
-                "Lộ trình: Bến xe Vũng Tàu -> QL51 -> Cao tốc Long Thành -> Bến xe Miền Đông",
-            ),
-            (
-                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
-                "Bến xe Buôn Ma Thuột (Đắk Lắk)",
-                Decimal("350.00"),
-                450,
-                "Lộ trình: QL13 -> QL14 (Đường Hồ Chí Minh) qua Đắk Nông -> Bến xe Buôn Ma Thuột",
-            ),
-            (
                 "Bến xe Miền Tây (TP. Hồ Chí Minh)",
                 "Bến xe Rạch Sỏi (Rạch Giá - Kiên Giang)",
-                Decimal("250.00"),
+                250,
                 330,
                 "Lộ trình: BX Miền Tây -> Cao tốc Trung Lương -> Tuyến Lộ Tẻ - Rạch Sỏi -> Bến xe Rạch Sỏi",
             ),
             (
+                "Bến xe Rạch Sỏi (Rạch Giá - Kiên Giang)",
+                "Bến xe Miền Tây (TP. Hồ Chí Minh)",
+                250,
+                330,
+                "Lộ trình: Bến xe Rạch Sỏi -> Tuyến Lộ Tẻ - Rạch Sỏi -> Cao tốc Trung Lương -> BX Miền Tây",
+            ),
+            (
+                "Bến xe Miền Tây (TP. Hồ Chí Minh)",
+                "Bến xe Hà Tiên (Kiên Giang)",
+                320,
+                420,
+                "Lộ trình: BX Miền Tây -> QL80 qua Rạch Giá -> Bến xe Thị xã Hà Tiên",
+            ),
+            (
+                "Bến xe Hà Tiên (Kiên Giang)",
+                "Bến xe Miền Tây (TP. Hồ Chí Minh)",
+                320,
+                420,
+                "Lộ trình: Bến xe Hà Tiên -> QL80 -> Cao tốc Trung Lương -> BX Miền Tây",
+            ),
+            (
+                "Bến xe Miền Tây (TP. Hồ Chí Minh)",
+                "Bến xe Châu Đốc (An Giang)",
+                250,
+                330,
+                "Lộ trình: BX Miền Tây -> Cao tốc Mỹ Thuận -> Cầu Vàm Cống -> QL91 -> Miếu Bà Chúa Xứ Châu Đốc",
+            ),
+            (
+                "Bến xe Châu Đốc (An Giang)",
+                "Bến xe Miền Tây (TP. Hồ Chí Minh)",
+                250,
+                330,
+                "Lộ trình: Bến xe Châu Đốc -> QL91 -> Cầu Vàm Cống -> Cao tốc Trung Lương -> BX Miền Tây",
+            ),
+            (
+                "Bến xe Miền Tây (TP. Hồ Chí Minh)",
+                "Bến xe Long Xuyên (An Giang)",
+                190,
+                240,
+                "Lộ trình: BX Miền Tây -> Cầu Mỹ Thuận -> QL80 -> Cầu Vàm Cống -> Bến xe Long Xuyên",
+            ),
+            (
+                "Bến xe Long Xuyên (An Giang)",
+                "Bến xe Miền Tây (TP. Hồ Chí Minh)",
+                190,
+                240,
+                "Lộ trình: Bến xe Long Xuyên -> Cầu Vàm Cống -> Cao tốc Trung Lương -> BX Miền Tây",
+            ),
+            (
+                "Bến xe Miền Tây (TP. Hồ Chí Minh)",
+                "Bến xe Cà Mau",
+                310,
+                420,
+                "Lộ trình: BX Miền Tây -> Cao tốc Trung Lương -> Cầu Cần Thơ -> Quản Lộ Phụng Hiệp -> BX Cà Mau",
+            ),
+            (
+                "Bến xe Cà Mau",
+                "Bến xe Miền Tây (TP. Hồ Chí Minh)",
+                310,
+                420,
+                "Lộ trình: Bến xe Cà Mau -> Tuyến Quản Lộ Phụng Hiệp -> Cao tốc Trung Lương -> BX Miền Tây",
+            ),
+            (
+                "Bến xe Miền Tây (TP. Hồ Chí Minh)",
+                "Bến xe Bạc Liêu",
+                270,
+                360,
+                "Lộ trình: QL1A qua Hậu Giang, Sóc Trăng -> Bến xe Bạc Liêu",
+            ),
+            (
+                "Bến xe Miền Tây (TP. Hồ Chí Minh)",
+                "Bến xe Sóc Trăng",
+                230,
+                300,
+                "Lộ trình: Cầu Cần Thơ -> QL1A qua Đại Ngãi -> Bến xe Sóc Trăng",
+            ),
+            (
+                "Bến xe Miền Tây (TP. Hồ Chí Minh)",
+                "Bến xe Vĩnh Long",
+                135,
+                180,
+                "Lộ trình: Cao tốc Trung Lương - Mỹ Thuận -> Cầu Mỹ Thuận -> Bến xe Vĩnh Long",
+            ),
+            (
+                "Bến xe Miền Tây (TP. Hồ Chí Minh)",
+                "Bến xe Bến Tre",
+                90,
+                120,
+                "Lộ trình: Cao tốc Trung Lương -> QL60 -> Cầu Rạch Miễu -> Bến xe Bến Tre",
+            ),
+            (
+                "Bến xe Miền Tây (TP. Hồ Chí Minh)",
+                "Bến xe Cao Lãnh (Đồng Tháp)",
+                150,
+                190,
+                "Lộ trình: Cao tốc Trung Lương -> N2 qua Tháp Mười -> Cầu Cao Lãnh -> Bến xe Cao Lãnh",
+            ),
+            (
+                "Bến xe Miền Tây (TP. Hồ Chí Minh)",
+                "Bến xe Trà Vinh",
+                130,
+                180,
+                "Lộ trình: Cầu Rạch Miễu -> QL60 -> Cầu Cổ Chiên -> Bến xe Trà Vinh",
+            ),
+            # --- Nhóm 5: Hà Nội <-> Tây Bắc, Đông Bắc & Đồng Bằng Bắc Bộ ---
+            (
                 "Bến xe Mỹ Đình (Hà Nội)",
                 "Bến xe Sa Pa (Lào Cai)",
-                Decimal("320.00"),
+                320,
                 330,
                 "Lộ trình: BX Mỹ Đình -> Cầu Nhật Tân -> Cao tốc Nội Bài - Lào Cai -> Cầu Móng Sến -> Sa Pa",
             ),
             (
                 "Bến xe Sa Pa (Lào Cai)",
                 "Bến xe Mỹ Đình (Hà Nội)",
-                Decimal("320.00"),
+                320,
                 330,
                 "Lộ trình: Bến xe Sa Pa -> Cao tốc Lào Cai - Nội Bài -> Bến xe Mỹ Đình",
             ),
             (
+                "Bến xe Mỹ Đình (Hà Nội)",
+                "Bến xe Trung tâm Lào Cai",
+                290,
+                270,
+                "Lộ trình: Cao tốc Nội Bài - Lào Cai toàn tuyến -> Bến xe Lào Cai (Cửa khẩu Quốc tế)",
+            ),
+            (
+                "Bến xe Mỹ Đình (Hà Nội)",
+                "Bến xe TP. Hà Giang",
+                300,
+                360,
+                "Lộ trình: Cao tốc Nội Bài - Tuyên Quang -> QL2 qua Tuyên Quang -> Bến xe Hà Giang (Công viên nước)",
+            ),
+            (
+                "Bến xe TP. Hà Giang",
+                "Bến xe Mỹ Đình (Hà Nội)",
+                300,
+                360,
+                "Lộ trình: Bến xe Hà Giang -> QL2 -> Cao tốc Tuyên Quang - Nội Bài -> BX Mỹ Đình",
+            ),
+            (
+                "Bến xe Mỹ Đình (Hà Nội)",
+                "Bến xe Mộc Châu (Sơn La)",
+                200,
+                240,
+                "Lộ trình: Đại Lộ Thăng Long -> Cao tốc Hòa Lạc - Hòa Bình -> QL6 -> Đèo Thung Khe -> Mộc Châu",
+            ),
+            (
+                "Bến xe Mỹ Đình (Hà Nội)",
+                "Bến xe Điện Biên Phủ (Điện Biên)",
+                450,
+                600,
+                "Lộ trình: QL6 qua Hòa Bình, Mộc Châu, Sơn La -> Đèo Pha Đin -> TP. Điện Biên Phủ",
+            ),
+            (
+                "Bến xe Mỹ Đình (Hà Nội)",
+                "Bến xe Liên tỉnh Cao Bằng",
+                280,
+                360,
+                "Lộ trình: Cao tốc Hà Nội - Thái Nguyên - Chợ Mới -> QL3 qua Đèo Gió -> Bến xe Cao Bằng",
+            ),
+            (
                 "Bến xe Giáp Bát (Hà Nội)",
                 "Bến xe Bãi Cháy (Hạ Long - Quảng Ninh)",
-                Decimal("160.00"),
+                160,
                 150,
                 "Lộ trình: Cao tốc Hà Nội - Hải Phòng - Bạch Đằng - Hạ Long -> Bến xe Bãi Cháy",
             ),
             (
+                "Bến xe Bãi Cháy (Hạ Long - Quảng Ninh)",
+                "Bến xe Giáp Bát (Hà Nội)",
+                160,
+                150,
+                "Lộ trình: Bến xe Bãi Cháy -> Cao tốc Hạ Long - Hải Phòng - Hà Nội -> BX Giáp Bát",
+            ),
+            (
+                "Bến xe Mỹ Đình (Hà Nội)",
+                "Bến xe Móng Cái (Quảng Ninh)",
+                310,
+                270,
+                "Lộ trình: Cao tốc Hà Nội - Hải Phòng - Vân Đồn - Tiên Yên - Móng Cái (toàn tuyến cao tốc)",
+            ),
+            (
                 "Bến xe Gia Lâm (Hà Nội)",
                 "Bến xe Vĩnh Niệm (Hải Phòng)",
-                Decimal("110.00"),
+                110,
                 90,
                 "Lộ trình: Cao tốc 5B Hà Nội - Hải Phòng -> Bến xe Vĩnh Niệm",
             ),
             (
+                "Bến xe Vĩnh Niệm (Hải Phòng)",
+                "Bến xe Gia Lâm (Hà Nội)",
+                110,
+                90,
+                "Lộ trình: Bến xe Vĩnh Niệm -> Cao tốc 5B -> Cầu Thanh Trì -> Bến xe Gia Lâm",
+            ),
+            (
+                "Bến xe Giáp Bát (Hà Nội)",
+                "Bến xe Phía Nam TP. Ninh Bình",
+                95,
+                90,
+                "Lộ trình: Cao tốc Pháp Vân - Cầu Giẽ - Cao Bồ - Mai Sơn -> Bến xe Ninh Bình (Tràng An, Tam Cốc)",
+            ),
+            (
+                "Bến xe Giáp Bát (Hà Nội)",
+                "Bến xe Trung tâm Nam Định",
+                90,
+                90,
+                "Lộ trình: Cao tốc Pháp Vân - Liêm Tuyền -> QL21B -> Bến xe Nam Định",
+            ),
+            (
+                "Bến xe Giáp Bát (Hà Nội)",
+                "Bến xe Thái Bình",
+                110,
+                120,
+                "Lộ trình: Cao tốc Pháp Vân -> QL39A qua Hưng Yên, Cầu Triều Dương -> Bến xe Thái Bình",
+            ),
+            (
+                "Bến xe Nước Ngầm (Hà Nội)",
+                "Bến xe Phía Bắc Thanh Hóa",
+                160,
+                150,
+                "Lộ trình: Cao tốc Bắc Nam (Mai Sơn - QL45) -> Bến xe Thanh Hóa",
+            ),
+            (
+                "Bến xe Nước Ngầm (Hà Nội)",
+                "Bến xe Bắc Vinh (Nghệ An)",
+                300,
+                270,
+                "Lộ trình: Cao tốc Mai Sơn - QL45 - Diễn Châu - Bãi Vọt -> Bến xe Bắc Vinh",
+            ),
+            (
+                "Bến xe Bắc Vinh (Nghệ An)",
+                "Bến xe Nước Ngầm (Hà Nội)",
+                300,
+                270,
+                "Lộ trình: Bến xe Bắc Vinh -> Cao tốc Diễn Châu - QL45 - Mai Sơn -> BX Nước Ngầm",
+            ),
+            (
+                "Bến xe Nước Ngầm (Hà Nội)",
+                "Bến xe Hà Tĩnh",
+                350,
+                330,
+                "Lộ trình: Cao tốc Diễn Châu - Bãi Vọt -> QL1A -> Bến xe Hà Tĩnh",
+            ),
+            (
+                "Bến xe Nước Ngầm (Hà Nội)",
+                "Bến xe Đồng Hới (Quảng Bình)",
+                500,
+                480,
+                "Lộ trình: QL1A qua Hà Tĩnh, Đèo Ngang -> Bến xe Đồng Hới (Phong Nha Kẻ Bàng)",
+            ),
+            # --- Nhóm 6: Tuyến Liên Tỉnh Miền Trung - Tây Nguyên - Miền Tây ---
+            (
                 "Bến xe Trung tâm Đà Nẵng",
                 "Bến xe Phía Nam Huế",
-                Decimal("100.00"),
+                100,
                 120,
                 "Lộ trình: Bến xe Đà Nẵng -> Hầm đường bộ Hải Vân -> QL1A -> Bến xe Phía Nam Huế",
             ),
             (
-                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                "Bến xe Phía Nam Huế",
                 "Bến xe Trung tâm Đà Nẵng",
-                Decimal("950.00"),
-                1020,
-                "Lộ trình: Trục QL1A Nam Trung Bộ qua Bình Thuận, Ninh Thuận, Khánh Hòa, Bình Định, Đà Nẵng",
+                100,
+                120,
+                "Lộ trình: Bến xe Huế -> Hầm Hải Vân -> Bến xe Trung tâm Đà Nẵng",
+            ),
+            (
+                "Bến xe Trung tâm Đà Nẵng",
+                "Bến xe Trung tâm Quy Nhơn",
+                310,
+                360,
+                "Lộ trình: Cao tốc Đà Nẵng - Quảng Ngãi -> QL1A -> Bến xe Quy Nhơn",
+            ),
+            (
+                "Bến xe Trung tâm Đà Nẵng",
+                "Bến xe Phía Nam Nha Trang",
+                530,
+                600,
+                "Lộ trình: QL1A dọc duyên hải Nam Trung Bộ -> Bến xe Phía Nam Nha Trang",
+            ),
+            (
+                "Bến xe Trung tâm Đà Nẵng",
+                "Bến xe Đức Long Gia Lai (Pleiku)",
+                330,
+                420,
+                "Lộ trình: QL14B -> Đường Hồ Chí Minh qua Khâm Đức, Đắk Tô, Kon Tum -> Pleiku",
+            ),
+            (
+                "Bến xe Trung tâm Đà Nẵng",
+                "Bến xe Buôn Ma Thuột",
+                530,
+                660,
+                "Lộ trình: QL1A qua Bình Định -> QL19 lên Gia Lai -> QL14 xuống Buôn Ma Thuột",
+            ),
+            (
+                "Bến xe Liên tỉnh Đà Lạt",
+                "Bến xe Phía Nam Nha Trang",
+                135,
+                180,
+                "Lộ trình: QL27C (Tuyến đường hoa biển qua Đèo Khánh Lê) -> Bến xe Nha Trang",
+            ),
+            (
+                "Bến xe Phía Nam Nha Trang",
+                "Bến xe Liên tỉnh Đà Lạt",
+                135,
+                180,
+                "Lộ trình: Bến xe Nha Trang -> QL27C qua Đèo Khánh Lê -> Bến xe Liên tỉnh Đà Lạt",
+            ),
+            (
+                "Bến xe Liên tỉnh Đà Lạt",
+                "Bến xe Buôn Ma Thuột",
+                210,
+                300,
+                "Lộ trình: QL27 qua Đèo Chuối, Đam Rông, Hồ Lắk -> Bến xe Buôn Ma Thuột",
+            ),
+            (
+                "Bến xe Liên tỉnh Đà Lạt",
+                "Bến xe Trung tâm Cần Thơ",
+                460,
+                540,
+                "Lộ trình: Đèo Prenn -> QL20 -> Cao tốc Long Thành -> Cao tốc Trung Lương -> BX Cần Thơ",
+            ),
+            (
+                "Bến xe Liên tỉnh Đà Lạt",
+                "Bến xe Vũng Tàu",
+                300,
+                390,
+                "Lộ trình: QL20 -> QL56 qua Long Khánh, Bà Rịa -> Bến xe Vũng Tàu",
+            ),
+            (
+                "Bến xe Liên tỉnh Đà Lạt",
+                "Bến xe Phan Thiết",
+                160,
+                240,
+                "Lộ trình: QL28B qua Đèo Đại Ninh -> Lương Sơn -> Bến xe Phan Thiết",
+            ),
+            (
+                "Bến xe Trung tâm Cần Thơ",
+                "Bến xe Rạch Sỏi (Rạch Giá)",
+                110,
+                150,
+                "Lộ trình: QL91B -> Tuyến Lộ Tẻ - Rạch Sỏi -> Bến xe Rạch Sỏi",
+            ),
+            (
+                "Bến xe Trung tâm Cần Thơ",
+                "Bến xe Cà Mau",
+                150,
+                210,
+                "Lộ trình: Tuyến Quản Lộ - Phụng Hiệp qua Ngã Bảy, Sóc Trăng -> Bến xe Cà Mau",
+            ),
+            (
+                "Bến xe Trung tâm Cần Thơ",
+                "Bến xe Châu Đốc (An Giang)",
+                125,
+                180,
+                "Lộ trình: QL91 dọc sông Hậu qua Ô Môn, Thốt Nốt, Long Xuyên -> Bến xe Châu Đốc",
+            ),
+            (
+                "Bến xe Trung tâm Cần Thơ",
+                "Bến xe Vũng Tàu",
+                260,
+                330,
+                "Lộ trình: Cao tốc Trung Lương -> Cao tốc Long Thành -> QL51 -> Bến xe Vũng Tàu",
+            ),
+            # --- Nhóm 7: Trục Xuyên Việt Bắc - Trung - Nam ---
+            (
+                "Bến xe Nước Ngầm (Hà Nội)",
+                "Bến xe Trung tâm Đà Nẵng",
+                760,
+                840,
+                "Lộ trình: QL1A / Cao tốc Bắc Nam qua Ninh Bình, Thanh Hóa, Vinh, Hà Tĩnh, Quảng Bình, Huế -> Đà Nẵng",
+            ),
+            (
+                "Bến xe Trung tâm Đà Nẵng",
+                "Bến xe Nước Ngầm (Hà Nội)",
+                760,
+                840,
+                "Lộ trình: Bến xe Đà Nẵng -> Hầm Hải Vân -> QL1A ra Hà Nội -> BX Nước Ngầm",
+            ),
+            (
+                "Bến xe Nước Ngầm (Hà Nội)",
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                1720,
+                1800,
+                "Lộ trình: Tuyến xe khách Bắc Nam xuyên Việt qua 18 tỉnh thành dọc duyên hải",
+            ),
+            (
+                "Bến xe Miền Đông mới (TP. Hồ Chí Minh)",
+                "Bến xe Nước Ngầm (Hà Nội)",
+                1720,
+                1800,
+                "Lộ trình: Tuyến xe khách Nam Bắc xuyên Việt từ TP.HCM về Thủ đô Hà Nội",
             ),
         ]
+
         tuyen_list: list[TuyenXe] = []
-        for di, den, km, phut, mota in tuyen_data:
+        for di, den, km, phut, mota in tuyen_raw_data:
             tx = TuyenXe(
                 DiemDi=di,
                 DiemDen=den,
-                KhoangCach=km,
+                KhoangCach=Decimal(str(km)),
                 ThoiGianDuKien=phut,
                 MoTa=mota,
                 TrangThai="HoatDong",
@@ -480,160 +1045,72 @@ def seed_all():
             tuyen_list.append(tx)
         db.flush()
 
-        # 8. Chuyến Xe (Các chuyến thực tế trong tuần từ hôm nay trở đi)
-        print("[seed] Nạp ChuyenXe...")
+        # 8. Sinh Hơn 160+ Chuyến Xe Khởi Hành Từ Hôm Nay Trở Đi
+        print("[seed] Nạp danh mục ChuyenXe phong phú...")
         hom_nay = date.today()
         chuyen_xe_list: list[ChuyenXe] = []
 
-        # Tuyến 1: TP.HCM -> Đà Lạt (Xe 51B-289.45 Limousine 34P)
-        for offset in range(5):
-            ngay = hom_nay + timedelta(days=offset)
-            chuyen_xe_list.append(
-                ChuyenXe(
-                    MaTuyen=tuyen_list[0].MaTuyen,
-                    MaXe=xe_map["51B-289.45"].MaXe,
-                    NgayKhoiHanh=ngay,
-                    GioKhoiHanh=time(8, 0),
-                    GiaVe=Decimal("320000.00"),
-                    TrangThai="SapKhoiHanh",
-                    GhiChu="Xe Limousine 34 phòng cao cấp, đón tại Hàng Xanh lúc 08:30",
-                )
-            )
-            chuyen_xe_list.append(
-                ChuyenXe(
-                    MaTuyen=tuyen_list[0].MaTuyen,
-                    MaXe=xe_map["49B-018.66"].MaXe,
-                    NgayKhoiHanh=ngay,
-                    GioKhoiHanh=time(22, 30),
-                    GiaVe=Decimal("350000.00"),
-                    TrangThai="SapKhoiHanh",
-                    GhiChu="Chuyến đêm, đến Đà Lạt sáng sớm 05:00",
-                )
+        # Bảng quy đổi giá vé & phân bổ xe theo tuyến
+        # Dùng xe_list từ 30 xe đã tạo
+        all_xe = list(xe_map.values())
+        so_xe = len(all_xe)
+
+        # Lập lịch chạy cho 90 tuyến qua các ngày (từ hôm nay đến 5 ngày tới)
+        for idx, tuyen in enumerate(tuyen_list):
+            km = float(tuyen.KhoangCach or 200)
+
+            # Tính giá vé sát thực tế thị trường theo cự ly
+            if km <= 120:
+                gia_ve = Decimal("150000.00")
+            elif km <= 220:
+                gia_ve = Decimal("190000.00")
+            elif km <= 320:
+                gia_ve = Decimal("320000.00")
+            elif km <= 450:
+                gia_ve = Decimal("360000.00")
+            elif km <= 600:
+                gia_ve = Decimal("440000.00")
+            elif km <= 800:
+                gia_ve = Decimal("550000.00")
+            elif km <= 1100:
+                gia_ve = Decimal("680000.00")
+            else:
+                gia_ve = Decimal("950000.00")  # Xuyên Việt
+
+            # Chọn xe phù hợp luân phiên
+            xe_phu_hop = all_xe[idx % so_xe]
+
+            # Đối với các tuyến trọng điểm (Đà Lạt, Nha Trang, Vũng Tàu, Sa Pa, Cần Thơ), chạy nhiều chuyến/ngày
+            la_tuyen_hot = any(
+                hot in tuyen.DiemDen or hot in tuyen.DiemDi for hot in ["Đà Lạt", "Sa Pa", "Vũng Tàu", "Nha Trang", "Cần Thơ"]
             )
 
-        # Tuyến 2: Đà Lạt -> TP.HCM (Xe 49B-018.66)
-        for offset in range(4):
-            ngay = hom_nay + timedelta(days=offset)
-            chuyen_xe_list.append(
-                ChuyenXe(
-                    MaTuyen=tuyen_list[1].MaTuyen,
-                    MaXe=xe_map["49B-018.66"].MaXe,
-                    NgayKhoiHanh=ngay,
-                    GioKhoiHanh=time(13, 0),
-                    GiaVe=Decimal("320000.00"),
-                    TrangThai="SapKhoiHanh",
-                    GhiChu="Trả khách tại BX Miền Đông Mới và Suối Tiên",
-                )
-            )
+            if la_tuyen_hot:
+                gio_chay = [time(7, 0), time(10, 30), time(14, 0), time(22, 30)]
+                ngay_chay_range = 4  # 4 ngày
+            else:
+                gio_chay = [time(8, 30), time(21, 0)]
+                ngay_chay_range = 3  # 3 ngày
 
-        # Tuyến 3: TP.HCM -> Nha Trang (Xe 79B-031.48)
-        for offset in range(4):
-            ngay = hom_nay + timedelta(days=offset)
-            chuyen_xe_list.append(
-                ChuyenXe(
-                    MaTuyen=tuyen_list[2].MaTuyen,
-                    MaXe=xe_map["79B-031.48"].MaXe,
-                    NgayKhoiHanh=ngay,
-                    GioKhoiHanh=time(21, 0),
-                    GiaVe=Decimal("340000.00"),
-                    TrangThai="SapKhoiHanh",
-                    GhiChu="Chạy cao tốc toàn tuyến, êm ái, tặng nước suối khăn lạnh",
-                )
-            )
-
-        # Tuyến 5: TP.HCM -> Cần Thơ (Xe 65B-019.55 Giường nằm 40C)
-        for offset in range(4):
-            ngay = hom_nay + timedelta(days=offset)
-            for g in [time(7, 30), time(11, 0), time(15, 0)]:
-                chuyen_xe_list.append(
-                    ChuyenXe(
-                        MaTuyen=tuyen_list[4].MaTuyen,
-                        MaXe=xe_map["65B-019.55"].MaXe,
-                        NgayKhoiHanh=ngay,
+            for day_offset in range(ngay_chay_range):
+                ngay_khoi_hanh = hom_nay + timedelta(days=day_offset)
+                for g in gio_chay:
+                    chuyen = ChuyenXe(
+                        MaTuyen=tuyen.MaTuyen,
+                        MaXe=xe_phu_hop.MaXe,
+                        NgayKhoiHanh=ngay_khoi_hanh,
                         GioKhoiHanh=g,
-                        GiaVe=Decimal("180000.00"),
+                        GiaVe=gia_ve,
                         TrangThai="SapKhoiHanh",
-                        GhiChu="Xuất bến tại Bến xe Miền Tây",
+                        GhiChu=f"Xe {xe_phu_hop.BienSo} ({xe_phu_hop.HangXe}), xuất bến đúng giờ, đón trả tận nơi",
                     )
-                )
-
-        # Tuyến 7: TP.HCM -> Vũng Tàu (Xe 72B-029.11 Ghế ngồi 28C)
-        for offset in range(3):
-            ngay = hom_nay + timedelta(days=offset)
-            for g in [time(6, 30), time(9, 30), time(14, 0), time(17, 30)]:
-                chuyen_xe_list.append(
-                    ChuyenXe(
-                        MaTuyen=tuyen_list[6].MaTuyen,
-                        MaXe=xe_map["72B-029.11"].MaXe,
-                        NgayKhoiHanh=ngay,
-                        GioKhoiHanh=g,
-                        GiaVe=Decimal("160000.00"),
-                        TrangThai="SapKhoiHanh",
-                        GhiChu="Xe limousine ghế ngả cao cấp",
-                    )
-                )
-
-        # Tuyến 11: Hà Nội -> Sa Pa (Xe 29B-188.92 Cung điện 24P)
-        for offset in range(4):
-            ngay = hom_nay + timedelta(days=offset)
-            chuyen_xe_list.append(
-                ChuyenXe(
-                    MaTuyen=tuyen_list[10].MaTuyen,
-                    MaXe=xe_map["29B-188.92"].MaXe,
-                    NgayKhoiHanh=ngay,
-                    GioKhoiHanh=time(7, 0),
-                    GiaVe=Decimal("450000.00"),
-                    TrangThai="SapKhoiHanh",
-                    GhiChu="Cabin Cung điện hoàng gia, đón phố cổ và Sân bay Nội Bài",
-                )
-            )
-            chuyen_xe_list.append(
-                ChuyenXe(
-                    MaTuyen=tuyen_list[10].MaTuyen,
-                    MaXe=xe_map["29B-188.92"].MaXe,
-                    NgayKhoiHanh=ngay,
-                    GioKhoiHanh=time(22, 0),
-                    GiaVe=Decimal("480000.00"),
-                    TrangThai="SapKhoiHanh",
-                    GhiChu="Chuyến đêm, đến Sa Pa lúc 04:30 sáng, khách được ngủ trên xe đến 06:00",
-                )
-            )
-
-        # Tuyến 15: Đà Nẵng -> Huế (Xe 43B-047.82 Limousine 34P)
-        for offset in range(3):
-            ngay = hom_nay + timedelta(days=offset)
-            chuyen_xe_list.append(
-                ChuyenXe(
-                    MaTuyen=tuyen_list[14].MaTuyen,
-                    MaXe=xe_map["43B-047.82"].MaXe,
-                    NgayKhoiHanh=ngay,
-                    GioKhoiHanh=time(9, 0),
-                    GiaVe=Decimal("140000.00"),
-                    TrangThai="SapKhoiHanh",
-                    GhiChu="Qua hầm Hải Vân, êm ái nhanh chóng",
-                )
-            )
-
-        # Tuyến 16: TP.HCM -> Đà Nẵng (Xe 51B-305.18 Giường nằm 40C)
-        for offset in range(4):
-            ngay = hom_nay + timedelta(days=offset)
-            chuyen_xe_list.append(
-                ChuyenXe(
-                    MaTuyen=tuyen_list[15].MaTuyen,
-                    MaXe=xe_map["51B-305.18"].MaXe,
-                    NgayKhoiHanh=ngay,
-                    GioKhoiHanh=time(15, 0),
-                    GiaVe=Decimal("520000.00"),
-                    TrangThai="SapKhoiHanh",
-                    GhiChu="Bao ăn 2 bữa chính tại trạm dừng chân chất lượng cao",
-                )
-            )
+                    chuyen_xe_list.append(chuyen)
 
         db.add_all(chuyen_xe_list)
         db.flush()
 
-        # 9. Khuyến Mãi (Mã voucher thực tế ngoài đời)
-        print("[seed] Nạp KhuyenMai...")
+        # 9. Khuyến Mãi Thực Tế
+        print("[seed] Nạp mã KhuyenMai...")
         km_data = [
             (
                 "Chào Bạn Mới - Giảm 20%",
@@ -690,6 +1167,28 @@ def seed_all():
                 datetime(2027, 12, 31),
                 "Giảm 10% tối đa 60.000đ cho dòng xe Cung điện VIP",
             ),
+            (
+                "Du Lịch Vũng Tàu Cuối Tuần",
+                "VUNGTAUHE",
+                "TienMat",
+                Decimal("20000.00"),
+                None,
+                Decimal("150000.00"),
+                datetime(2026, 1, 1),
+                datetime(2027, 12, 31),
+                "Giảm 20.000đ cho tuyến xe Sài Gòn đi Vũng Tàu",
+            ),
+            (
+                "Khám Phá Miền Tây Sông Nước",
+                "MIENTAYVIP",
+                "PhanTram",
+                Decimal("12.00"),
+                Decimal("40000.00"),
+                Decimal("250000.00"),
+                datetime(2026, 1, 1),
+                datetime(2027, 12, 31),
+                "Giảm 12% cho các tuyến đi Cần Thơ, Rạch Giá, Cà Mau",
+            ),
         ]
         km_map: dict[str, KhuyenMai] = {}
         for ten, code, loai, giatri, toida, toithieu, start, end, mota in km_data:
@@ -709,23 +1208,22 @@ def seed_all():
             km_map[code] = km
         db.flush()
 
-        # 10. Đặt Vé & Chi Tiết Đặt Vé & Thanh Toán & Lịch Sử Vé Mẫu
+        # 10. Đặt Vé & Chi Tiết Đặt Vé & Thanh Toán & Lịch Sử Mẫu
         print("[seed] Nạp DatVe, CT_DatVe, ThanhToan, LichSuVe mẫu...")
-        # Lấy chuyến xe đầu tiên (Sài Gòn - Đà Lạt chuyến 8h sáng)
+        # Lấy chuyến xe đầu tiên (Sài Gòn - Đà Lạt)
         cx_sg_dl = chuyen_xe_list[0]
-        # Lấy ghế của xe chạy chuyến này
         ghe_sg_dl = db.query(Ghe).filter(Ghe.MaXe == cx_sg_dl.MaXe).order_by(Ghe.SoGhe).all()
 
-        # Đơn 1: Khách hàng Đặng Vũ Long đặt 2 ghế A01, A02 - Đã thanh toán qua VNPay
+        # Đơn 1: Khách hàng Đặng Vũ Long đặt 2 ghế A01, A02 qua website, thanh toán VNPay
         don_1 = DatVe(
             MaKH=kh_map["kh_dangvulong"].MaKH,
             MaNV=None,
             MaKM=km_map["CHAOBANMOI"].MaKM,
             NgayDat=datetime.now() - timedelta(hours=3),
-            TongTien=Decimal("590000.00"),  # 2 vé x 320k = 640k - 50k voucher = 590k
+            TongTien=Decimal("590000.00"),
             TienGiam=Decimal("50000.00"),
             TrangThai="DaThanhToan",
-            GhiChu="Đặt qua website, thanh toán VNPay QR thành công",
+            GhiChu="Khách đặt trực tuyến, thanh toán VNPay QR thành công",
         )
         db.add(don_1)
         db.flush()
@@ -751,7 +1249,7 @@ def seed_all():
             MaGiaoDich="VNP148291048821",
             ThoiGianThanhToan=datetime.now() - timedelta(hours=3) + timedelta(minutes=2),
             TrangThai="ThanhCong",
-            GhiChu="Thanh toán thành công qua VNPay-QR",
+            GhiChu="Thanh toán thành công qua cổng VNPay-QR",
         )
         db.add(tt_1)
 
@@ -771,7 +1269,7 @@ def seed_all():
         )
         db.add_all([ls_1_1, ls_1_2])
 
-        # Đơn 2: Bán tại quầy cho khách vãng lai (nhân viên Mai Anh bán, ghế A05)
+        # Đơn 2: Bán tại quầy Bến xe Miền Đông cho khách vãng lai (nhân viên Mai Anh xuất vé, ghế A05)
         don_2 = DatVe(
             MaKH=kh_vang_lai_1.MaKH,
             MaNV=nv_map["nv_miendong"].MaNV,
@@ -780,7 +1278,7 @@ def seed_all():
             TongTien=Decimal("320000.00"),
             TienGiam=Decimal("0.00"),
             TrangThai="DaThanhToan",
-            GhiChu="Khách mua trực tiếp tại Quầy số 3 BX Miền Đông",
+            GhiChu="Khách mua trực tiếp tại Quầy số 3 Bến xe Miền Đông Mới",
         )
         db.add(don_2)
         db.flush()
@@ -813,7 +1311,7 @@ def seed_all():
         )
         db.add(ls_2)
 
-        # Đơn 3: Đơn chờ thanh toán (ghế A08, giữ chỗ trực tuyến)
+        # Đơn 3: Đơn đang chờ thanh toán (ghế A08, giữ chỗ 5 phút)
         don_3 = DatVe(
             MaKH=kh_map["kh_lethithuy"].MaKH,
             MaNV=None,
@@ -822,7 +1320,7 @@ def seed_all():
             TongTien=Decimal("320000.00"),
             TienGiam=Decimal("0.00"),
             TrangThai="ChoThanhToan",
-            GhiChu="Đang giữ chỗ 5 phút, chờ thanh toán MoMo",
+            GhiChu="Khách chọn ghế A08, hệ thống đang giữ chỗ 5 phút",
         )
         db.add(don_3)
         db.flush()
@@ -845,9 +1343,10 @@ def seed_all():
         db.add(ls_3)
 
         db.commit()
-        print("[seed] Nạp dữ liệu mẫu THÀNH CÔNG RỰC RỠ!")
+        print("[seed] Nạp mạng lưới dữ liệu xe khách toàn quốc THÀNH CÔNG RỰC RỠ!")
 
-        # In tóm tắt số lượng bản ghi
+        # In tổng kết số lượng bản ghi
+        print("\n=== TỔNG KẾT DỮ LIỆU ĐÃ NẠP VÀO DATABASE ===")
         for tbl, model in [
             ("VaiTro", VaiTro),
             ("ChucNang", ChucNang),
@@ -867,7 +1366,7 @@ def seed_all():
             ("LichSuVe", LichSuVe),
         ]:
             count = db.query(model).count()
-            print(f"  + {tbl:12s}: {count} bản ghi")
+            print(f"  + {tbl:12s}: {count:4d} bản ghi")
 
     except Exception as e:
         db.rollback()
