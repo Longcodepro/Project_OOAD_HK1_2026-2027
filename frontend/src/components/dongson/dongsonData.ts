@@ -1,6 +1,12 @@
 /**
- * Vector data & layers extracted directly from "Hoa văn Đông Sơn.html"
- * Exact archaeological composition of the Ngoc Lu bronze drum.
+ * @file dongsonData.ts
+ * @description Tập hợp dữ liệu Vector SVG và các lớp khảo cổ của Trống đồng Đông Sơn Ngọc Lũ & Nón lá.
+ *
+ * BAO GỒM:
+ * 1. Họa tiết hình tượng: Chim Lạc bay (`CRANE`), chim đậu (`PERCH`), đàn hươu (`DEER`), người giã gạo (`PEOPLE`).
+ * 2. Các hàm dựng lớp SVG: Ngôi sao 14 cánh (`starLayer`), vành kỷ hà (`geoLayer`), vành người múa (`peopleLayer`),
+ *    vành hươu (`deerLayer`), vành chim Lạc (`birdLayer`).
+ * 3. Họa tiết Nón lá (`hatSvg`).
  */
 
 export const T = Math.PI * 2

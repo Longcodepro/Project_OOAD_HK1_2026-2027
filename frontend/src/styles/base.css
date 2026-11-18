@@ -92,6 +92,17 @@ input::placeholder {
 .drum .l-people { animation: spin-reverse 150s linear infinite; transform-origin: 50% 50%; }
 .drum .l-geo { animation: spin 200s linear infinite; transform-origin: 50% 50%; }
 
+/* Chế độ mượt mà / Giảm tải GPU: Ngừng xoay đa tầng SVG để tránh giật lag máy */
+.drum-static .ring,
+@media (prefers-reduced-motion: reduce) {
+  .drum .ring {
+    animation: none !important;
+  }
+  .flap .wing-u, .flap .wing-d {
+    animation: none !important;
+  }
+}
+
 /* 2. Chim Lạc vỗ cánh & bay */
 .wing-u { transform-origin: 89px 30px; }
 .wing-d { transform-origin: 89px 49px; }

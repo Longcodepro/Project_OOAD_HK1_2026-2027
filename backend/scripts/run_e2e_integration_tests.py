@@ -10,6 +10,7 @@ import time
 import json
 import random
 import subprocess
+from datetime import datetime, timedelta
 from decimal import Decimal
 import requests
 
@@ -201,12 +202,13 @@ def main():
         customer_token = login_resp.json()["access_token"]
         customer_auth_header = {"Authorization": f"Bearer {customer_token}"}
 
-    # 1.4 Tìm kiếm chuyến TP.HCM - Đà Lạt
+    # 1.4 Tìm kiếm chuyến TP.HCM - Đà Lạt (chọn chuyến sau 3 ngày để đảm bảo đủ điều kiện > 24h cho bài test hủy vé)
+    search_date = (datetime.now().date() + timedelta(days=3)).strftime("%Y-%m-%d")
     search_resp, _ = runner.run_step(
         "Kịch bản 1: Khách hàng",
-        "1.4 Tìm kiếm chuyến xe TP.HCM - Đà Lạt ngày 2026-11-15",
+        f"1.4 Tìm kiếm chuyến xe TP.HCM - Đà Lạt ngày {search_date}",
         "GET",
-        "/trips/search?origin=TP.+H%E1%BB%93+Ch%C3%AD+Minh&destination=%C4%90%C3%A0+L%E1%BA%A1t&date=2026-11-15",
+        f"/trips/search?origin=TP.+H%E1%BB%93+Ch%C3%AD+Minh&destination=%C4%90%C3%A0+L%E1%BA%A1t&date={search_date}",
         lambda r: (r.status_code == 200 and len(r.json().get("items", [])) > 0, f"Tìm thấy {len(r.json().get('items', []))} chuyến xe")
     )
     if search_resp and search_resp.status_code == 200 and search_resp.json().get("items"):

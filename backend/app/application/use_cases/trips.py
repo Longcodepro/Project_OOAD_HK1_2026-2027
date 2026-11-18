@@ -22,7 +22,15 @@ from app.domain.rules.scheduling import overlaps
 
 
 class TripService:
-    """UC13 (thêm/sửa/xem chuyến, tuyến) và UC01 (tra cứu chuyến)."""
+    """Ca sử dụng UC13 (Thêm/Sửa/Xem chuyến, tuyến), UC15 (Đổi giá vé) và UC01 (Tra cứu chuyến xe).
+
+    Nghiệp vụ cốt lõi:
+    - Quản lý tuyến đường và các điểm đón/trả dọc hành trình.
+    - Lên lịch chuyến xe và điều phối xe, phát hiện xung đột lịch xe tự động.
+    - Tìm kiếm chuyến xe tối ưu với cơ chế giải phóng ghế lười và gợi ý ngày lân cận.
+    - Cập nhật giá vé linh hoạt (không ảnh hưởng đến vé đã bán).
+    - Đổi xe hoặc đổi giờ chạy kèm thông báo SMS tự động cho hành khách.
+    """
 
     def __init__(
         self,
@@ -38,6 +46,7 @@ class TripService:
 
     # ---- tuyến ----
     def create_route(self, origin, destination, distance_km, expected_minutes) -> Route:
+        """Tạo tuyến đường mới. Kiểm tra không được trùng lặp cặp (origin, destination)."""
         if self.repo.route_exists(origin, destination):
             raise Conflict("Tuyến này đã tồn tại")
         return self.repo.add_route(Route(origin, destination, distance_km, expected_minutes))
@@ -57,6 +66,7 @@ class TripService:
 
     # ---- chuyến ----
     def _check_vehicle_free(self, vehicle_id: int, start: datetime, minutes: int, exclude_id=None):
+        """Kiểm tra xe có bị trùng lịch chạy với chuyến khác không (loại trừ các chuyến đã CANCELLED)."""
         end = start + timedelta(minutes=minutes)
         for other in self.repo.vehicle_trips(vehicle_id, start, exclude_id):
             if other.status == TripStatus.CANCELLED:
@@ -77,6 +87,15 @@ class TripService:
         dropoffs: list[str],
         note: str | None,
     ) -> Trip:
+        """Tạo chuyến xe mới mở bán.
+
+        Ràng buộc nghiệp vụ:
+        1. Tuyến đường phải đang ACTIVE.
+        2. Xe phải đang ACTIVE và đã được thiết lập sơ đồ ghế.
+        3. Giờ khởi hành phải ở tương lai so với giờ hiện tại (now_vn).
+        4. Xe không bị trùng lịch chạy với bất kỳ chuyến nào khác trong khoảng thời gian dự kiến.
+        5. Tự động khởi tạo trạng thái TRONG (FREE) cho toàn bộ ghế của xe trên chuyến này.
+        """
         route = self.get_route(route_id)
         if route.status != RouteStatus.ACTIVE:
             raise BusinessRule("Tuyến đã ngừng hoạt động")

@@ -74,4 +74,8 @@ class BookingRepository(Protocol):
         order_id: int | None,
         ticket_id: int | None,
         order_code: str | None = None,
-    ) -> list[OrderAggregate]: ...
+        limit: int | None = None,
+        offset: int = 0,
+    ) -> tuple[list[OrderAggregate], int]:
+        """Trả (các đơn của trang hiện tại, tổng số đơn khớp bộ lọc). `limit=None` = lấy tất cả."""
+        ...

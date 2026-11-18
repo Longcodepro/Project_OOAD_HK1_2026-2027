@@ -1,17 +1,50 @@
+/**
+ * @file SuccessPage.tsx
+ * @description Màn hình Xác nhận Đặt vé Thành công & Hiển thị Cuống vé Điện tử (Boarding Pass & QR Code).
+ *
+ * CHỨC NĂNG CHÍNH:
+ * 1. Hiển thị thông điệp xác nhận đặt vé thành công và chúc thượng lộ bình an mang âm hưởng văn hóa dân tộc.
+ * 2. Khôi phục bền vững trạng thái vé khi F5 (Reload Persistence) từ `sessionStorage`.
+ * 3. Hỗ trợ xem vé cho đơn hàng nhiều ghế (`orderTickets`):
+ *    - Cung cấp dải nút chọn từng vé (Ghế · Tên hành khách) để chuyển đổi qua lại giữa các cuống vé của cùng một đơn.
+ * 4. Thiết kế Cuống vé điện tử (Boarding Pass Card):
+ *    - Trình bày trực quan mã vé (`ticketCode`), mã đặt chỗ (`orderId`), trạng thái (`status`), lộ trình,
+ *      ngày giờ xuất bến, biển số xe, họ tên hành khách, số điện thoại, số ghế (kèm chỉ dẫn tầng 1/tầng 2),
+ *      giá vé gốc, số tiền giảm và tổng thanh toán.
+ *    - Hiển thị điểm đón và điểm trả khách đã đăng ký.
+ *    - Khung mã QR xác thực (`qrData`) để nhân viên soát vé quét nhanh tại cửa xe.
+ * 5. Các hành động nghiệp vụ (Action Buttons):
+ *    - Tải file vé điện tử PDF chính thức (`ticketsApi.downloadPdf`) kèm hiệu ứng loading và thông báo lỗi.
+ *    - In cuống vé trực tiếp qua hộp thoại in của trình duyệt (`window.print()`).
+ *    - Chuyển hướng nhanh tới mục "Hành trình của tôi" (`ProfilePage`) hoặc quay về Trang chủ.
+ */
+
+import { useEffect, useState } from 'react'
 import type { Ticket, View, User } from '../types'
 import { Header } from '../components/layout/Header'
 import { CRANE, renderFigureSvg } from '../components/dongson/dongsonData'
 import { FlockOfCranes } from '../components/dongson/FlockOfCranes'
-import { formatVnd, ticketsApi } from '../services/api'
+import { apiErrorMessage, formatVnd, ticketsApi } from '../services/api'
+import { loadSavedCurrentTicket, loadSavedOrderTickets, saveCurrentTicket } from '../services/viewState'
 
 export interface SuccessPageProps {
+  /** Hàm điều hướng giữa các màn hình */
   setView: (v: View) => void
+  /** Thông tin người dùng đăng nhập hiện tại */
   user: User | null
+  /** Trạng thái online của máy chủ backend */
   backendOnline: boolean
+  /** Callback đăng xuất tài khoản */
   onLogout?: () => void
+  /** Vé đang được hiển thị chi tiết */
   ticket: Ticket | null
+  /** Danh sách toàn bộ các vé thuộc đơn hàng vừa tạo (nếu đặt nhiều ghế) */
+  orderTickets?: Ticket[]
+  /** Callback chọn vé để hiển thị chi tiết khi đơn có nhiều vé */
+  onSelectTicket?: (ticket: Ticket) => void
 }
 
+/** Bảng cấu hình nhãn và màu sắc hiển thị cho trạng thái vé */
 const STATUS: Record<string, { label: string; tone: string }> = {
   CHUA_DI: { label: 'ĐÃ THANH TOÁN', tone: 'text-celadon bg-celadon/10 border-celadon' },
   CHO_THANH_TOAN: { label: 'CHỜ THANH TOÁN', tone: 'text-bronze bg-bronze/10 border-bronze' },
@@ -25,8 +58,59 @@ export function SuccessPage({
   backendOnline,
   onLogout,
   ticket,
+  orderTickets = [],
+  onSelectTicket,
 }: SuccessPageProps) {
-  if (!ticket) {
+  // Khởi tạo vé hiển thị: ưu tiên prop ticket, nếu F5 thì khôi phục từ sessionStorage
+  const [activeTicket, setActiveTicket] = useState<Ticket | null>(() => {
+    return ticket ?? loadSavedCurrentTicket() ?? (orderTickets[0] ?? loadSavedOrderTickets()[0] ?? null)
+  })
+
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
+  const [pdfError, setPdfError] = useState('')
+
+  // Đồng bộ khi prop ticket thay đổi hoặc khi khởi động lại trang
+  useEffect(() => {
+    if (ticket) {
+      setActiveTicket(ticket)
+    } else {
+      const saved = loadSavedCurrentTicket() ?? (orderTickets[0] ?? loadSavedOrderTickets()[0] ?? null)
+      if (saved) {
+        setActiveTicket(saved)
+        onSelectTicket?.(saved)
+      }
+    }
+  }, [ticket, orderTickets, onSelectTicket])
+
+  // Lấy danh sách các vé cùng đơn (nếu có)
+  const allOrderTickets = orderTickets.length > 0 ? orderTickets : loadSavedOrderTickets()
+  const siblings =
+    activeTicket && allOrderTickets.length > 1 && allOrderTickets.some((t) => t.ticketCode === activeTicket.ticketCode)
+      ? allOrderTickets
+      : []
+
+  const handleSelectSibling = (t: Ticket) => {
+    setActiveTicket(t)
+    saveCurrentTicket(t)
+    onSelectTicket?.(t)
+    setPdfError('')
+  }
+
+  const handleDownloadPdf = async () => {
+    if (!activeTicket) return
+    setDownloadingPdf(true)
+    setPdfError('')
+    try {
+      await ticketsApi.downloadPdf(activeTicket.id, `VeXe-${activeTicket.ticketCode}.pdf`)
+    } catch (err) {
+      setPdfError(apiErrorMessage(err, 'Không tải được vé PDF. Vui lòng thử lại sau.'))
+    } finally {
+      setDownloadingPdf(false)
+    }
+  }
+
+  // Trường hợp hoàn toàn không có vé để hiển thị (kể cả sau khi đọc từ sessionStorage)
+  if (!activeTicket) {
     return (
       <>
         <Header
@@ -58,7 +142,6 @@ export function SuccessPage({
     )
   }
 
-  const activeTicket: Ticket = ticket
   const status = STATUS[activeTicket.status] ?? { label: activeTicket.status, tone: 'text-ink-soft bg-paper-deep border-hairline' }
   const craneSvg = renderFigureSvg(CRANE)
 
@@ -73,7 +156,7 @@ export function SuccessPage({
       />
 
       <main className="max-w-[760px] mx-auto px-4 md:px-6 py-8 md:py-12 flex flex-col items-center">
-        {/* Biểu tượng thành công men lam */}
+        {/* Biểu tượng dấu kiểm xác nhận thành công */}
         <div className="w-16 h-16 rounded-full bg-celadon/15 border-2 border-celadon flex items-center justify-center text-celadon mb-4">
           <span className="material-symbols-outlined text-3xl font-bold">check</span>
         </div>
@@ -100,9 +183,36 @@ export function SuccessPage({
           />
         </div>
 
-        {/* CUỐNG VÉ ĐIỆN TỬ (BOARDING PASS CARD VỚI NÉT KHẮC ĐÔNG SƠN) */}
+        {/* Thanh chọn vé trong trường hợp đơn hàng có nhiều vé (nhiều ghế) */}
+        {siblings.length > 0 && (
+          <div className="mt-6 w-full" role="group" aria-label="Các vé trong đơn">
+            <p className="mb-2 text-xs font-semibold text-ink-soft">Đơn gồm {siblings.length} vé — chọn vé để xem:</p>
+            <div className="flex flex-wrap gap-2">
+              {siblings.map((t) => {
+                const active = t.ticketCode === activeTicket.ticketCode
+                return (
+                  <button
+                    key={t.ticketCode}
+                    type="button"
+                    onClick={() => handleSelectSibling(t)}
+                    aria-pressed={active}
+                    className={`cursor-pointer rounded border px-3 py-1.5 text-xs font-bold transition ${
+                      active
+                        ? 'border-terracotta bg-terracotta text-paper'
+                        : 'border-hairline bg-paper text-ink hover:border-terracotta'
+                    }`}
+                  >
+                    Ghế {t.seatNumber} · {t.passengerName}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* CUỐNG VÉ ĐIỆN TỬ (Boarding Pass Card) */}
         <article className="w-full bg-[#FFFDF9] border border-dashed border-bronze/60 rounded p-6 md:p-8 relative overflow-hidden shadow-xs mt-4">
-          {/* Dấu Chim Lạc CRANE góc trên bên phải */}
+          {/* Họa tiết chim Lạc Đông Sơn chìm ở góc vé */}
           <svg
             aria-hidden="true"
             className="absolute -right-6 -bottom-6 w-48 h-auto text-bronze opacity-15 pointer-events-none"
@@ -110,22 +220,36 @@ export function SuccessPage({
             dangerouslySetInnerHTML={{ __html: craneSvg }}
           />
 
-          {/* Đầu vé */}
+          {/* Đầu vé: Mã vé, Mã đặt chỗ và huy hiệu trạng thái */}
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-dashed border-hairline pb-4 mb-5">
-            <div>
-              <span className="text-[11px] font-bold text-ink-soft uppercase tracking-wider block">
-                MÃ VÉ ĐIỆN TỬ
-              </span>
-              <span className="text-2xl font-black text-terracotta tracking-wider tabular-nums">
-                {activeTicket.ticketCode}
-              </span>
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-baseline gap-4">
+                <div>
+                  <span className="text-[11px] font-bold text-ink-soft uppercase tracking-wider block">
+                    MÃ VÉ ĐIỆN TỬ
+                  </span>
+                  <span className="text-2xl font-black text-terracotta tracking-wider tabular-nums">
+                    {activeTicket.ticketCode}
+                  </span>
+                </div>
+                {activeTicket.orderId && (
+                  <div className="border-l border-hairline pl-4">
+                    <span className="text-[11px] font-bold text-ink-soft uppercase tracking-wider block">
+                      MÃ ĐẶT CHỖ
+                    </span>
+                    <span className="text-lg font-extrabold text-ink tracking-wider font-mono">
+                      #{activeTicket.orderId}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <span className={`text-xs font-bold border px-3 py-1 rounded ${status.tone}`}>{status.label}</span>
             </div>
           </div>
 
-          {/* Thông tin lộ trình */}
+          {/* Thân vé: Thông tin lộ trình */}
           <div className="space-y-4 relative z-10">
             <div className="flex items-baseline justify-between flex-wrap gap-2">
               <div>
@@ -141,7 +265,7 @@ export function SuccessPage({
               )}
             </div>
 
-            {/* Chi tiết hành khách & vị trí */}
+            {/* Chi tiết hành khách & vị trí ghế ngồi */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-y border-dashed border-hairline py-4 text-xs">
               <div>
                 <span className="text-ink-soft block text-[11px] uppercase font-semibold">Hành khách</span>
@@ -152,15 +276,25 @@ export function SuccessPage({
                 <b className="text-ink text-sm block mt-0.5">{activeTicket.passengerPhone}</b>
               </div>
               <div>
-                <span className="text-ink-soft block text-[11px] uppercase font-semibold">Ghế</span>
-                <b className="text-terracotta text-sm block mt-0.5">{activeTicket.seatNumber}</b>
+                <span className="text-ink-soft block text-[11px] uppercase font-semibold">Vị trí ghế</span>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <b className="text-terracotta text-sm">{activeTicket.seatNumber}</b>
+                </div>
+                <span className="text-[10px] text-ink-soft block mt-0.5">
+                  {activeTicket.seatNumber.startsWith('B')
+                    ? 'Tầng 2 (Khoang trên)'
+                    : activeTicket.seatNumber.startsWith('A')
+                      ? 'Tầng 1 (Khoang dưới)'
+                      : 'Ghế tiêu chuẩn'}
+                </span>
               </div>
               <div>
-                <span className="text-ink-soft block text-[11px] uppercase font-semibold">Tổng tiền</span>
+                <span className="text-ink-soft block text-[11px] uppercase font-semibold">Tổng thanh toán</span>
                 <b className="text-ink text-sm block mt-0.5">{formatVnd(activeTicket.totalAmount)}</b>
               </div>
             </div>
 
+            {/* Thông tin giảm giá nếu có */}
             {activeTicket.discount > 0 && (
               <div className="text-xs text-ink-soft space-y-1">
                 <div className="flex justify-between">
@@ -174,6 +308,7 @@ export function SuccessPage({
               </div>
             )}
 
+            {/* Điểm đón và điểm trả khách */}
             {(activeTicket.pickupPoint || activeTicket.dropoffPoint) && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-ink-soft pt-1">
                 {activeTicket.pickupPoint && (
@@ -191,7 +326,7 @@ export function SuccessPage({
               </div>
             )}
 
-            {/* Dữ liệu mã QR (chưa dựng hình QR) */}
+            {/* Mã QR và chuỗi dữ liệu soát vé */}
             <div className="flex flex-col sm:flex-row items-center gap-6 border-t border-dashed border-hairline pt-5 mt-4">
               <div className="w-28 h-28 rounded bg-paper p-2 border border-hairline flex flex-col items-center justify-center shrink-0">
                 <span className="material-symbols-outlined text-ink" style={{ fontSize: 64 }}>qr_code_2</span>
@@ -204,22 +339,30 @@ export function SuccessPage({
                   <p>Vé chưa có mã xác thực.</p>
                 )}
                 <p>
-                  Khi lên xe, hãy đọc mã vé <b>{activeTicket.ticketCode}</b> cho nhân viên soát vé.
+                  Khi lên xe, hãy xuất trình mã QR này hoặc đọc mã vé <b>{activeTicket.ticketCode}</b> cho nhân viên soát vé.
                 </p>
               </div>
             </div>
           </div>
         </article>
 
-        {/* Nút hành động */}
+        {/* Thông báo lỗi tải PDF nếu có */}
+        {pdfError && (
+          <div className="mt-4 w-full p-3.5 rounded border border-terracotta/30 bg-terracotta/10 text-xs text-terracotta font-semibold text-center">
+            {pdfError}
+          </div>
+        )}
+
+        {/* Các nút hành động */}
         <div className="mt-8 flex flex-col sm:flex-row items-center gap-4 w-full justify-center">
           <button
             type="button"
-            onClick={() => ticketsApi.downloadPdf(activeTicket.id, `VeXe-${activeTicket.ticketCode}.pdf`)}
-            className="cta-terracotta h-11 px-6 rounded text-xs font-bold text-paper flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+            disabled={downloadingPdf}
+            onClick={handleDownloadPdf}
+            className="cta-terracotta h-11 px-6 rounded text-xs font-bold text-paper flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto disabled:opacity-60"
           >
             <span className="material-symbols-outlined text-base">download</span>
-            <span>Tải vé điện tử PDF</span>
+            <span>{downloadingPdf ? 'Đang tải tệp PDF...' : 'Tải vé điện tử PDF'}</span>
           </button>
 
           <button

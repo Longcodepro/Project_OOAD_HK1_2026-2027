@@ -16,7 +16,20 @@ class CouponCheck:
 
 
 class CouponService:
-    """UC15 (phần khuyến mãi) và bước áp mã ở UC02/UC04."""
+    """Ca sử dụng UC15 (Quản lý Khuyến mãi) và bước áp dụng mã giảm giá ở UC02 (Online) / UC04 (Quầy).
+
+    Quy tắc nghiệp vụ:
+    - Loại giảm giá (kind):
+      + PHAN_TRAM (PERCENT): Giảm theo tỷ lệ % tổng tiền vé (có chặn trần max_discount nếu cấu hình).
+      + SO_TIEN (AMOUNT): Giảm một số tiền cố định (ví dụ giảm 50,000đ).
+    - Kiểm tra điều kiện áp dụng (Validation):
+      + Trạng thái mã phải đang BẬT (CouponStatus.ON).
+      + Thời điểm áp dụng phải nằm trong khoảng [valid_from, valid_to].
+      + Số lượt đã sử dụng (used) phải nhỏ hơn tổng số lượng phát hành (quantity).
+      + Tổng tiền vé trước giảm (subtotal) phải đạt mức chi tiêu tối thiểu (min_order).
+    - Bảo toàn lịch sử: Mã giảm giá không được phép xóa (tránh làm hỏng đối soát tài chính của các đơn cũ),
+      chỉ được phép bật/tắt (toggle trạng thái ON/OFF).
+    """
 
     def __init__(self, repo: CouponRepository):
         self.repo = repo

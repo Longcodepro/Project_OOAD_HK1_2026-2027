@@ -27,7 +27,18 @@ def temp_password() -> str:
 
 
 class AdminUserService:
-    """UC16: Admin quản lý tài khoản & phân quyền, mọi thao tác đều ghi nhật ký."""
+    """Ca sử dụng UC16: Admin quản trị người dùng & phân quyền hệ thống.
+
+    Ràng buộc nghiệp vụ quan trọng:
+    - Admin không thể tự khóa tài khoản của chính mình (ngăn chặn mất quyền quản trị hệ thống).
+    - Không thể chuyển đổi qua lại giữa tài khoản Khách hàng (KHACH_HANG) và Nhân viên nội bộ
+      (để bảo toàn tính phân tách giữa giao dịch cá nhân và thao tác nghiệp vụ).
+    - Khi cấp tài khoản nhân viên hoặc đặt lại mật khẩu: Sinh mật khẩu ngẫu nhiên 10 ký tự
+      (đảm bảo cả chữ lẫn số) và bật cờ `must_change_password = True` buộc đổi ở lần đăng nhập đầu tiên.
+    - Khi khóa tài khoản: Thu hồi toàn bộ phiên đăng nhập (token_version += 1). Nếu tài khoản còn vé
+      chưa đi, hệ thống trả về cảnh báo nhưng vé vẫn giữ nguyên hiệu lực đi xe của hành khách.
+    - Mọi thao tác quản trị đều được ghi nhật ký hệ thống (ActivityLogger) để phục vụ kiểm toán.
+    """
 
     STAFF_ROLES = (Role.TICKET_CLERK, Role.ADMIN)
 

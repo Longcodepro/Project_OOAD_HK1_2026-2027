@@ -5,6 +5,12 @@ from enum import StrEnum
 
 
 class OrderStatus(StrEnum):
+    """Trạng thái vòng đời Đơn đặt vé:
+    - PENDING (CHO_THANH_TOAN): Vừa tạo đơn, đang giữ chỗ chờ thanh toán (trong 15 phút).
+    - PAID (DA_THANH_TOAN): Đã thanh toán thành công, vé được phát hành (có mã QR).
+    - FAILED (THAT_BAI): Hết hạn giữ chỗ trước khi tiền về, đơn bị đóng tự động.
+    - CANCELLED (DA_HUY): Khách hàng/nhân viên chủ động hủy đơn chờ, hoặc toàn bộ vé trong đơn đã hủy.
+    """
     PENDING = "CHO_THANH_TOAN"
     PAID = "DA_THANH_TOAN"
     FAILED = "THAT_BAI"
@@ -12,11 +18,21 @@ class OrderStatus(StrEnum):
 
 
 class Channel(StrEnum):
+    """Kênh bán vé:
+    - ONLINE (TRUC_TUYEN): Khách đặt qua web/app, bắt buộc đăng nhập tài khoản.
+    - COUNTER (TAI_QUAY): Bán tại phòng vé/bến xe, nhân viên thu ngân thao tác, khách vãng lai không cần tài khoản.
+    """
     ONLINE = "TRUC_TUYEN"
     COUNTER = "TAI_QUAY"
 
 
 class TicketStatus(StrEnum):
+    """Trạng thái vòng đời Vé xe điện tử:
+    - PENDING (CHO_THANH_TOAN): Vé tạm tạo trong đơn chờ thanh toán.
+    - UNUSED (CHUA_DI): Đã thanh toán, có mã QR, sẵn sàng lên xe xuất trình.
+    - COMPLETED (DA_HOAN_THANH): Chuyến xe đã khởi hành/kết thúc (suy diễn thời gian thực lúc đọc).
+    - CANCELLED (DA_HUY): Đã hủy (khách tự hủy, hủy tại quầy, hoặc nhà xe hủy chuyến), tiền được hoàn lại.
+    """
     PENDING = "CHO_THANH_TOAN"
     UNUSED = "CHUA_DI"
     COMPLETED = "DA_HOAN_THANH"
@@ -24,6 +40,13 @@ class TicketStatus(StrEnum):
 
 
 class PaymentMethod(StrEnum):
+    """Phương thức thanh toán hỗ trợ:
+    - MOMO: Ví điện tử MoMo
+    - ZALOPAY: Ví điện tử ZaloPay
+    - VIETQR: Quét mã QR chuyển khoản ngân hàng (VietQR chuẩn Napas 247)
+    - CARD (THE): Thẻ ATM nội địa / thẻ quốc tế Visa, Master
+    - CASH (TIEN_MAT): Tiền mặt (CHỈ ÁP DỤNG TẠI QUẦY)
+    """
     MOMO = "MOMO"
     ZALOPAY = "ZALOPAY"
     VIETQR = "VIETQR"
@@ -32,6 +55,12 @@ class PaymentMethod(StrEnum):
 
 
 class PaymentStatus(StrEnum):
+    """Trạng thái giao dịch thanh toán:
+    - PROCESSING (DANG_XU_LY): Đang chờ cổng thanh toán xác nhận (ví dụ đang quét QR).
+    - SUCCESS (THANH_CONG): Tiền đã vào tài khoản, giao dịch hoàn tất.
+    - FAILED (THAT_BAI): Giao dịch bị cổng từ chối (thẻ lỗi, số dư không đủ).
+    - CANCELLED (DA_HUY): Giao dịch bị hủy do đổi phương thức hoặc đơn hết hạn.
+    """
     PROCESSING = "DANG_XU_LY"
     SUCCESS = "THANH_CONG"
     FAILED = "THAT_BAI"

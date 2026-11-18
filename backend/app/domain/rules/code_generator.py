@@ -1,6 +1,7 @@
-"""Hàm sinh mã nghiệp vụ chuẩn doanh nghiệp vận tải.
+"""Hàm sinh mã nghiệp vụ chuẩn doanh nghiệp vận tải hành khách.
 
-Quy tắc: Tiền tố + Thời gian / Tên gợi nhớ + Số thứ tự hoặc Giờ
+Quy tắc cấu trúc mã:
+- Tiền tố nghiệp vụ + Định danh gợi nhớ (Điểm đi - Điểm đến / Ngày tháng) + Số thứ tự hoặc Giờ
 - Tuyến xe (routes): TX-{ORIGIN}{DEST} (VD: TX-HNDN, TX-SGDL)
 - Chuyến xe (trips): CX-{ROUTE}-{YYMMDD}-{HHMM} (VD: CX-HNDN-261112-1800)
 - Đơn đặt vé (orders): ORD-{YYMMDD}-{SEQ:04d} (VD: ORD-261112-0001)
@@ -14,7 +15,15 @@ from datetime import date, datetime, time
 
 
 def _city_abbr(name: str) -> str:
-    """Rút gọn tên tỉnh/thành phố thành 2 ký tự viết hoa."""
+    """Rút gọn tên tỉnh/thành phố thành 2 ký tự viết hoa chuẩn hóa.
+
+    Quy trình xử lý:
+    1. Thay thế chữ đ/Đ thành d/D để tránh lỗi phân rã ký tự tiếng Việt.
+    2. Chuẩn hóa NFD để bóc tách các dấu thanh (dấu sắc, huyền, hỏi, ngã, nặng).
+    3. Loại bỏ dấu (danh mục unicode "Mn"), chuyển thành chữ hoa không dấu.
+    4. Tra cứu bảng đối chiếu địa danh phổ biến đã được chuẩn hóa (Hà Nội -> HN, Sài Gòn/TP.HCM -> SG, Đà Nẵng -> DN...).
+    5. Dự phòng (fallback): Lấy chữ cái đầu của 2 từ đầu tiên (ví dụ "NINH BINH" -> "NB"), hoặc 2 ký tự đầu của từ duy nhất.
+    """
     s = name.replace("đ", "d").replace("Đ", "D")
     s = unicodedata.normalize("NFD", s)
     s = "".join(c for c in s if unicodedata.category(c) != "Mn").strip().upper()
@@ -52,6 +61,12 @@ def _city_abbr(name: str) -> str:
 
 
 def gen_route_code(origin: str, destination: str, route_id: int | None = None) -> str:
+    """Sinh mã định danh tuyến đường: TX-{ORIGIN}{DEST}[-{ID:02d}].
+
+    Ví dụ:
+        origin='Hà Nội', destination='Đà Nẵng' -> 'TX-HNDN'
+        Nếu có route_id=1 -> 'TX-HNDN-01'
+    """
     orig = _city_abbr(origin)
     dest = _city_abbr(destination)
     base = f"TX-{orig}{dest}"
@@ -66,6 +81,12 @@ def gen_trip_code(
     dep_time: time,
     trip_id: int | None = None,
 ) -> str:
+    """Sinh mã định danh chuyến xe: CX-{ROUTE_PART}-{YYMMDD}-{HHMM}.
+
+    Ví dụ:
+        route_code='TX-HNDN', dep_date=2026-11-12, dep_time=18:00
+        -> 'CX-HNDN-261112-1800'
+    """
     route_part = route_code.replace("TX-", "") if route_code else "TRIP"
     time_str = f"{dep_time.hour:02d}{dep_time.minute:02d}"
     date_str = f"{dep_date:%y%m%d}"
@@ -74,12 +95,27 @@ def gen_trip_code(
 
 
 def gen_order_code(dt: datetime, order_id: int) -> str:
+    """Sinh mã đơn đặt vé: ORD-{YYMMDD}-{order_id:04d}.
+
+    Ví dụ:
+        dt=2026-11-12 10:00:00, order_id=1 -> 'ORD-261112-0001'
+    """
     return f"ORD-{dt:%y%m%d}-{order_id:04d}"
 
 
 def gen_ticket_code(dt: datetime, ticket_id: int) -> str:
+    """Sinh mã vé điện tử: VE-{YYMMDD}-{ticket_id:04d}.
+
+    Ví dụ:
+        dt=2026-11-12 10:00:00, ticket_id=17 -> 'VE-261112-0017'
+    """
     return f"VE-{dt:%y%m%d}-{ticket_id:04d}"
 
 
 def gen_refund_code(dt: datetime, refund_id: int) -> str:
+    """Sinh mã lệnh hoàn tiền: HT-{YYMMDD}-{refund_id:04d}.
+
+    Ví dụ:
+        dt=2026-11-12 10:00:00, refund_id=3 -> 'HT-261112-0003'
+    """
     return f"HT-{dt:%y%m%d}-{refund_id:04d}"

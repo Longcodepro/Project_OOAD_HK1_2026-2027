@@ -19,9 +19,11 @@ class AdminOrderService:
         order_id: int | None = None,
         ticket_id: int | None = None,
         order_code: str | None = None,
-    ) -> list[OrderAggregate]:
+        limit: int | None = None,
+        offset: int = 0,
+    ) -> tuple[list[OrderAggregate], int]:
         return self.repo.search_orders(
-            status, channel, date_from, date_to, phone, order_id, ticket_id, order_code
+            status, channel, date_from, date_to, phone, order_id, ticket_id, order_code, limit, offset
         )
 
     def get(self, order_id: int) -> OrderAggregate:

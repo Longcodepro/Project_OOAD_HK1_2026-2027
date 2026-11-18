@@ -7,17 +7,31 @@ DEFAULT_TRIP_MINUTES = 360  # tuyến chưa khai báo thời gian dự kiến th
 
 
 class RouteStatus(StrEnum):
+    """Trạng thái tuyến đường:
+    - ACTIVE (HOAT_DONG): Tuyến đang khai thác, được tạo chuyến xe mới.
+    - STOPPED (NGUNG): Tạm dừng khai thác tuyến này.
+    """
     ACTIVE = "HOAT_DONG"
     STOPPED = "NGUNG"
 
 
 class TripStatus(StrEnum):
+    """Trạng thái chuyến xe:
+    - OPEN (MO_BAN): Đang mở bán vé công khai cho khách hàng.
+    - LOCKED (DA_KHOA): Tạm ngưng bán vé (đang điều chỉnh xe/lịch trình).
+    - CANCELLED (DA_HUY): Nhà xe hủy chuyến (do thiên tai/sự cố), hoàn 100% tiền vé.
+    """
     OPEN = "MO_BAN"
     LOCKED = "DA_KHOA"
     CANCELLED = "DA_HUY"
 
 
 class SeatState(StrEnum):
+    """Trạng thái ghế trên một chuyến xe cụ thể (TripSeat):
+    - FREE (TRONG): Ghế còn trống, sẵn sàng cho bất kỳ ai chọn và giữ chỗ.
+    - HELD (TAM_KHOA): Ghế đang được giữ tạm thời bởi một tài khoản (tối đa 15 phút).
+    - SOLD (DA_BAN): Ghế đã thanh toán tiền vé thành công, thuộc sở hữu hành khách.
+    """
     FREE = "TRONG"
     HELD = "TAM_KHOA"
     SOLD = "DA_BAN"

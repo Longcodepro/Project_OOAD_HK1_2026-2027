@@ -1,3 +1,25 @@
+/**
+ * @file CounterPage.tsx
+ * @description Màn hình Nghiệp vụ Bán vé tại Quầy (Point of Sale - POS) & Đối soát Ca trực dành cho Nhân viên Bán vé.
+ *
+ * CÁC PHÂN HỆ NGHIỆP VỤ CHÍNH:
+ * 1. Tab BÁN VÉ TẠI QUẦY (POS Desk):
+ *    - Tìm kiếm chuyến xe mở bán theo Điểm đi, Điểm đến và Ngày chạy.
+ *    - Xem sơ đồ ghế trực tiếp của chuyến xe, chọn ghế (tối đa 10 ghế/đơn), giữ chỗ tạm thời (`bookingsApi.holdSeats`).
+ *    - Nhập thông tin hành khách từng ghế và chọn điểm đón/trả.
+ *    - Áp dụng mã giảm giá khuyến mãi (nếu có).
+ *    - Lập phiếu bán vé quầy (`counterApi.createOrder`): Backend tự động thu tiền mặt (`method: 'TIEN_MAT'`)
+ *      và chuyển vé sang trạng thái hiệu lực (`CHUA_DI`).
+ *    - In phôi vé giấy nhiệt: Tự động mở cửa sổ in ấn biên nhận vé xe chuẩn in nhiệt (Thermal Receipt Printing).
+ * 2. Tab ĐỐI SOÁT DOANH THU CA TRỰC (Cashier Shift Reconciliation):
+ *    - Gọi `counterApi.summary(date)` để tổng hợp doanh thu trong ca trực của chính nhân viên.
+ *    - Thống kê chi tiết: Số đơn đã thu tiền, tổng số vé bán ra, tổng doanh thu và cơ cấu tiền mặt / chuyển khoản.
+ *    - Danh sách các đơn đã lập: Cho phép in lại phôi vé giấy khi máy in lỗi (`counterApi.receipts`).
+ * 3. HỦY VÉ TẠI QUẦY (Counter Ticket Cancellation):
+ *    - Cho phép nhân viên hủy vé cho khách tại quầy (`counterApi.cancelTicket`),
+ *      tính toán tiền hoàn và in biên nhận xác nhận hủy vé cho khách hàng.
+ */
+
 import { Fragment, useEffect, useRef, useState } from 'react'
 import type { CounterSummary, Order, RouteOffer, Seat, Ticket, TicketRefund, Trip, TripDetail, User } from '../../types'
 import {

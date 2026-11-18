@@ -1,3 +1,15 @@
+/**
+ * @file Footer.tsx
+ * @description Chân trang ứng dụng (Website Footer) tích hợp dải hoa văn sóng nước mây xoắn Đông Sơn.
+ *
+ * NỘI DUNG HIỂN THỊ:
+ * 1. Dải hoa văn mây cuộn sóng nước Đông Sơn dạng SVG thuần túy.
+ * 2. Giới thiệu thương hiệu VéXe Việt và định vị đồ án môn học Phân tích Thiết kế Hướng đối tượng (OOAD).
+ * 3. Danh sách các tuyến xe đang mở bán lấy dữ liệu thực tế từ API `routesApi.offers()`.
+ * 4. Các liên kết điều hướng nhanh dành cho khách hàng: Tra cứu vé, Hành trình của tôi, Đăng nhập.
+ * 5. Bản quyền và thông điệp văn hóa "Khởi hành trọn vẹn · Kết nối non sông".
+ */
+
 import { useEffect, useState } from 'react'
 import type { RouteOffer, View } from '../../types'
 import { routesApi } from '../../services/api'

@@ -1,19 +1,51 @@
+/**
+ * @file PickerFields.tsx
+ * @description Các Thành phần Bộ Chọn Tùy Biến (Custom Pickers: PlacePicker & DatePicker).
+ *
+ * TÍNH NĂNG CHÍNH:
+ * 1. `PlacePicker`:
+ *    - Bộ chọn Tỉnh/Thành phố thông minh dạng popover.
+ *    - Tìm kiếm tức thời hỗ trợ gõ không dấu (`plain`: "ha noi" -> "Hà Nội").
+ *    - Chặn chọn trùng điểm xuất phát và điểm đích (`disabledValue`).
+ * 2. `DatePicker`:
+ *    - Bộ chọn lịch trực quan hỗ trợ chọn nhanh "Hôm nay", "Ngày mai", chuyển tháng và định dạng chuẩn ISO YYYY-MM-DD.
+ *    - Chặn chọn các ngày trước mốc tối thiểu (`min`).
+ * 3. Các hàm tiện ích ngày giờ: `toYmd`, `fromYmd` xử lý chuẩn múi giờ địa phương (tránh lỗi lệch ngày của UTC).
+ */
+
 import { useEffect, useRef, useState } from 'react'
 
-/** YYYY-MM-DD theo giờ máy (toISOString lệch sang hôm qua trước 7h sáng giờ VN). */
+/**
+ * Chuyển đối tượng Date sang chuỗi định dạng 'YYYY-MM-DD' theo giờ địa phương của máy khách.
+ * Tránh việc dùng `.toISOString()` gây lệch sang ngày hôm trước trước 07:00 sáng tại Việt Nam (GMT+7).
+ *
+ * @param d - Đối tượng ngày tháng
+ * @returns Chuỗi định dạng YYYY-MM-DD
+ */
 export const toYmd = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
+/**
+ * Chuyển chuỗi định dạng 'YYYY-MM-DD' thành đối tượng Date theo giờ địa phương.
+ *
+ * @param s - Chuỗi ngày dạng YYYY-MM-DD
+ * @returns Đối tượng Date tương ứng
+ */
 export const fromYmd = (s: string) => {
   const [y, m, d] = s.split('-').map(Number)
   return new Date(y, m - 1, d)
 }
 
-// Bỏ dấu để gõ "ha noi" vẫn ra "Hà Nội"
+/**
+ * Loại bỏ dấu tiếng Việt và chuyển sang chữ thường để tìm kiếm không dấu.
+ * Ví dụ: "Đà Nẵng" -> "da nang", "Hà Nội" -> "ha noi".
+ */
 const plain = (s: string) =>
   s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').toLowerCase()
 
-/** Đóng popover khi bấm ra ngoài hoặc nhấn Esc. */
+/**
+ * Hook đóng popover tự động khi nhấp chuột ra ngoài phạm vi hoặc khi nhấn phím Escape.
+ */
 function useDismiss(open: boolean, close: () => void) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -43,6 +75,9 @@ export interface PlacePickerProps {
   label: string
 }
 
+/**
+ * Bộ chọn Tỉnh / Thành phố tìm kiếm không dấu dạng popover.
+ */
 export function PlacePicker({ value, onChange, options, disabledValue, label }: PlacePickerProps) {
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
@@ -116,16 +151,26 @@ export function PlacePicker({ value, onChange, options, disabledValue, label }: 
 
 /* ---------------- Chọn ngày ---------------- */
 
+/** Nhãn viết tắt các thứ trong tuần (Thứ Hai đến Chủ Nhật) */
 const DOW = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']
 
 export interface DatePickerProps {
-  value: string // YYYY-MM-DD
+  /** Ngày được chọn (định dạng YYYY-MM-DD) */
+  value: string
+  /** Callback khi người dùng chọn ngày mới */
   onChange: (v: string) => void
+  /** Ngày nhỏ nhất cho phép chọn (chặn ngày quá khứ) */
   min?: string
+  /** Ngày lớn nhất cho phép chọn */
   max?: string
+  /** Nhãn mô tả trường (dùng cho trợ năng aria-label) */
   label: string
 }
 
+/**
+ * Bộ chọn Ngày khởi hành trực quan dạng Popover Lịch (Calendar DatePicker).
+ * Hỗ trợ chuyển tháng, chọn nhanh "Hôm nay", "Ngày mai", tự động khóa ngày quá khứ theo mốc `min`.
+ */
 export function DatePicker({ value, onChange, min, max, label }: DatePickerProps) {
   const [open, setOpen] = useState(false)
   const [view, setView] = useState(() => fromYmd(value)) // tháng đang xem

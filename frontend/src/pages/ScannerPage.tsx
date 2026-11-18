@@ -1,3 +1,22 @@
+/**
+ * @file ScannerPage.tsx
+ * @description Màn hình Nghiệp vụ Soát Vé Lên Xe dành cho Nhân viên Soát vé / Tài xế (Ticket Check-in Scanner).
+ *
+ * QUY TRÌNH NGHIỆP VỤ SOÁT VÉ:
+ * 1. Phương thức tiếp nhận dữ liệu:
+ *    - Quét mã QR trên cuống vé của hành khách (thông qua đầu đọc mã vạch hoặc camera).
+ *    - Hoặc nhập trực tiếp mã vé bằng tay (ví dụ: "VE-261112-0001", "VE-17", "17").
+ *    - Hoặc nhập số điện thoại của hành khách để tra cứu vé nhanh khi khách quên mang vé giấy.
+ * 2. Thẩm tra tính hợp lệ của vé trong Cơ sở Dữ liệu (`ticketsApi.get` & `staffApi.verify`):
+ *    - 'CHUA_DI': HỢP LỆ (Hành khách được phép lên xe).
+ *    - 'DA_HOAN_THANH': TỪ CHỐI (Vé này đã được soát và sử dụng trước đó, cảnh báo gian lận tái sử dụng vé).
+ *    - 'DA_HUY': TỪ CHỐI (Vé đã bị hủy và hoàn tiền).
+ *    - 'CHO_THANH_TOAN': TỪ CHỐI (Vé chưa thanh toán tiền).
+ * 3. Hiển thị kết quả kiểm tra trực quan:
+ *    - Bảng thông tin hành khách: Họ tên, SĐT, số ghế, tuyến đường, giờ khởi hành, biển số xe, điểm đón/trả.
+ *    - Khung trạng thái đổi màu xanh (Hợp lệ) hoặc đỏ (Không hợp lệ) với thông điệp giải thích cụ thể.
+ */
+
 import { useState, type FormEvent } from 'react'
 import type { CheckinResult, User } from '../types'
 import { staffApi, ticketsApi, parseTicketId, apiErrorMessage, formatVnd } from '../services/api'

@@ -1,3 +1,16 @@
+/**
+ * @file FilterSidebar.tsx
+ * @description Thanh bên Bộ lọc Chuyến xe theo các khung giờ khởi hành trong ngày (Search Filter Sidebar).
+ *
+ * CÁC KHUNG GIỜ LỌC:
+ * 1. Sáng sớm (`earlyMorning`): 00:00 - 06:00
+ * 2. Buổi sáng (`morning`): 06:00 - 12:00
+ * 3. Buổi chiều (`afternoon`): 12:00 - 18:00
+ * 4. Buổi tối (`evening`): 18:00 - 24:00
+ *
+ * Cung cấp nút "Đặt lại" để nhanh chóng khôi phục chọn tất cả các khung giờ.
+ */
+
 export interface FilterOptions {
   earlyMorning: boolean // 00:00 - 06:00
   morning: boolean      // 06:00 - 12:00
@@ -100,7 +113,7 @@ export function FilterSidebar({ filters, onFilterChange }: FilterSidebarProps) {
         </div>
         <div className="flex items-center gap-2">
           <span className="material-symbols-outlined text-sm text-terracotta">currency_exchange</span>
-          <span>Hoàn tiền theo thời điểm hủy</span>
+          <span>Hủy vé minh bạch</span>
         </div>
       </div>
     </aside>

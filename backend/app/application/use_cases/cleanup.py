@@ -26,6 +26,22 @@ class CleanupResult:
 
 
 class CleanupService:
+    """Ca sử dụng Tự động thu hồi ghế giữ chỗ quá hạn và hủy đơn hàng quá hạn thanh toán.
+
+    Nguyên tắc hoạt động của Background Cleanup Worker:
+    1. Đọc tham số THOI_GIAN_GIU_CHO_PHUT (mặc định 15 phút) từ cơ sở dữ liệu.
+    2. Pha 1 - Thu hồi ghế giữ chỗ độc lập (Seat Holds):
+       - Tìm các bản ghi TripSeat có status = 'TAM_KHOA' và hold_until < now.
+       - Cập nhật đồng loạt về status = 'TRONG', held_by = NULL, hold_until = NULL.
+    3. Pha 2 - Hủy các đơn hàng quá hạn thanh toán:
+       - Tìm các đơn hàng có status = 'CHO_THANH_TOAN' và created_at < (now - hold_minutes).
+       - Chuyển status đơn sang 'DA_HUY' kèm ghi chú tự động.
+       - Chuyển toàn bộ vé PENDING của đơn sang CANCELLED.
+       - Giải phóng các ghế tương ứng trên chuyến xe về trạng thái 'TRONG'.
+    4. Trả về CleanupResult tổng hợp số lượng và danh sách trip_id -> seat_ids bị thay đổi
+       để hệ thống có thể bắn sự kiện WebSocket (SEATS_RELEASED) tới client.
+    """
+
     def __init__(self, db: Session):
         self.db = db
 

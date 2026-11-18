@@ -1,3 +1,17 @@
+/**
+ * @file AdminRoutesPage.tsx
+ * @description Màn hình Quản Trị Danh Mục Tuyến Đường Liên Tỉnh (Intercity Routes Management).
+ *
+ * TÍNH NĂNG CHÍNH:
+ * 1. Danh sách Tuyến đường:
+ *    - Tìm kiếm thông minh loại bỏ dấu tiếng Việt (`fold`: "Da Nang" khớp với "Đà Nẵng").
+ *    - Hiển thị Điểm đi, Điểm đến, Cự ly (km), Thời gian hành trình dự kiến và trạng thái khai thác.
+ * 2. Thêm mới tuyến đường (`adminRoutesApi.create`):
+ *    - Định nghĩa Điểm xuất phát và Điểm kết thúc, khoảng cách và thời gian chạy trung bình.
+ * 3. Chỉnh sửa & Cập nhật tuyến (`adminRoutesApi.update`):
+ *    - Sửa thông số cự ly, thời lượng hành trình hoặc bật/ngừng khai thác tuyến đường (`HOAT_DONG` / `NGUNG`).
+ */
+
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { adminRoutesApi, apiErrorMessage, type AdminRoute } from '../../services/api'
 import { Button } from '../../components/common/Button'

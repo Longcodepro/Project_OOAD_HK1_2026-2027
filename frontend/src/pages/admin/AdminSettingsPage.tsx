@@ -1,3 +1,20 @@
+/**
+ * @file AdminSettingsPage.tsx
+ * @description Màn hình Cấu Hình Tham Số Toàn Cục Hệ Thống (Global System Parameters Configuration).
+ *
+ * DANH MỤC THAM SỐ ĐIỀU KHIỂN:
+ * 1. `THOI_GIAN_GIU_CHO_PHUT`: Thời gian giữ ghế tạm thời khi đặt vé (1 - 60 phút).
+ * 2. `HAN_HUY_VE_GIO`: Hạn chót cho phép khách tự hủy vé trước giờ khởi hành (0 - 720 giờ).
+ * 3. `PHI_HUY_PHAN_TRAM`: Tỷ lệ phần trăm phí hủy vé khấu trừ trên số tiền vé (0 - 100%).
+ * 4. `OTP_HIEU_LUC_GIAY`: Thời hạn có hiệu lực của mã xác nhận OTP (30 - 600 giây).
+ * 5. `OTP_SO_LAN_THU_TOI_DA`: Số lần nhập sai mã OTP tối đa cho phép trước khi hủy mã (1 - 10 lần).
+ * 6. `OTP_GUI_LAI_GIAY`: Thời gian chờ tối thiểu giữa 2 lần bấm yêu cầu gửi lại OTP (10 - 300 giây).
+ * 7. `DANG_NHAP_SAI_TOI_DA`: Số lần đăng nhập sai mật khẩu tối đa trước khi tài khoản bị khóa tạm thời (1 - 20 lần).
+ * 8. `DANG_NHAP_KHOA_PHUT`: Thời gian tạm khóa tài khoản sau khi vượt quá số lần đăng nhập sai (1 - 1440 phút).
+ *
+ * Mọi thay đổi tham số được xác thực theo ngưỡng `min` / `max` và cập nhật trực tiếp vào CSDL qua `adminSettingsApi.update`.
+ */
+
 import { useCallback, useEffect, useState } from 'react'
 import { adminSettingsApi, apiErrorMessage, type AdminSetting as Setting } from '../../services/api'
 

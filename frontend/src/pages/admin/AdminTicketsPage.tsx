@@ -1,3 +1,18 @@
+/**
+ * @file AdminTicketsPage.tsx
+ * @description Màn hình Quản Trị Đơn Hàng & Xử Lý Hàng Đợi Hoàn Tiền (Orders & Refund Queue Management).
+ *
+ * PHÂN HỆ NGHIỆP VỤ:
+ * 1. Hàng đợi Hoàn tiền chờ xử lý ('REFUNDS'):
+ *    - Liệt kê các lệnh hoàn tiền bị lỗi cổng thanh toán và chuyển sang trạng thái xử lý thủ công (`CHO_XU_LY_THU_CONG`).
+ *    - Hiển thị chi tiết: Mã hoàn tiền, mã vé, số tiền hoàn, phí khấu trừ, lý do hủy và thông điệp lỗi kỹ thuật.
+ *    - Thao tác: Kế toán bấm "Thử lại hoàn tiền" (`adminRefundsApi.retry`) để gửi lại lệnh hoàn sang cổng thanh toán.
+ * 2. Danh sách Đơn đặt vé toàn mạng lưới ('ORDERS'):
+ *    - Tra cứu đơn theo mã đơn, mã vé hoặc số điện thoại khách hàng.
+ *    - Lọc theo kênh bán (Trực tuyến / Tại quầy) và trạng thái đơn hàng (Chờ thanh toán / Đã thanh toán / Đã hủy).
+ *    - Xem Modal chi tiết đơn hàng: thông tin khách, chi tiết từng vé trong đơn, lịch sử các giao dịch thanh toán và hoàn tiền.
+ */
+
 import { useEffect, useState } from 'react'
 import {
   adminOrdersApi,

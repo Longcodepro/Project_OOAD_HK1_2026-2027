@@ -1,12 +1,29 @@
+/**
+ * @file BookingTimer.tsx
+ * @description Đồng hồ Đếm ngược Thời gian Giữ chỗ Tạm thời (Seat Reservation Countdown Timer).
+ *
+ * TÍNH NĂNG CHÍNH:
+ * 1. Đếm ngược từng giây dựa trên `initialSeconds` nhận từ backend API.
+ * 2. Vòng tròn tiến trình SVG tròn xoay (Circular Progress Ring):
+ *    - Bán kính r=24, chu vi circumference = 2 * PI * r.
+ *    - Giảm dần thanh màu đất nung (`stroke="var(--terracotta)"`) theo tỷ lệ thời gian còn lại.
+ * 3. Tự động kích hoạt callback `onExpire()` khi thời gian về 0 để thông báo hủy/nhả ghế.
+ */
+
 import { useEffect, useState } from 'react'
 
 interface BookingTimerProps {
-  /** Số giây giữ chỗ còn lại do backend trả về. */
+  /** Số giây giữ chỗ còn lại do backend trả về */
   initialSeconds: number
+  /** Callback kích hoạt khi đồng hồ đếm ngược về 0 */
   onExpire?: () => void
+  /** Lớp CSS tùy biến */
   className?: string
 }
 
+/**
+ * Thành phần Đồng hồ đếm ngược thời gian giữ chỗ kèm vòng tiến trình SVG.
+ */
 export function BookingTimer({
   initialSeconds,
   onExpire,

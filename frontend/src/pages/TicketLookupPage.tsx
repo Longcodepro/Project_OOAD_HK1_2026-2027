@@ -1,3 +1,24 @@
+/**
+ * @file TicketLookupPage.tsx
+ * @description Màn hình Tra cứu Vé Xe Công khai (Public Ticket Lookup & Cancellation Portal).
+ *
+ * MỤC ĐÍCH & CHỨC NĂNG NGHIỆP VỤ:
+ * 1. Tra cứu vé linh hoạt theo hai phương thức:
+ *    - Tra cứu theo mã vé: hỗ trợ định dạng đầy đủ (ví dụ: "VE-261112-0001"), mã rút gọn ("VE-17"), hoặc số ID ("17").
+ *    - Tra cứu theo số điện thoại: tìm tất cả các vé gắn liền với số điện thoại của hành khách.
+ * 2. Hiển thị cuống vé chi tiết (Boarding Pass View):
+ *    - Hiển thị đầy đủ thông tin: Tuyến đường, giờ xuất bến, điểm đón/trả, biển số xe, số ghế (kèm chỉ dẫn tầng 1/tầng 2),
+ *      số tiền, mã đặt chỗ, trạng thái và khung mã QR xác thực lên xe.
+ * 3. Hộp thoại Hủy vé trực tuyến (`CancelTicketModal`):
+ *    - Dự toán chính xác số tiền được hoàn và phí khấu trừ theo quy định (gọi `ticketsApi.cancelQuote`).
+ *    - Kiểm tra điều kiện hủy vé: yêu cầu thời gian khởi hành còn ít nhất 24 giờ, phí hủy 15%.
+ *    - Khi hành khách bấm "Xác nhận hủy vé": gọi `ticketsApi.cancel`, cập nhật trạng thái `DA_HUY`
+ *      và hiển thị thông tin tiền hoàn thật từ backend.
+ * 4. Tải vé PDF & In cuống vé:
+ *    - Tải vé điện tử PDF chính thức qua `ticketsApi.downloadPdf` với hiệu ứng loading và thông báo lỗi rõ ràng.
+ *    - In cuống vé trực tiếp qua `window.print()`.
+ */
+
 import { useEffect, useState } from 'react'
 import type { View, User, Ticket, TicketRefund } from '../types'
 import { ticketsApi, apiErrorMessage, formatVnd, cleanPhone, parseTicketId, type CancelQuote } from '../services/api'
@@ -22,10 +43,13 @@ export const TICKET_STATUS: Record<string, { label: string; cls: string }> = {
 }
 
 /** Câu mô tả kết quả hoàn tiền thật của một vé đã hủy. */
-export const refundText = (r: TicketRefund): string =>
-  r.status === 'DA_HOAN'
-    ? `Đã hoàn ${formatVnd(r.amount)} (phí hủy ${formatVnd(r.fee)}).`
-    : `Hoàn tiền ${formatVnd(r.amount)} đang chờ nhân viên xử lý thủ công.`
+export const refundText = (r: TicketRefund): string => {
+  const methodStr = r.method === 'TIEN_MAT' ? 'tiền mặt' : 'cổng thanh toán'
+  const codeStr = r.code ? ` (Mã hoàn: ${r.code})` : ''
+  return r.status === 'DA_HOAN'
+    ? `Đã hoàn ${formatVnd(r.amount)} qua ${methodStr} (phí hủy ${formatVnd(r.fee)})${codeStr}.`
+    : `Lệnh hoàn tiền ${formatVnd(r.amount)}${codeStr} đang chờ nhân viên đối soát và xử lý thủ công.`
+}
 
 export interface CancelTicketModalProps {
   ticket: Ticket
@@ -34,7 +58,7 @@ export interface CancelTicketModalProps {
   onCancelled: (refund: TicketRefund) => void
 }
 
-/** Hộp thoại hủy vé: hiện phí/số tiền hoàn do backend tính (khấu trừ 15% phí), rồi mới cho xác nhận. */
+/** Hộp thoại hủy vé: hiện phí/số tiền hoàn do backend tính (khấu trừ 15% phí), kiểm tra điều kiện > 24h rồi mới cho xác nhận. */
 export function CancelTicketModal({ ticket, onClose, onCancelled }: CancelTicketModalProps) {
   const [quote, setQuote] = useState<CancelQuote | null>(null)
   const [error, setError] = useState('')
@@ -55,7 +79,8 @@ export function CancelTicketModal({ ticket, onClose, onCancelled }: CancelTicket
     setSubmitting(true)
     setError('')
     try {
-      onCancelled(await ticketsApi.cancel(ticket.id))
+      const res = await ticketsApi.cancel(ticket.id)
+      onCancelled(res)
     } catch (err) {
       setError(apiErrorMessage(err, 'Không thể hủy vé'))
       setSubmitting(false)
@@ -64,7 +89,7 @@ export function CancelTicketModal({ ticket, onClose, onCancelled }: CancelTicket
 
   return (
     <Modal
-      title="Xác nhận hủy vé"
+      title="Xác nhận hủy vé trực tuyến"
       onClose={onClose}
       footer={
         <>
@@ -82,37 +107,55 @@ export function CancelTicketModal({ ticket, onClose, onCancelled }: CancelTicket
         </>
       }
     >
-      <div className="space-y-4">
-        <p>
-          Bạn sắp hủy vé <b className="text-ink">{ticket.ticketCode}</b> ({ticket.route} · Ghế {ticket.seatNumber}). Vé hủy có hiệu lực ngay.
+      <div className="space-y-4 text-xs">
+        <p className="text-sm">
+          Bạn sắp hủy vé <b className="text-ink">{ticket.ticketCode}</b> ({ticket.route} · Ghế {ticket.seatNumber}). Vé hủy có hiệu lực ngay lập tức.
         </p>
 
-        {!quote && !error && <p className="text-xs text-ink-soft">Đang tính phí hủy vé theo quy định...</p>}
+        {!quote && !error && <p className="text-ink-soft">Đang tính phí hủy vé theo quy định...</p>}
+
+        {quote && (
+          <div className="text-ink-soft space-y-1">
+            <p>
+              Thời gian trước giờ khởi hành:{' '}
+              <b className="text-ink">
+                {quote.hoursLeft > 0 ? `${Math.round(quote.hoursLeft * 10) / 10} giờ` : 'Đã qua giờ khởi hành'}
+              </b>
+            </p>
+            <p className="text-[11px] text-ink-soft italic">
+              * Quy định: Hủy vé trực tuyến yêu cầu trước giờ khởi hành ít nhất 24 giờ. Phí hủy theo quy định là 15% giá vé.
+            </p>
+          </div>
+        )}
 
         {quote && !quote.canCancel && (
-          <div className="dlg-note text-terracotta font-semibold">
-            {quote.reason || 'Vé này hiện không thể hủy (chỉ được hủy trước giờ khởi hành ít nhất 24 giờ).'}
+          <div className="p-3 rounded border border-terracotta/30 bg-terracotta/10 text-terracotta font-semibold leading-relaxed">
+            {quote.reason || 'Vé này hiện không đủ điều kiện hủy trực tuyến (yêu cầu trước giờ xe khởi hành ít nhất 24 giờ).'}
           </div>
         )}
 
         {quote?.canCancel && (
-          <div className="dlg-note space-y-1">
+          <div className="rounded border border-hairline bg-paper-deep/60 p-3.5 space-y-2">
             <div className="flex justify-between">
-              <span>Giá vé:</span>
-              <span className="font-bold">{formatVnd(ticket.totalAmount)}</span>
+              <span className="text-ink-soft">Giá vé:</span>
+              <span className="font-bold text-ink">{formatVnd(ticket.totalAmount)}</span>
             </div>
             <div className="flex justify-between text-terracotta font-semibold">
-              <span>Phí hủy ({quote.feePercent}%):</span>
+              <span>Phí hủy vé ({quote.feePercent}%):</span>
               <span>-{formatVnd(quote.fee)}</span>
             </div>
-            <div className="flex justify-between text-celadon font-bold pt-1 border-t border-hairline">
-              <span>Số tiền hoàn lại:</span>
+            <div className="flex justify-between text-celadon font-bold pt-2 border-t border-hairline text-sm">
+              <span>Số tiền thực nhận hoàn lại:</span>
               <span>{formatVnd(quote.refundAmount)}</span>
             </div>
           </div>
         )}
 
-        {error && <div className="dlg-note text-terracotta font-semibold">{error}</div>}
+        {error && (
+          <div className="p-3 rounded border border-terracotta/30 bg-terracotta/10 text-terracotta font-semibold">
+            {error}
+          </div>
+        )}
       </div>
     </Modal>
   )
@@ -134,6 +177,9 @@ export function TicketLookupPage({
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [cancelSuccessMsg, setCancelSuccessMsg] = useState('')
 
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
+  const [pdfError, setPdfError] = useState('')
+
   const handleLookup = async (e: React.FormEvent) => {
     e.preventDefault()
     const q = searchInput.trim()
@@ -145,6 +191,7 @@ export function TicketLookupPage({
     setLoading(true)
     setErrorMsg('')
     setCancelSuccessMsg('')
+    setPdfError('')
     setTicket(null)
     setMatchingTickets([])
 
@@ -153,7 +200,7 @@ export function TicketLookupPage({
       const hasVePrefix = /^VE-(?:\d{6}-)?\d+$/i.test(q)
 
       if (isPhone && !hasVePrefix) {
-        // Tra cứu vé theo số điện thoại
+        // Tra cứu vé theo số điện thoại hành khách
         const foundList = await ticketsApi.findByPhone(q)
         if (foundList.length === 0) {
           setErrorMsg(`Không tìm thấy vé nào gắn với số điện thoại ${cleanPhone(q)} trong tài khoản của bạn`)
@@ -181,8 +228,13 @@ export function TicketLookupPage({
             }
             setErrorMsg(`Không tìm thấy vé mang mã ${q}`)
           } else {
-            setTicket(found)
-            setMatchingTickets([found])
+            // Nếu người dùng nhập đầy đủ VE-YYMMDD-XXXX thì kiểm tra khớp chính xác mã vé
+            if (/^VE-\d{6}-\d+$/i.test(q) && found.ticketCode.toUpperCase() !== q.toUpperCase()) {
+              setErrorMsg(`Không tìm thấy vé mang mã ${q}`)
+            } else {
+              setTicket(found)
+              setMatchingTickets([found])
+            }
           }
         }
       }
@@ -195,8 +247,14 @@ export function TicketLookupPage({
 
   const handleCancelled = async (refund: TicketRefund) => {
     setShowCancelModal(false)
-    setCancelSuccessMsg(`Đã hủy vé. ${refundText(refund)}`)
+    setCancelSuccessMsg(`Đã hủy vé thành công. ${refundText(refund)}`)
     if (ticket) {
+      // Cập nhật trạng thái tức thời trên giao diện thành DA_HUY kèm thông tin tiền hoàn
+      const updatedTicket: Ticket = { ...ticket, status: 'DA_HUY', refund }
+      setTicket(updatedTicket)
+      setMatchingTickets((prev) => prev.map((t) => (t.id === ticket.id ? updatedTicket : t)))
+
+      // Tải lại dữ liệu tươi từ máy chủ
       try {
         const refreshed = await ticketsApi.get(ticket.ticketCode)
         if (refreshed) {
@@ -204,8 +262,20 @@ export function TicketLookupPage({
           setMatchingTickets((prev) => prev.map((t) => (t.id === refreshed.id ? refreshed : t)))
         }
       } catch {
-        // Nếu không tải lại được vé đơn lẻ
+        // Giữ state đã cập nhật lạc quan
       }
+    }
+  }
+
+  const handleDownloadPdf = async (targetTicket: Ticket) => {
+    setDownloadingPdf(true)
+    setPdfError('')
+    try {
+      await ticketsApi.downloadPdf(targetTicket.id, `VeXe-${targetTicket.ticketCode}.pdf`)
+    } catch (err) {
+      setPdfError(apiErrorMessage(err, 'Không tải được vé PDF. Vui lòng thử lại sau.'))
+    } finally {
+      setDownloadingPdf(false)
     }
   }
 
@@ -231,7 +301,7 @@ export function TicketLookupPage({
             Tra cứu vé của tôi
           </h1>
           <p className="text-sm text-ink-soft max-w-[54ch] mx-auto">
-            Nhập mã vé (ví dụ VE-17) hoặc số điện thoại hành khách để xem lộ trình, mã QR lên xe hoặc hủy vé trực tuyến.
+            Nhập mã vé (ví dụ VE-17 hoặc VE-261112-0001) hoặc số điện thoại hành khách để xem lộ trình, mã QR lên xe hoặc hủy vé trực tuyến.
           </p>
         </div>
 
@@ -288,7 +358,10 @@ export function TicketLookupPage({
                   <button
                     key={t.id}
                     type="button"
-                    onClick={() => setTicket(t)}
+                    onClick={() => {
+                      setTicket(t)
+                      setPdfError('')
+                    }}
                     className={`p-3 text-left rounded border transition cursor-pointer flex flex-col justify-between ${
                       isSelected
                         ? 'border-terracotta bg-terracotta/5 ring-1 ring-terracotta'
@@ -312,6 +385,7 @@ export function TicketLookupPage({
           </div>
         )}
 
+        {/* Cuống vé chi tiết (Boarding Pass View) */}
         {ticket && (
           <article className="bg-[#FFFDF9] border border-dashed border-bronze/60 rounded p-6 relative overflow-hidden shadow-xs space-y-5">
             <svg
@@ -322,13 +396,27 @@ export function TicketLookupPage({
             />
 
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-hairline pb-4">
-              <div>
-                <span className="text-[11px] font-bold text-ink-soft uppercase tracking-wider block">
-                  MÃ VÉ
-                </span>
-                <span className="text-2xl font-black text-terracotta tracking-wider tabular-nums">
-                  {ticket.ticketCode}
-                </span>
+              <div className="space-y-0.5">
+                <div className="flex flex-wrap items-baseline gap-4">
+                  <div>
+                    <span className="text-[11px] font-bold text-ink-soft uppercase tracking-wider block">
+                      MÃ VÉ ĐIỆN TỬ
+                    </span>
+                    <span className="text-2xl font-black text-terracotta tracking-wider tabular-nums">
+                      {ticket.ticketCode}
+                    </span>
+                  </div>
+                  {ticket.orderId && (
+                    <div className="border-l border-hairline pl-4">
+                      <span className="text-[11px] font-bold text-ink-soft uppercase tracking-wider block">
+                        MÃ ĐẶT CHỖ
+                      </span>
+                      <span className="text-base font-bold text-ink tracking-wider font-mono">
+                        #{ticket.orderId}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
               <span className={`text-xs font-bold border px-3 py-1 rounded ${status?.cls ?? 'text-ink-soft border-hairline'}`}>
                 {status?.label ?? ticket.status}
@@ -339,7 +427,7 @@ export function TicketLookupPage({
               <div className="p-3.5 rounded bg-paper-deep/50 border border-hairline space-y-1">
                 <span className="text-ink-soft block font-semibold">Lộ trình chuyến xe:</span>
                 <b className="text-sm text-ink block">{ticket.route}</b>
-                {ticket.plate && <span className="text-ink-soft block">Biển số: {ticket.plate}</span>}
+                {ticket.plate && <span className="text-ink-soft block">Biển số xe: {ticket.plate}</span>}
               </div>
 
               <div className="p-3.5 rounded bg-paper-deep/50 border border-hairline space-y-1">
@@ -354,13 +442,13 @@ export function TicketLookupPage({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 {ticket.pickupPoint && (
                   <div>
-                    <span className="text-ink-soft block text-[11px] font-semibold">Điểm đón</span>
+                    <span className="text-ink-soft block text-[11px] font-semibold">Điểm đón khách</span>
                     <b className="text-ink text-sm">{ticket.pickupPoint}</b>
                   </div>
                 )}
                 {ticket.dropoffPoint && (
                   <div>
-                    <span className="text-ink-soft block text-[11px] font-semibold">Điểm trả</span>
+                    <span className="text-ink-soft block text-[11px] font-semibold">Điểm trả khách</span>
                     <b className="text-ink text-sm">{ticket.dropoffPoint}</b>
                   </div>
                 )}
@@ -377,8 +465,18 @@ export function TicketLookupPage({
                 <b className="text-ink text-sm">{ticket.passengerPhone}</b>
               </div>
               <div>
-                <span className="text-ink-soft block text-[11px] font-semibold">Ghế</span>
-                <b className="text-terracotta text-sm">{ticket.seatNumber}</b>
+                <span className="text-ink-soft block text-[11px] font-semibold">Vị trí chỗ ngồi</span>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="material-symbols-outlined text-base text-terracotta">airline_seat_recline_extra</span>
+                  <b className="text-terracotta text-sm">{ticket.seatNumber}</b>
+                </div>
+                <span className="text-[10px] text-ink-soft block mt-0.5">
+                  {ticket.seatNumber.startsWith('B')
+                    ? 'Tầng 2 (Khoang trên)'
+                    : ticket.seatNumber.startsWith('A')
+                      ? 'Tầng 1 (Khoang dưới)'
+                      : 'Ghế tiêu chuẩn'}
+                </span>
               </div>
               <div>
                 <span className="text-ink-soft block text-[11px] font-semibold">Tổng tiền vé</span>
@@ -391,9 +489,33 @@ export function TicketLookupPage({
               </div>
             </div>
 
+            {/* Khung mã QR xác thực lên xe */}
+            <div className="flex flex-col sm:flex-row items-center gap-6 border-t border-dashed border-hairline pt-4">
+              <div className="w-24 h-24 rounded bg-paper p-2 border border-hairline flex flex-col items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-ink" style={{ fontSize: 56 }}>qr_code_2</span>
+              </div>
+              <div className="text-xs text-ink-soft space-y-1 text-center sm:text-left min-w-0">
+                <p className="font-bold text-ink">Mã xác thực lên xe</p>
+                {ticket.qrData ? (
+                  <p className="font-mono text-ink break-all text-[11px]">{ticket.qrData}</p>
+                ) : (
+                  <p>Vé chưa có mã xác thực (vé chờ thanh toán hoặc đã hủy).</p>
+                )}
+                <p>
+                  Khi lên xe, vui lòng xuất trình mã QR này hoặc đọc mã vé <b>{ticket.ticketCode}</b> cho nhân viên soát vé.
+                </p>
+              </div>
+            </div>
+
             {ticket.refund && (
               <div className="p-3.5 rounded border border-hairline bg-paper-deep/60 text-xs text-ink font-semibold">
                 Hoàn tiền: {refundText(ticket.refund)}
+              </div>
+            )}
+
+            {pdfError && (
+              <div className="p-3 rounded border border-terracotta/30 bg-terracotta/10 text-xs text-terracotta font-semibold text-center">
+                {pdfError}
               </div>
             )}
 
@@ -409,12 +531,24 @@ export function TicketLookupPage({
                 >
                   Chi tiết vé & QR
                 </button>
+
+                <button
+                  type="button"
+                  disabled={downloadingPdf}
+                  onClick={() => handleDownloadPdf(ticket)}
+                  className="px-4 py-2 rounded border border-hairline text-xs font-semibold text-ink hover:border-terracotta transition cursor-pointer flex items-center gap-1.5 disabled:opacity-60"
+                >
+                  <span className="material-symbols-outlined text-base">download</span>
+                  <span>{downloadingPdf ? 'Đang tải PDF...' : 'Tải vé PDF'}</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="px-4 py-2 rounded border border-hairline text-xs font-semibold text-ink hover:border-terracotta transition cursor-pointer"
+                  className="px-4 py-2 rounded border border-hairline text-xs font-semibold text-ink hover:border-terracotta transition cursor-pointer flex items-center gap-1.5"
                 >
-                  In vé / Tải PDF
+                  <span className="material-symbols-outlined text-base">print</span>
+                  <span>In vé</span>
                 </button>
               </div>
 
