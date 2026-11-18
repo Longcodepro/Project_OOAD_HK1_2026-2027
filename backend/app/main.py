@@ -4,10 +4,11 @@ from sqlalchemy import text
 
 from app.config import settings
 from app.infrastructure.db.session import SessionLocal
+from app.presentation.routers import auth_router
 
 app = FastAPI(
     title=settings.app_name,
-    description="Backend đặt vé xe khách (OOAD) - Khởi tạo khung sạch để kiểm thử từng endpoint.",
+    description="Backend đặt vé xe khách (OOAD) - Hệ thống Quản trị & Bán vé Xe Khách Trực Tuyến.",
     version="1.0.0",
     debug=settings.debug,
 )
@@ -19,6 +20,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Đăng ký các router (hỗ trợ cả đường dẫn trực tiếp và prefix /api)
+app.include_router(auth_router)
+app.include_router(auth_router, prefix="/api")
 
 
 @app.get("/health", tags=["hệ thống"])
