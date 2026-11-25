@@ -2,7 +2,7 @@
 
 Tài liệu này cung cấp hướng dẫn chi tiết cách kiểm thử thủ công (manual testing), tích hợp API và chạy các kịch bản nghiệp vụ thực tế trên hệ thống **Vé Xe Khách (OOAD Bus Ticket System)** thông qua:
 1. **Swagger UI** trực quan tại trình duyệt.
-2. **Postman Collection v2.1** chuẩn hóa đi kèm file `Vexe_API_Collection.postman_collection.json`.
+2. **Postman Collection v2.1** chuẩn hóa đi kèm tại thư mục `tests/postman/` (gồm `Vexe_API_Collection.postman_collection.json` và `Full_System_Newman_Collection.json`).
 
 ---
 
@@ -95,16 +95,17 @@ http://localhost:8005/docs
 
 ## 3. HƯỚNG DẪN IMPORT & SỬ DỤNG POSTMAN COLLECTION
 
-Hệ thống đã chuẩn bị sẵn bộ sưu tập Postman chuẩn hóa v2.1 đầy đủ 79 requests đặt tại root dự án:
+Hệ thống đã chuẩn bị sẵn các bộ sưu tập Postman chuẩn hóa v2.1 đầy đủ kịch bản đặt tại thư mục `tests/postman/`:
 ```
-Vexe_API_Collection.postman_collection.json
+tests/postman/Vexe_API_Collection.postman_collection.json
+tests/postman/Full_System_Newman_Collection.json
 ```
 
 ### 3.1 Các bước Import vào Postman
 1. Khởi động ứng dụng **Postman**.
 2. Chọn không gian làm việc (**My Workspace** hoặc tạo Workspace mới).
 3. Bấm vào nút **Import** ở thanh bên trái phía trên (hoặc phím tắt `Ctrl + O` / `Cmd + O`).
-4. Kéo thả file `Vexe_API_Collection.postman_collection.json` vào cửa sổ Import hoặc bấm **Browse files** và trỏ đến file trong thư mục dự án.
+4. Kéo thả file `tests/postman/Vexe_API_Collection.postman_collection.json` (hoặc `tests/postman/Full_System_Newman_Collection.json`) vào cửa sổ Import.
 5. Bấm **Import**. Bộ sưu tập mang tên **`Vé Xe Khách - API Collection`** sẽ xuất hiện trong danh sách Collections.
 
 ---

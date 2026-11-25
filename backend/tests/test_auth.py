@@ -1,3 +1,6 @@
+import uuid
+
+
 def test_login_admin_success(client):
     res = client.post(
         "/api/auth/login",
@@ -86,14 +89,14 @@ def test_get_me_invalid_token(client):
 
 
 def test_register_customer_success(client):
-    unique_suffix = "998877"
+    uid = uuid.uuid4().hex[:6]
     reg_res = client.post(
         "/api/auth/register",
         json={
-            "ten_dang_nhap": f"test_user_{unique_suffix}",
+            "ten_dang_nhap": f"test_user_{uid}",
             "mat_khau": "MatKhau@123",
             "ho_ten": "Khách Hàng Mới Test",
-            "sdt": f"0911{unique_suffix}",
+            "sdt": f"091{uid[:7]}",
             "dia_chi": "Quận 3, TP. Hồ Chí Minh",
         },
     )
@@ -120,14 +123,15 @@ def test_register_duplicate_username(client):
 
 def test_change_password_flow(client):
     # 1. Đăng ký tài khoản tạm
-    username = "user_change_pass_test"
+    uid = uuid.uuid4().hex[:6]
+    username = f"user_chg_{uid}"
     reg_res = client.post(
         "/api/auth/register",
         json={
             "ten_dang_nhap": username,
             "mat_khau": "MatKhauCu123",
             "ho_ten": "Đổi Mật Khẩu User",
-            "sdt": "0999000111",
+            "sdt": f"099{uid[:7]}",
         },
     )
     assert reg_res.status_code == 201

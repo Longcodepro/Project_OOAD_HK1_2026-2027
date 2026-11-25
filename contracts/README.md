@@ -21,4 +21,4 @@ python -c "import json; from app.main import app; json.dump(app.openapi(), open(
 ```
 
 ## Trạng thái hiện tại
-Chưa có `openapi.json` — backend hiện mới là khung thư mục (`../backend/README.md`), chưa có code thật, chưa có endpoint nào. File sẽ được thêm khi backend có route đầu tiên thật.
+✅ Đã hoàn thiện toàn diện tệp đặc tả `contracts/openapi.json` (OpenAPI 3.1.0) bao quát 100% các nhóm endpoint: Xác thực & Tài khoản, Tra cứu Chuyến xe & Sơ đồ ghế, Đặt vé & Thanh toán VietQR, Bán vé Quầy POS, Soát vé QR Code, Quản trị Tuyến/Chuyến/Xe, Quản lý Khuyến mãi và Báo cáo Dashboard.

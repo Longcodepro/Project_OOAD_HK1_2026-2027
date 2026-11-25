@@ -42,6 +42,9 @@ class DatVe(Base):
     lich_su_list: Mapped[list["LichSuVe"]] = relationship(
         "LichSuVe", back_populates="dat_ve", cascade="all, delete-orphan"
     )
+    thong_bao_sms_list: Mapped[list["ThongBaoSMS"]] = relationship(
+        "ThongBaoSMS", back_populates="dat_ve", cascade="all, delete-orphan"
+    )
 
 
 class CT_DatVe(Base):
@@ -53,6 +56,8 @@ class CT_DatVe(Base):
     MaChuyen: Mapped[int] = mapped_column(Integer, ForeignKey("ChuyenXe.MaChuyen"), nullable=False)
 
     DonGia: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    HoTenHanhKhach: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    SDTHanhKhach: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     __table_args__ = (
         UniqueConstraint("MaDatVe", "MaGhe", name="uq_ctdatve_madatve_maghe"),
@@ -75,6 +80,9 @@ class ThanhToan(Base):
     MaGiaoDich: Mapped[str | None] = mapped_column(String(100), nullable=True)
     ThoiGianThanhToan: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=func.now())
     TrangThai: Mapped[str] = mapped_column(String(30), nullable=False, default="ChoThanhToan")
+    SoTaiKhoan: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    TenNganHang: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    TenChuTaiKhoan: Mapped[str | None] = mapped_column(String(100), nullable=True)
     GhiChu: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     dat_ve: Mapped["DatVe"] = relationship("DatVe", back_populates="thanh_toan_list")
@@ -94,3 +102,22 @@ class LichSuVe(Base):
 
     dat_ve: Mapped["DatVe"] = relationship("DatVe", back_populates="lich_su_list")
     tai_khoan: Mapped["TaiKhoan"] = relationship("TaiKhoan", back_populates="lich_su_list")
+
+
+class ThongBaoSMS(Base):
+    __tablename__ = "ThongBaoSMS"
+
+    MaThongBao: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    MaDatVe: Mapped[int] = mapped_column(Integer, ForeignKey("DatVe.MaDatVe"), nullable=False)
+    MaChuyen: Mapped[int] = mapped_column(Integer, ForeignKey("ChuyenXe.MaChuyen"), nullable=False)
+
+    SDT: Mapped[str] = mapped_column(String(20), nullable=False)
+    LoaiThongBao: Mapped[str] = mapped_column(String(50), nullable=False, default="SMS_HuyChuyenMoiNhanTien")
+    NoiDung: Mapped[str] = mapped_column(String(1000), nullable=False)
+    TrangThai: Mapped[str] = mapped_column(String(30), nullable=False, default="DaGui")
+    ThoiGianGui: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=func.now())
+    GhiChu: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    dat_ve: Mapped["DatVe"] = relationship("DatVe", back_populates="thong_bao_sms_list")
+    chuyen_xe: Mapped["ChuyenXe"] = relationship("ChuyenXe")
+

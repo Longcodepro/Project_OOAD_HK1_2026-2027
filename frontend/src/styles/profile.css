@@ -1,0 +1,41 @@
+.profile-side {
+  height: max-content;
+  padding: 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  background: var(--card);
+}
+
+.profile-side > button {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  border-radius: 4px;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 13px;
+  color: var(--ink-soft);
+  transition: background .15s, color .15s;
+}
+
+.profile-side > button:hover { background: var(--paper-deep); color: var(--ink); }
+
+.profile-side > button.active {
+  background: var(--paper-deep);
+  box-shadow: inset 3px 0 0 var(--terracotta);
+  color: var(--terracotta);
+  font-weight: 700;
+}
+
+.history-card {
+  background: var(--card);
+  box-shadow: 0 2px 10px rgba(28, 26, 23, .04);
+}
+
+.status {
+  display: inline-block;
+  border-radius: 3px;
+  padding: 4px 8px;
+  font: 600 10px var(--font);
+  letter-spacing: .08em;
+}

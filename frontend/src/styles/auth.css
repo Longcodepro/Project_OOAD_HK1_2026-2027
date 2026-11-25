@@ -1,0 +1,98 @@
+.auth-page {
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+  background:
+    radial-gradient(ellipse 90% 60% at 60% 0%, rgba(180, 67, 46, .12) 0%, transparent 62%),
+    var(--paper);
+}
+
+.auth-back {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  z-index: 20;
+  color: var(--ink-soft);
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color .18s;
+}
+.auth-back:hover { color: var(--terracotta); }
+
+/* Thẻ đăng nhập: viền đồng kép như khung cửa sổ (.dlg) */
+.auth-card,
+.google-card {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  margin: auto;
+  overflow: hidden;
+  border: 1px solid var(--bronze);
+  border-radius: 6px;
+  background: var(--card);
+  box-shadow: 0 0 0 4px var(--card), 0 0 0 5px var(--hairline), 0 24px 60px rgba(28, 26, 23, .18);
+}
+.auth-card { max-width: 960px; }
+.google-card { max-width: 480px; }
+
+/* Cột trái: nền mực tối, mặt trống đồng mờ ở góc */
+.auth-aside {
+  background:
+    repeating-radial-gradient(circle at 100% 100%, transparent 0 18px, rgba(160, 127, 51, .18) 18px 19px),
+    linear-gradient(160deg, #2B211B, var(--ink));
+  color: var(--paper);
+}
+.auth-aside .eyebrow { color: var(--bronze); }
+
+/* Ô nhập trong thẻ: dùng style input toàn cục, chỉ ép đủ rộng */
+.auth-input,
+.auth-card input,
+.auth-page input {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+}
+
+.google-button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  padding: 11px;
+  color: var(--ink);
+  font-size: 13px;
+  transition: border-color .2s var(--ease), background .2s var(--ease);
+}
+.google-button:hover { border-color: var(--bronze); background: var(--paper-deep); }
+
+.google-g {
+  display: grid;
+  height: 21px;
+  width: 21px;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(#4285f4 0 25%, #34a853 0 50%, #fbbc05 0 75%, #ea4335 0);
+  color: white;
+  font-size: 13px;
+  font-weight: 800;
+  text-shadow: 0 1px 3px #111;
+}
+.google-g.big { width: 42px; height: 42px; font-size: 24px; }
+
+.auth-orbit {
+  position: absolute;
+  border: 1px solid rgba(160, 127, 51, .22);
+  border-radius: 50%;
+}
+.auth-orbit.one { top: -220px; left: -180px; width: 600px; height: 600px; }
+.auth-orbit.two { right: -280px; bottom: -340px; width: 720px; height: 720px; }

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "87151cc4-d44c-415c-874e-778718d2bc13",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/home/long/Documents/University/HOCTAP/HK7/Object-Oriented Analysis and Design (OOAD)/DoAn/Project_OOAD_HK1_2026-2027/.archify/architecture-bus-ticket-20261111/candidate.json",
+  "output": "/home/long/Documents/University/HOCTAP/HK7/Object-Oriented Analysis and Design (OOAD)/DoAn/Project_OOAD_HK1_2026-2027/architecture.html",
+  "specification": {
+    "sha256": "a0758eac3fa13c0ee85d30e6e920131e5e11f033599feeff9170e635629e06f4",
+    "bytes": 9823
+  },
+  "artifact": {
+    "sha256": "3dca6401fd66e00ad2bddf79e73e883f9196ebbbd18d5cb492a07e6d6744de3d",
+    "bytes": 857173
+  }
+}
