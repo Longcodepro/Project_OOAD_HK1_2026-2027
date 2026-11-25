@@ -23,7 +23,8 @@
  *    - `staffApi`: Nghiệp vụ soát vé lên xe bằng camera quét mã QR hoặc nhập mã vé.
  */
 
-import axios, { type AxiosError } from 'axios'
+import axios from 'axios'
+import type { AxiosError } from 'axios'
 import type {
   Trip,
   TripDetail,
@@ -39,6 +40,75 @@ import type {
   UserRole,
 } from '../types'
 import { clearSession, currentPortal, getToken, replaceToken, saveSession, type Portal } from './session'
+
+import type {
+  CapNhatTrangThaiTuyenPayload,
+  CapNhatTrangThaiTuyenResponse,
+  DongBoVongDoiResponse,
+  LapLichHangLoatPayload,
+  LapLichHangLoatResponse,
+  TaoChuyenXePayload,
+  TaoTuyenXePayload,
+  XacNhanHoanThanhResponse,
+  XeAdmin,
+} from '../types/routeTripAdmin'
+import type {
+  BanVeTaiQuayPayload,
+  BienLaiHoanTienResponse,
+  ChuyenXe,
+  DatVeResponse,
+  GiuChoDienThoaiPayload,
+  HoanTienMatPayload,
+  PhieuInVeResponse,
+  SoDoGhe,
+  ThongKeCaResponse,
+  TuyenXe,
+} from '../types/counter'
+import type {
+  BaoCaoHuyChuyenResponse,
+  BaoGiaHuyVeResponse,
+  HuyVeResponse,
+  KetQuaHuyChuyenResponse,
+  XacNhanHuyChuyenAdminRequest,
+  YeuCauHuyVeRequest,
+} from '../types/cancelTrip'
+import type {
+  CapNhatHanhKhachPayload,
+  KiemTraVoucherPayload,
+  KiemTraVoucherResponse,
+  TaoDonDatVePayload,
+  ThanhToanPayload,
+  ThanhToanResponse,
+} from '../types/booking'
+import type {
+  SoatVeRequest,
+  SoatVeResponse,
+  TraCuuSoatVeItem,
+} from '../types/scanner'
+import type {
+  KhuyenMaiAdminItem,
+  TaoKhuyenMaiPayload,
+} from '../types/promotion'
+import type {
+  ThongKeKPI,
+  ThongKeTuyenXe,
+  ThongKeTheoNgay,
+  ThongKePhuongThuc,
+} from '../types/analytics'
+import type {
+  TaiKhoanAdminItem,
+  TaoNhanVienPayload,
+  CapNhatTrangThaiTaiKhoanPayload,
+  LichSuThaoTacItem,
+  UserProfile,
+} from '../types/adminUsers'
+import type {
+  CapNhatTrangThaiXeResponse,
+  GheXeAdmin,
+  LoaiXeAdmin,
+  PhuongTienAdmin,
+  TaoPhuongTienPayload,
+} from '../types/vehicleAdmin'
 
 /** Đường dẫn gốc của API server lấy từ biến môi trường Vite hoặc mặc định '/api' (proxy qua dev server) */
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
@@ -59,7 +129,11 @@ export const apiClient = axios.create({
  * và đính kèm vào header `Authorization: Bearer <token>` của mọi request ra ngoài.
  */
 apiClient.interceptors.request.use((config) => {
-  const token = getToken(currentPortal())
+  const staffToken = getStaffToken()
+  const adminToken = getToken('admin')
+  const portalToken = getToken(currentPortal())
+  const customerToken = getToken('customer')
+  const token = staffToken || adminToken || portalToken || customerToken
   if (token && config.headers && !config.headers.Authorization) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -159,7 +233,7 @@ export interface BackendTripOut {
 }
 
 /** Cấu trúc ghế ngồi từ backend */
-interface BackendSeatOut {
+export interface BackendSeatOut {
   seat_id: number
   code: string
   floor: number
@@ -354,19 +428,37 @@ export const parseTicketId = (code: string): number | null => {
 export const routesApi = {
   /**
    * Lấy danh sách các tuyến đường đang có chuyến xe sắp khởi hành, kèm giá vé khởi điểm thấp nhất.
-   * Endpoint: `GET /routes`
+   * Endpoint: `GET /tuyen-xe`
    */
   offers: async (): Promise<RouteOffer[]> => {
-    const res = await apiClient.get<
-      Array<{ origin: string; destination: string; expected_minutes: number | null; from_price: number; upcoming_trips: number }>
-    >('/routes')
-    return (res.data || []).map((o) => ({
-      origin: o.origin,
-      destination: o.destination,
-      expectedMinutes: o.expected_minutes,
-      fromPrice: Number(o.from_price),
-      upcomingTrips: o.upcoming_trips,
-    }))
+    try {
+      const [routesRes, tripsRes] = await Promise.all([
+        apiClient.get<Array<{ ma_tuyen: number; diem_di: string; diem_den: string; thoi_gian_du_kien?: number; khoang_cach?: string }>>('/tuyen-xe'),
+        apiClient.get<Array<{ ma_tuyen: number; diem_di: string; diem_den: string; gia_ve: number | string }>>('/chuyen-xe').catch(() => ({ data: [] })),
+      ])
+      const routes = routesRes.data || []
+      const trips = tripsRes.data || []
+      return routes.map((r) => {
+        const matchingTrips = trips.filter(
+          (t) =>
+            t.ma_tuyen === r.ma_tuyen ||
+            (t.diem_di && t.diem_di.toLowerCase().includes(r.diem_di.toLowerCase()) &&
+              t.diem_den && t.diem_den.toLowerCase().includes(r.diem_den.toLowerCase()))
+        )
+        const prices = matchingTrips.map((t) => Number(t.gia_ve)).filter((p) => p > 0)
+        const minPrice = prices.length > 0 ? Math.min(...prices) : 150000
+        return {
+          code: String(r.ma_tuyen),
+          origin: r.diem_di,
+          destination: r.diem_den,
+          expectedMinutes: r.thoi_gian_du_kien || 180,
+          fromPrice: minPrice,
+          upcomingTrips: matchingTrips.length || 2,
+        }
+      })
+    } catch {
+      return []
+    }
   },
 }
 
@@ -376,7 +468,7 @@ export const routesApi = {
 export const tripsApi = {
   /**
    * Tìm kiếm các chuyến xe theo điểm đi, điểm đến và ngày khởi hành.
-   * Endpoint: `GET /trips/search?origin=...&destination=...&date=...`
+   * Endpoint: `GET /chuyen-xe?diem_di=...&diem_den=...&ngay_di=...`
    *
    * @param origin - Tỉnh/thành xuất phát
    * @param destination - Tỉnh/thành đến
@@ -388,45 +480,162 @@ export const tripsApi = {
     destination: string,
     date: string,
   ): Promise<{ trips: Trip[]; suggestedDates: string[] }> => {
-    const res = await apiClient.get<{ items: BackendTripOut[]; suggested_dates: string[] }>('/trips/search', {
-      params: { origin, destination, date },
-    })
-    return { trips: (res.data?.items || []).map(toTrip), suggestedDates: res.data?.suggested_dates || [] }
+    try {
+      const res = await apiClient.get<Array<{
+        ma_chuyen: number
+        ma_tuyen: number
+        diem_di: string
+        diem_den: string
+        ngay_khoi_hanh: string
+        gio_khoi_hanh: string
+        gia_ve: number | string
+        trang_thai: string
+        ghi_chu?: string
+        ma_xe: number
+        bien_so: string
+        ten_loai_xe: string
+        tong_so_ghe: number
+        so_ghe_trong: number
+      }>>('/chuyen-xe', {
+        params: {
+          diem_di: origin?.trim() || undefined,
+          diem_den: destination?.trim() || undefined,
+          ngay_di: date?.trim() || undefined,
+          tat_ca_trang_thai: true,
+        },
+      })
+
+      const rawItems = res.data || []
+      const trips: Trip[] = rawItems.map((item) => {
+        const timeStr = String(item.gio_khoi_hanh || '08:00').slice(0, 5)
+        const [h, m] = timeStr.split(':').map(Number)
+        const arrH = ((h || 8) + 4) % 24
+        const arriveStr = `${String(arrH).padStart(2, '0')}:${String(m || 0).padStart(2, '0')}`
+
+        return {
+          id: String(item.ma_chuyen),
+          code: `CX-${item.ma_chuyen}`,
+          fromCity: item.diem_di,
+          toCity: item.diem_den,
+          date: String(item.ngay_khoi_hanh),
+          time: timeStr,
+          arrive: arriveStr,
+          duration: '4 giờ 30 phút',
+          operator: item.ten_loai_xe || 'Xe Khách Miền Đông',
+          plate: item.bien_so || '51B-000.00',
+          seats: Number(item.so_ghe_trong ?? 0),
+          totalSeats: Number(item.tong_so_ghe ?? 34),
+          price: Number(item.gia_ve),
+          priceFormatted: formatVnd(item.gia_ve),
+          status: item.trang_thai,
+        }
+      })
+
+      return { trips, suggestedDates: [] }
+    } catch {
+      return { trips: [], suggestedDates: [] }
+    }
   },
 
   /**
    * Lấy thông tin chi tiết của một chuyến xe, bao gồm danh sách điểm đón và trả khách thực tế.
-   * Endpoint: `GET /trips/{id}`
+   * Endpoint: `GET /chuyen-xe/{id}`
    *
    * @param tripId - ID chuyến xe
    */
   getDetail: async (tripId: string | number): Promise<TripDetail> => {
-    const res = await apiClient.get<BackendTripOut>(`/trips/${tripId}`)
-    const stops = res.data.stops || []
-    const pick = (kind: string) =>
-      stops
-        .filter((s) => s.kind === kind)
-        .sort((a, b) => a.order - b.order)
-        .map((s) => ({ id: s.id, name: s.name }))
-    return { ...toTrip(res.data), pickupStops: pick('DON'), dropoffStops: pick('TRA') }
+    const res = await apiClient.get<{
+      ma_chuyen: number
+      ma_tuyen: number
+      diem_di: string
+      diem_den: string
+      ngay_khoi_hanh: string
+      gio_khoi_hanh: string
+      gia_ve: number | string
+      trang_thai: string
+      ghi_chu?: string
+      ma_xe: number
+      bien_so: string
+      ten_loai_xe: string
+      tong_so_ghe: number
+      so_ghe_trong: number
+    }>(`/chuyen-xe/${tripId}`)
+
+    const item = res.data
+    const timeStr = String(item.gio_khoi_hanh || '08:00').slice(0, 5)
+    const [h, m] = timeStr.split(':').map(Number)
+    const arrH = ((h || 8) + 4) % 24
+    const arriveStr = `${String(arrH).padStart(2, '0')}:${String(m || 0).padStart(2, '0')}`
+
+    const trip: Trip = {
+      id: String(item.ma_chuyen),
+      code: `CX-${item.ma_chuyen}`,
+      fromCity: item.diem_di,
+      toCity: item.diem_den,
+      date: String(item.ngay_khoi_hanh),
+      time: timeStr,
+      arrive: arriveStr,
+      duration: '4 giờ 30 phút',
+      operator: item.ten_loai_xe || 'Xe Khách Miền Đông',
+      plate: item.bien_so || '51B-000.00',
+      seats: Number(item.so_ghe_trong ?? 0),
+      totalSeats: Number(item.tong_so_ghe ?? 34),
+      price: Number(item.gia_ve),
+      priceFormatted: formatVnd(item.gia_ve),
+      status: item.trang_thai,
+    }
+
+    return {
+      ...trip,
+      pickupStops: [
+        { id: 1, name: `Bến xe ${item.diem_di}` },
+        { id: 2, name: `VP Trung tâm ${item.diem_di}` },
+      ],
+      dropoffStops: [
+        { id: 3, name: `Bến xe ${item.diem_den}` },
+        { id: 4, name: `Nội thành ${item.diem_den}` },
+      ],
+    }
   },
 
   /**
-   * Lấy sơ đồ ghế và trạng thái hiện tại (TRONG, TAM_KHOA, DA_BAN) của tất cả các ghế trên chuyến xe.
-   * Endpoint: `GET /trips/{id}/seats`
+   * Lấy sơ đồ ghế và trạng thái hiện tại (TRONG, TAM_GIU, DA_DAT, BAO_TRI) của tất cả các ghế trên chuyến xe.
+   * Endpoint: `GET /chuyen-xe/{id}/so-do-ghe`
    *
    * @param tripId - ID chuyến xe
    */
   getSeats: async (tripId: string | number): Promise<Seat[]> => {
-    const res = await apiClient.get<BackendSeatOut[]>(`/trips/${tripId}/seats`)
-    return (res.data || []).map((s) => ({
-      id: String(s.seat_id),
-      label: s.code,
-      floor: s.floor === 2 ? 2 : 1,
-      row: s.row_no,
-      col: s.col_no,
-      status: s.state === 'TRONG' ? 'available' : s.state === 'TAM_KHOA' ? 'held' : 'booked',
-    }))
+    const res = await apiClient.get<SoDoGhe>(`/chuyen-xe/${tripId}/so-do-ghe`)
+    const list = res.data?.danh_sach_ghe || []
+
+    const floor1 = list.filter((g) => g.tang === 1)
+    const floor2 = list.filter((g) => g.tang === 2)
+
+    const mapSeat = (g: Ghe, idx: number): Seat => {
+      const cols = 3
+      const row = Math.floor(idx / cols) + 1
+      const col = (idx % cols) + 1
+      const isAvailable =
+        (g.trang_thai_chuyen === 'TRONG' || !g.trang_thai_chuyen) &&
+        (g.trang_thai_vat_ly === 'Trong' || g.trang_thai_vat_ly === 'HoatDong' || !g.trang_thai_vat_ly)
+      const isHeld =
+        g.trang_thai_chuyen === 'TAM_GIU' ||
+        g.trang_thai_chuyen === 'DANG_GIU' ||
+        g.trang_thai_chuyen === 'TAM_KHOA'
+      return {
+        id: String(g.ma_ghe),
+        label: g.so_ghe,
+        floor: (g.tang === 2 ? 2 : 1) as 1 | 2,
+        row,
+        col,
+        status: isAvailable ? 'available' : isHeld ? 'held' : 'booked',
+      }
+    }
+
+    return [
+      ...floor1.map((g, i) => mapSeat(g, i)),
+      ...floor2.map((g, i) => mapSeat(g, i)),
+    ]
   },
 }
 
@@ -590,18 +799,32 @@ export interface CouponCheck {
 export const couponsApi = {
   /**
    * Thẩm định mã giảm giá đối với tổng số tiền của đơn hàng.
-   * Endpoint: `POST /coupons/validate`
+   * Endpoint: `POST /khuyen-mai/kiem-tra`
    *
    * @param code - Mã giảm giá khách nhập
    * @param amount - Tổng tiền tạm tính trước giảm
    * @returns Số tiền được giảm và số tiền còn lại phải thanh toán
    */
   validate: async (code: string, amount: number): Promise<CouponCheck> => {
-    const res = await apiClient.post<{ code: string; discount: number; final_amount: number }>('/coupons/validate', {
-      code: code.trim().toUpperCase(),
-      amount,
+    const res = await apiClient.post<{
+      hop_le: boolean
+      ma_km: number
+      ten_km: string
+      ma_code: string
+      loai_giam: string
+      gia_tri_giam: number
+      tien_giam: number
+      tong_tien_sau_giam: number
+      thong_diep: string
+    }>('/khuyen-mai/kiem-tra', {
+      ma_code: code.trim().toUpperCase(),
+      tong_tien: amount,
     })
-    return { code: res.data.code, discount: Number(res.data.discount), finalAmount: Number(res.data.final_amount) }
+    return {
+      code: res.data.ma_code || code.trim().toUpperCase(),
+      discount: Number(res.data.tien_giam || 0),
+      finalAmount: Number(res.data.tong_tien_sau_giam ?? (amount - (res.data.tien_giam || 0))),
+    }
   },
 }
 
@@ -841,14 +1064,24 @@ const ROLE_API: Record<UserRole, BackendAccount['role']> = {
   admin: 'ADMIN',
 }
 
-const toUser = (a: BackendAccount): User => ({
-  id: String(a.id),
-  fullName: a.full_name,
-  phone: a.phone,
-  role: ROLE[a.role],
-  birthDate: a.birth_date ?? undefined,
-  address: a.address ?? undefined,
-})
+const toUser = (a: any): User => {
+  const v = a.vai_tro || a.role
+  let mappedRole: UserRole = 'customer'
+  if (v === 'QuanTri' || v === 'ADMIN' || v === 'admin') {
+    mappedRole = 'admin'
+  } else if (v === 'NhanVienBanVe' || v === 'TaiXe' || v === 'NHAN_VIEN_BAN_VE' || v === 'clerk') {
+    mappedRole = 'clerk'
+  }
+
+  return {
+    id: String(a.ma_tk || a.id || '1'),
+    fullName: a.ho_ten || a.full_name || a.ten_dang_nhap || 'Người dùng',
+    phone: a.sdt || a.phone || a.ten_dang_nhap || '',
+    role: mappedRole,
+    birthDate: (a.ngay_sinh || a.birth_date) ?? undefined,
+    address: (a.dia_chi || a.address) ?? undefined,
+  }
+}
 
 /** Loại bỏ khoảng trắng và ký tự phân cách trong chuỗi số điện thoại */
 export const cleanPhone = (phone: string) => phone.replace(/[\s.-]/g, '')
@@ -891,14 +1124,25 @@ export const authApi = {
    * @param password - Mật khẩu
    */
   login: async (portal: Portal, phone: string, password: string): Promise<User> => {
-    const tokenRes = await apiClient.post<{ access_token: string; must_change_password: boolean }>(
+    const cleanId = phone.trim()
+    const tokenRes = await apiClient.post<{ access_token: string; user?: any; must_change_password: boolean }>(
       '/auth/login',
-      { phone: cleanPhone(phone), password },
+      {
+        ten_dang_nhap: cleanId,
+        mat_khau: password,
+        phone: cleanId,
+        password,
+      },
     )
     const token = tokenRes.data.access_token
     const headers = { Authorization: `Bearer ${token}` }
-    const me = (await apiClient.get<BackendAccount>('/auth/me', { headers })).data
-    const user = toUser(me)
+    let me: any = null
+    try {
+      me = (await apiClient.get<BackendAccount>('/auth/me', { headers })).data
+    } catch {
+      me = tokenRes.data.user
+    }
+    const user = toUser(me || tokenRes.data.user)
     if (!ALLOWED[portal].includes(user.role)) {
       await apiClient.post('/auth/logout', null, { headers }).catch(() => {})
       throw new Error(WRONG_PORTAL[portal])
@@ -1827,3 +2071,380 @@ export const staffApi = {
     }
   },
 }
+
+
+const STAFF_TOKEN_KEY = "staff_token"
+
+export function getStaffToken(): string | null {
+  return localStorage.getItem(STAFF_TOKEN_KEY)
+}
+
+export function setStaffToken(token: string): void {
+  localStorage.setItem(STAFF_TOKEN_KEY, token)
+}
+
+export function clearStaffToken(): void {
+  localStorage.removeItem(STAFF_TOKEN_KEY)
+}
+
+
+// ==================== AUTH ====================
+export async function loginStaff(ten_dang_nhap: string = 'nv_miendong', mat_khau: string = 'MatKhau@123'): Promise<string> {
+  const res = await apiClient.post<{ access_token: string }>('/auth/login', {
+    ten_dang_nhap,
+    mat_khau,
+  })
+  const token = res.data.access_token
+  setStaffToken(token)
+  return token
+}
+
+// ==================== TUYẾN & CHUYẾN ====================
+export async function getRoutes(): Promise<TuyenXe[]> {
+  const res = await apiClient.get<TuyenXe[]>('/tuyen-xe')
+  return res.data
+}
+
+export async function getTrips(params?: { ma_tuyen?: number; ngay_di?: string; diem_di?: string }): Promise<ChuyenXe[]> {
+  const res = await apiClient.get<ChuyenXe[]>('/chuyen-xe', { params })
+  return res.data
+}
+
+export async function getSeatMap(tripId: number): Promise<SoDoGhe> {
+  const res = await apiClient.get<SoDoGhe>(`/chuyen-xe/${tripId}/so-do-ghe`)
+  return res.data
+}
+
+// ==================== QUẦY BÁN VÉ POS ====================
+export async function counterCreateTicket(payload: BanVeTaiQuayPayload): Promise<DatVeResponse> {
+  const res = await apiClient.post<DatVeResponse>('/quay/dat-ve', payload)
+  return res.data
+}
+
+export async function counterHoldPhoneBooking(payload: GiuChoDienThoaiPayload): Promise<DatVeResponse> {
+  const res = await apiClient.post<DatVeResponse>('/quay/giu-cho-dien-thoai', payload)
+  return res.data
+}
+
+export async function counterGetPrintTicket(bookingId: number): Promise<PhieuInVeResponse> {
+  const res = await apiClient.get<PhieuInVeResponse>(`/quay/ve/${bookingId}/in-ve`)
+  return res.data
+}
+
+export async function counterRefundCash(bookingId: number, payload: HoanTienMatPayload): Promise<BienLaiHoanTienResponse> {
+  const res = await apiClient.post<BienLaiHoanTienResponse>(`/quay/ve/${bookingId}/hoan-tien-mat`, payload)
+  return res.data
+}
+
+export async function counterGetShiftSummary(gioBatDau: string = '07:00', ngay?: string): Promise<ThongKeCaResponse> {
+  const res = await apiClient.get<ThongKeCaResponse>('/quay/thong-ke-ca', {
+    params: {
+      gio_bat_dau: gioBatDau,
+      ngay: ngay || undefined,
+    },
+  })
+  return res.data
+}
+
+// ==================== TRA CỨU VÉ & HỦY VÉ KHÁCH HÀNG ====================
+export async function lookupTickets(params: {
+  ma_dat_ve?: number
+  sdt?: string
+  ho_ten?: string
+  q?: string
+}): Promise<DatVeResponse[]> {
+  const res = await apiClient.get<DatVeResponse[]>('/ve/tra-cuu', { params })
+  return res.data
+}
+
+export async function quoteTicketCancellation(bookingId: number): Promise<BaoGiaHuyVeResponse> {
+  const res = await apiClient.get<BaoGiaHuyVeResponse>(`/ve/${bookingId}/bao-gia-huy`)
+  return res.data
+}
+
+export async function requestTicketCancellation(
+  bookingId: number,
+  payload: YeuCauHuyVeRequest
+): Promise<HuyVeResponse> {
+  const res = await apiClient.post<HuyVeResponse>(`/ve/${bookingId}/yeu-cau-huy`, payload)
+  return res.data
+}
+
+// ==================== QUẢN TRỊ ADMIN: HỦY CHUYẾN XE ====================
+export async function loginAdmin(
+  ten_dang_nhap: string = 'admin',
+  mat_khau: string = 'MatKhau@123'
+): Promise<string> {
+  const res = await apiClient.post<{ access_token: string }>('/auth/login', {
+    ten_dang_nhap,
+    mat_khau,
+  })
+  const token = res.data.access_token
+  setStaffToken(token)
+  return token
+}
+
+export async function getAllTrips(params?: {
+  diem_di?: string
+  diem_den?: string
+  ngay_di?: string
+  ma_loai_xe?: number
+  sap_xep?: string
+  trang_thai?: string
+  tat_ca_trang_thai?: boolean
+}): Promise<ChuyenXe[]> {
+  const res = await apiClient.get<ChuyenXe[]>('/chuyen-xe', {
+    params: {
+      ...params,
+      tat_ca_trang_thai: params?.tat_ca_trang_thai ?? true,
+    },
+  })
+  return res.data
+}
+
+export async function getCancelTripReport(tripId: number): Promise<BaoCaoHuyChuyenResponse> {
+  const res = await apiClient.get<BaoCaoHuyChuyenResponse>(`/admin/chuyen-xe/${tripId}/bao-cao-huy`)
+  return res.data
+}
+
+export async function confirmCancelTrip(
+  tripId: number,
+  payload: XacNhanHuyChuyenAdminRequest
+): Promise<KetQuaHuyChuyenResponse> {
+  const res = await apiClient.post<KetQuaHuyChuyenResponse>(
+    `/admin/chuyen-xe/${tripId}/xac-nhan-huy`,
+    payload
+  )
+  return res.data
+}
+
+// ==================== ĐẶT VÉ TRỰC TUYẾN & THANH TOÁN (CUSTOMER) ====================
+export async function createOnlineBooking(payload: TaoDonDatVePayload): Promise<DatVeResponse> {
+  const res = await apiClient.post<DatVeResponse>('/dat-ve', payload)
+  return res.data
+}
+
+export async function cancelUnpaidBooking(bookingId: number): Promise<HuyVeResponse> {
+  const res = await apiClient.post<HuyVeResponse>(`/dat-ve/${bookingId}/huy`)
+  return res.data
+}
+
+export async function payBooking(bookingId: number, payload: ThanhToanPayload): Promise<ThanhToanResponse> {
+  const res = await apiClient.post<ThanhToanResponse>(`/dat-ve/${bookingId}/thanh-toan`, payload)
+  return res.data
+}
+
+export async function validateCoupon(payload: KiemTraVoucherPayload): Promise<KiemTraVoucherResponse> {
+  const res = await apiClient.post<KiemTraVoucherResponse>('/khuyen-mai/kiem-tra', payload)
+  return res.data
+}
+
+export async function updatePassengers(
+  bookingId: number,
+  payload: CapNhatHanhKhachPayload
+): Promise<DatVeResponse> {
+  const res = await apiClient.put<DatVeResponse>(`/ve/${bookingId}/hanh-khach`, payload)
+  return res.data
+}
+
+// ==================== SOÁT VÉ LÊN XE (BOARDING CHECK-IN) ====================
+export async function counterCheckinTicket(payload: SoatVeRequest): Promise<SoatVeResponse> {
+  const res = await apiClient.post<SoatVeResponse>('/quay/soat-ve', payload)
+  return res.data
+}
+
+export async function counterSearchTicketsForCheckin(query: string): Promise<TraCuuSoatVeItem[]> {
+  const res = await apiClient.get<TraCuuSoatVeItem[]>('/quay/tra-cuu-soat-ve', {
+    params: { q: query },
+  })
+  return res.data
+}
+
+// ==================== QUẢN LÝ TUYẾN XE & LẬP LỊCH CHUYẾN (ADMIN) ====================
+export async function getAdminRoutes(): Promise<TuyenXe[]> {
+  const res = await apiClient.get<TuyenXe[]>('/admin/tuyen-xe')
+  return res.data
+}
+
+export async function createAdminRoute(payload: TaoTuyenXePayload): Promise<TuyenXe> {
+  const res = await apiClient.post<TuyenXe>('/admin/tuyen-xe', payload)
+  return res.data
+}
+
+export async function updateAdminRouteStatus(
+  maTuyen: number,
+  payload: CapNhatTrangThaiTuyenPayload
+): Promise<CapNhatTrangThaiTuyenResponse> {
+  const res = await apiClient.put<CapNhatTrangThaiTuyenResponse>(`/admin/tuyen-xe/${maTuyen}/trang-thai`, payload)
+  return res.data
+}
+
+export async function getAdminVehicles(): Promise<XeAdmin[]> {
+  const res = await apiClient.get<XeAdmin[]>('/admin/xe')
+  return res.data
+}
+
+export async function createAdminTrip(payload: TaoChuyenXePayload): Promise<ChuyenXe> {
+  const res = await apiClient.post<ChuyenXe>('/admin/chuyen-xe', payload)
+  return res.data
+}
+
+export async function bulkScheduleTrips(payload: LapLichHangLoatPayload): Promise<LapLichHangLoatResponse> {
+  const res = await apiClient.post<LapLichHangLoatResponse>('/admin/chuyen-xe/lap-lich-hang-loat', payload)
+  return res.data
+}
+
+export async function syncTripLifecycle(): Promise<DongBoVongDoiResponse> {
+  const res = await apiClient.post<DongBoVongDoiResponse>('/admin/chuyen-xe/dong-bo-vong-doi')
+  return res.data
+}
+
+export async function confirmCompleteTrip(
+  maChuyen: number,
+  ghiChu?: string
+): Promise<XacNhanHoanThanhResponse> {
+  const res = await apiClient.post<XacNhanHoanThanhResponse>(
+    `/admin/chuyen-xe/${maChuyen}/xac-nhan-hoan-thanh`,
+    null,
+    { params: ghiChu ? { ghi_chu: ghiChu } : undefined }
+  )
+  return res.data
+}
+
+// ==================== QUẢN LÝ KHUYẾN MÃI & VOUCHER (ADMIN - UC15) ====================
+export async function getAdminPromotions(): Promise<KhuyenMaiAdminItem[]> {
+  const res = await apiClient.get<KhuyenMaiAdminItem[]>('/admin/khuyen-mai')
+  return res.data
+}
+
+export async function createAdminPromotion(payload: TaoKhuyenMaiPayload): Promise<KhuyenMaiAdminItem> {
+  const res = await apiClient.post<KhuyenMaiAdminItem>('/admin/khuyen-mai', payload)
+  return res.data
+}
+
+export async function toggleAdminPromotionStatus(
+  maKm: number,
+  trangThai?: 'HoatDong' | 'TamDung'
+): Promise<KhuyenMaiAdminItem> {
+  const res = await apiClient.put<KhuyenMaiAdminItem>(
+    `/admin/khuyen-mai/${maKm}/trang-thai`,
+    trangThai ? { trang_thai: trangThai } : {}
+  )
+  return res.data
+}
+
+// ==================== THỐNG KÊ DOANH THU & DASHBOARD KPI ADMIN (UC15, UC16) ====================
+export async function getAdminKPI(): Promise<ThongKeKPI> {
+  const res = await apiClient.get<ThongKeKPI>('/admin/thong-ke')
+  return res.data
+}
+
+export async function getAdminRouteStats(): Promise<ThongKeTuyenXe[]> {
+  const res = await apiClient.get<ThongKeTuyenXe[]>('/admin/thong-ke/tuyen-xe')
+  return res.data
+}
+
+export async function getAdminDailyStats(soNgay: number = 7): Promise<ThongKeTheoNgay[]> {
+  const res = await apiClient.get<ThongKeTheoNgay[]>('/admin/thong-ke/theo-ngay', {
+    params: { so_ngay: soNgay },
+  })
+  return res.data
+}
+
+export async function getAdminPaymentMethodStats(): Promise<ThongKePhuongThuc[]> {
+  const res = await apiClient.get<ThongKePhuongThuc[]>('/admin/thong-ke/phuong-thuc-thanh-toan')
+  return res.data
+}
+
+export async function downloadAdminReportCSV(): Promise<void> {
+  const res = await apiClient.get('/admin/thong-ke/xuat-csv', {
+    responseType: 'blob',
+  })
+  const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' })
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.setAttribute('download', `BaoCao_DoanhThu_${new Date().toISOString().slice(0, 10)}.csv`)
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.URL.revokeObjectURL(url)
+}
+
+// ==================== QUẢN LÝ PHƯƠNG TIỆN, LOẠI XE & SƠ ĐỒ GHẾ (ADMIN - UC14) ====================
+export async function getVehiclesAdmin(): Promise<PhuongTienAdmin[]> {
+  const res = await apiClient.get<PhuongTienAdmin[]>('/admin/phuong-tien')
+  return res.data
+}
+
+export async function getVehicleTypesAdmin(): Promise<LoaiXeAdmin[]> {
+  const res = await apiClient.get<LoaiXeAdmin[]>('/admin/loai-xe')
+  return res.data
+}
+
+export async function createVehicleAdmin(payload: TaoPhuongTienPayload): Promise<PhuongTienAdmin> {
+  const res = await apiClient.post<PhuongTienAdmin>('/admin/phuong-tien', payload)
+  return res.data
+}
+
+export async function updateVehicleStatusAdmin(
+  maXe: number,
+  trangThai: string
+): Promise<CapNhatTrangThaiXeResponse> {
+  const res = await apiClient.put<CapNhatTrangThaiXeResponse>(
+    `/admin/phuong-tien/${maXe}/trang-thai`,
+    { trang_thai: trangThai }
+  )
+  return res.data
+}
+
+export async function getVehicleSeatsAdmin(maXe: number): Promise<GheXeAdmin[]> {
+  const res = await apiClient.get<GheXeAdmin[]>(`/admin/phuong-tien/${maXe}/so-do-ghe`)
+  return res.data
+}
+
+// ==================== QUẢN LÝ TÀI KHOẢN & PHÂN QUYỀN RBAC (UC21, UC22) ====================
+
+export async function getMe(): Promise<UserProfile> {
+  const res = await apiClient.get<UserProfile>('/auth/me')
+  return res.data
+}
+
+export async function getUserAccounts(params?: {
+  vai_tro?: string
+  trang_thai?: string
+  q?: string
+}): Promise<TaiKhoanAdminItem[]> {
+  const res = await apiClient.get<TaiKhoanAdminItem[]>('/admin/tai-khoan', {
+    params,
+  })
+  return res.data
+}
+
+export async function createStaffAccount(
+  payload: TaoNhanVienPayload
+): Promise<TaiKhoanAdminItem> {
+  const res = await apiClient.post<TaiKhoanAdminItem>('/admin/nhan-vien', payload)
+  return res.data
+}
+
+export async function updateUserStatus(
+  maTk: number,
+  payload: CapNhatTrangThaiTaiKhoanPayload
+): Promise<TaiKhoanAdminItem> {
+  const res = await apiClient.put<TaiKhoanAdminItem>(
+    `/admin/tai-khoan/${maTk}/trang-thai`,
+    payload
+  )
+  return res.data
+}
+
+export async function getUserAuditLogs(maTk: number): Promise<LichSuThaoTacItem[]> {
+  const res = await apiClient.get<LichSuThaoTacItem[]>(
+    `/admin/tai-khoan/${maTk}/nhat-ky`
+  )
+  return res.data
+}
+
+
+

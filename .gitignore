@@ -229,10 +229,12 @@ __marimo__/
 
 # Archify diagrams & artifacts
 .archify/
-architecture.html
 architecture*.json
+!docs/architecture/architecture.html
+!docs/architecture/architecture.delivery.json
 
 # Local tooling & agents
+.worktrees/
 .playwright-mcp/
 backend/.venv/
 backend/.env

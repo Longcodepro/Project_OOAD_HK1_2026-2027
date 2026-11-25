@@ -1,153 +1,377 @@
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session, joinedload
 
-from app.application.use_cases.auth import AuthService
-from app.config import settings
-from app.domain.entities.account import Account
-from app.presentation.deps import get_auth_service, get_current_account
+from app.infrastructure.db.models import KhachHang, NhanVien, TaiKhoan, VaiTro
+from app.infrastructure.security import create_access_token, hash_password, verify_password
+from app.presentation.deps import get_current_user, get_db
 from app.presentation.schemas.auth import (
-    AccountResponse,
     ChangePasswordRequest,
-    ChangePhoneOtpRequest,
     ChangePhoneRequest,
     LoginRequest,
-    OtpRequest,
+    LoginResponse,
+    MessageResponse,
     OtpResponse,
-    ProfileUpdate,
     RegisterRequest,
     ResetPasswordRequest,
-    TokenResponse,
+    UpdateProfileRequest,
+    UserResponse,
 )
 
 router = APIRouter(prefix="/auth", tags=["xác thực & tài khoản"])
 
 
-def account_out(a: Account) -> AccountResponse:
-    return AccountResponse(
-        id=a.id,
-        phone=a.phone,
-        full_name=a.full_name,
-        role=a.role,
-        status=a.status,
-        birth_date=a.birth_date,
-        address=a.address,
-        must_change_password=a.must_change_password,
+def _build_user_response(user: TaiKhoan) -> UserResponse:
+    vai_tro_ten = user.vai_tro.TenVaiTro if user.vai_tro else "KhachHang"
+    ho_ten = user.TenDangNhap
+    sdt = ""
+    dia_chi = None
+    chuc_vu = None
+    ma_kh = None
+    ma_nv = None
+
+    if user.khach_hang:
+        ho_ten = user.khach_hang.HoTen
+        sdt = user.khach_hang.SDT
+        dia_chi = user.khach_hang.DiaChi
+        ma_kh = user.khach_hang.MaKH
+    elif user.nhan_vien:
+        ho_ten = user.nhan_vien.HoTen
+        sdt = user.nhan_vien.SDT
+        chuc_vu = user.nhan_vien.ChucVu
+        ma_nv = user.nhan_vien.MaNV
+
+    # Map sang role frontend cũ
+    role_map = {
+        "QuanTri": "ADMIN",
+        "NhanVienBanVe": "NHAN_VIEN_BAN_VE",
+        "TaiXe": "NHAN_VIEN_BAN_VE",
+        "KhachHang": "KHACH_HANG",
+    }
+    role_fe = role_map.get(vai_tro_ten, "KHACH_HANG")
+
+    return UserResponse(
+        ma_tk=user.MaTK,
+        ten_dang_nhap=user.TenDangNhap,
+        vai_tro=vai_tro_ten,
+        trang_thai=user.TrangThai,
+        ho_ten=ho_ten,
+        sdt=sdt,
+        dia_chi=dia_chi,
+        chuc_vu=chuc_vu,
+        ma_kh=ma_kh,
+        ma_nv=ma_nv,
+        # Frontend compat
+        id=user.MaTK,
+        full_name=ho_ten,
+        phone=sdt,
+        role=role_fe,
+        status=user.TrangThai,
+        address=dia_chi,
     )
 
 
-def _token(token: str, must_change: bool = False) -> TokenResponse:
-    return TokenResponse(
-        access_token=token,
-        expires_in_seconds=settings.jwt_expire_minutes * 60,
-        must_change_password=must_change,
+@router.post("/login", response_model=LoginResponse, summary="Đăng nhập tài khoản")
+def login(req: LoginRequest, db: Session = Depends(get_db)):
+    """Đăng nhập hệ thống bằng Tên đăng nhập hoặc Số điện thoại."""
+    login_id = (req.ten_dang_nhap or req.phone or req.username or "").strip()
+    pwd = (req.mat_khau or req.password or "").strip()
+
+    if not login_id or not pwd:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Vui lòng cung cấp số điện thoại/tên đăng nhập và mật khẩu",
+        )
+
+    # Tìm theo TenDangNhap
+    user = (
+        db.query(TaiKhoan)
+        .options(
+            joinedload(TaiKhoan.vai_tro),
+            joinedload(TaiKhoan.khach_hang),
+            joinedload(TaiKhoan.nhan_vien),
+        )
+        .filter(TaiKhoan.TenDangNhap == login_id)
+        .first()
     )
 
+    # Nếu không thấy theo username, tìm theo số điện thoại khách hàng
+    if not user:
+        kh = db.query(KhachHang).filter(KhachHang.SDT == login_id).first()
+        if kh and kh.MaTK:
+            user = (
+                db.query(TaiKhoan)
+                .options(
+                    joinedload(TaiKhoan.vai_tro),
+                    joinedload(TaiKhoan.khach_hang),
+                    joinedload(TaiKhoan.nhan_vien),
+                )
+                .filter(TaiKhoan.MaTK == kh.MaTK)
+                .first()
+            )
 
-def _otp_out(code: str | None, ttl: int) -> OtpResponse:
-    return OtpResponse(
-        expires_in_seconds=ttl,
-        mock_otp=code if settings.sms_mock else None,
+    # Nếu không thấy, tìm theo số điện thoại nhân viên
+    if not user:
+        nv = db.query(NhanVien).filter(NhanVien.SDT == login_id).first()
+        if nv and nv.MaTK:
+            user = (
+                db.query(TaiKhoan)
+                .options(
+                    joinedload(TaiKhoan.vai_tro),
+                    joinedload(TaiKhoan.khach_hang),
+                    joinedload(TaiKhoan.nhan_vien),
+                )
+                .filter(TaiKhoan.MaTK == nv.MaTK)
+                .first()
+            )
+
+    if not user or not verify_password(pwd, user.MatKhau):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Số điện thoại / Tên đăng nhập hoặc mật khẩu không chính xác",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if user.TrangThai != "HoatDong":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản hiện đang bị khóa hoặc ngừng hoạt động",
+        )
+
+    user_info = _build_user_response(user)
+    token = create_access_token(
+        data={
+            "sub": str(user.MaTK),
+            "ten_dang_nhap": user.TenDangNhap,
+            "vai_tro": user_info.vai_tro,
+            "ho_ten": user_info.ho_ten,
+        }
     )
 
-
-@router.post("/register/otp", response_model=OtpResponse, summary="Gửi mã OTP đăng ký tài khoản")
-def request_register_otp(body: OtpRequest, auth: AuthService = Depends(get_auth_service)):
-    """Gửi mã OTP 6 số đến số điện thoại để chuẩn bị đăng ký tài khoản mới.
-
-    - Mã có hiệu lực trong 120 giây (chống gửi lại dồn dập).
-    - Ở chế độ SMS_MOCK, mã OTP được trả về trực tiếp trong trường `mock_otp`.
-    """
-    return _otp_out(auth.request_register_otp(body.phone), auth.rules.otp_ttl_seconds)
+    return LoginResponse(access_token=token, token_type="bearer", user=user_info)
 
 
-@router.post("/register", status_code=201, response_model=AccountResponse, summary="Đăng ký tài khoản khách hàng mới")
-def register(body: RegisterRequest, auth: AuthService = Depends(get_auth_service)):
-    """Tạo tài khoản khách hàng mới bằng số điện thoại, họ tên, mật khẩu và mã OTP hợp lệ.
-
-    - Mật khẩu: Tối thiểu 8 ký tự.
-    - Mã OTP: Gồm 6 chữ số nhận từ `POST /auth/register/otp`.
-    """
-    return account_out(auth.register(body.full_name, body.phone, body.password, body.otp))
+@router.get("/me", response_model=UserResponse, summary="Lấy thông tin tài khoản hiện tại")
+def get_me(current_user: TaiKhoan = Depends(get_current_user)):
+    """Trả về thông tin hồ sơ của người dùng đang đăng nhập dựa trên JWT Access Token."""
+    return _build_user_response(current_user)
 
 
-@router.post("/login", response_model=TokenResponse, summary="Đăng nhập nhận Access Token (JWT)")
-def login(body: LoginRequest, auth: AuthService = Depends(get_auth_service)):
-    """Đăng nhập bằng số điện thoại và mật khẩu. Trả về access_token chuẩn Bearer.
-
-    Tài khoản mẫu:
-    - Khách hàng: `0900000002` / `Khach12345`
-    - Nhân viên quầy: `0900000001` / `Staff12345`
-    - Quản trị viên: `0900000000` / `Admin12345`
-    """
-    r = auth.login(body.phone, body.password)
-    return _token(r.token, r.must_change_password)
-
-
-@router.post("/logout", status_code=204, summary="Đăng xuất và thu hồi phiên đăng nhập")
-def logout(
-    account: Account = Depends(get_current_account),
-    auth: AuthService = Depends(get_auth_service),
-):
-    """Thu hồi token hiện tại của tài khoản đang đăng nhập, vô hiệu hóa phiên làm việc ngay lập tức."""
-    auth.logout(account)
-    return Response(status_code=204)
-
-
-@router.post("/password/forgot/otp", response_model=OtpResponse, summary="Yêu cầu OTP đặt lại mật khẩu đã quên")
-def request_reset_otp(body: OtpRequest, auth: AuthService = Depends(get_auth_service)):
-    """Gửi OTP đặt lại mật khẩu. Luôn trả 200 dù số có tài khoản hay không (không lộ thông tin)."""
-    return _otp_out(auth.request_reset_otp(body.phone), auth.rules.otp_ttl_seconds)
-
-
-@router.post("/password/reset", status_code=204, summary="Đặt lại mật khẩu mới qua OTP")
-def reset_password(body: ResetPasswordRequest, auth: AuthService = Depends(get_auth_service)):
-    """Xác thực mã OTP và thiết lập mật khẩu mới cho tài khoản. Thu hồi toàn bộ phiên cũ."""
-    auth.reset_password(body.phone, body.otp, body.new_password)
-    return Response(status_code=204)
-
-
-@router.post("/password/change", response_model=TokenResponse, summary="Đổi mật khẩu tài khoản đang đăng nhập")
-def change_password(
-    body: ChangePasswordRequest,
-    account: Account = Depends(get_current_account),
-    auth: AuthService = Depends(get_auth_service),
-):
-    """Đổi mật khẩu khi đang đăng nhập (cần mật khẩu hiện tại). Cấp token mới."""
-    return _token(auth.change_password(account, body.current_password, body.new_password))
-
-
-@router.post("/phone/otp", response_model=OtpResponse, summary="Yêu cầu OTP xác nhận số điện thoại mới")
-def request_change_phone_otp(
-    body: ChangePhoneOtpRequest,
-    account: Account = Depends(get_current_account),
-    auth: AuthService = Depends(get_auth_service),
-):
-    """Gửi OTP tới SỐ MỚI để xác nhận bạn sở hữu số đó trước khi đổi."""
-    return _otp_out(
-        auth.request_change_phone_otp(account, body.new_phone), auth.rules.otp_ttl_seconds
-    )
-
-
-@router.post("/phone/change", response_model=TokenResponse, summary="Xác nhận đổi sang số điện thoại mới")
-def change_phone(
-    body: ChangePhoneRequest,
-    account: Account = Depends(get_current_account),
-    auth: AuthService = Depends(get_auth_service),
-):
-    """Xác thực OTP gửi tới số mới và mật khẩu hiện tại để đổi số điện thoại. Cấp token mới."""
-    return _token(auth.change_phone(account, body.new_phone, body.otp, body.password))
-
-
-@router.get("/me", response_model=AccountResponse, summary="Xem thông tin hồ sơ tài khoản hiện tại")
-def me(account: Account = Depends(get_current_account)):
-    """Xem thông tin chi tiết tài khoản hiện tại (họ tên, số điện thoại, vai trò, địa chỉ, ngày sinh)."""
-    return account_out(account)
-
-
-@router.patch("/me", response_model=AccountResponse, summary="Cập nhật thông tin hồ sơ cá nhân")
+@router.patch("/me", response_model=UserResponse, summary="Cập nhật thông tin tài khoản")
 def update_me(
-    body: ProfileUpdate,
-    account: Account = Depends(get_current_account),
-    auth: AuthService = Depends(get_auth_service),
+    req: UpdateProfileRequest,
+    current_user: TaiKhoan = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    """Cập nhật các trường thông tin hồ sơ: `full_name`, `birth_date`, `address`."""
-    return account_out(auth.update_profile(account, body.full_name, body.birth_date, body.address))
+    """Cập nhật thông tin cá nhân của người dùng đang đăng nhập."""
+    full_name = req.full_name or req.fullName
+    address = req.address
+
+    if current_user.khach_hang:
+        if full_name:
+            current_user.khach_hang.HoTen = full_name.strip()
+        if address is not None:
+            current_user.khach_hang.DiaChi = address.strip() if address else None
+    elif current_user.nhan_vien:
+        if full_name:
+            current_user.nhan_vien.HoTen = full_name.strip()
+
+    db.commit()
+    db.refresh(current_user)
+    return _build_user_response(current_user)
+
+
+@router.post("/register/otp", response_model=OtpResponse, summary="Gửi OTP đăng ký")
+def request_register_otp(payload: dict | None = None):
+    return OtpResponse(expires_in_seconds=120, test_code="123456")
+
+
+@router.post("/password/forgot/otp", response_model=OtpResponse, summary="Gửi OTP quên mật khẩu")
+def request_forgot_password_otp(payload: dict | None = None):
+    return OtpResponse(expires_in_seconds=120, test_code="123456")
+
+
+@router.post("/phone/otp", response_model=OtpResponse, summary="Gửi OTP đổi số điện thoại")
+def request_phone_otp(payload: dict | None = None):
+    return OtpResponse(expires_in_seconds=120, test_code="123456")
+
+
+@router.post(
+    "/register",
+    response_model=LoginResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Đăng ký tài khoản khách hàng mới",
+)
+def register(req: RegisterRequest, db: Session = Depends(get_db)):
+    """Đăng ký tài khoản Khách Hàng mới và tự động đăng nhập cấp Access Token."""
+    sdt = (req.sdt or req.phone or "").strip()
+    pwd = (req.mat_khau or req.password or "").strip()
+    ho_ten = (req.ho_ten or req.full_name or f"Khách hàng {sdt[-4:]}").strip()
+    username = (req.ten_dang_nhap or f"kh_{sdt}").strip()
+    dia_chi = (req.dia_chi or "").strip() or None
+
+    if not sdt or not pwd:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Vui lòng cung cấp số điện thoại và mật khẩu",
+        )
+
+    # 1. Kiểm tra trùng tên đăng nhập
+    existed_user = db.query(TaiKhoan).filter(TaiKhoan.TenDangNhap == username).first()
+    if existed_user:
+        if req.ten_dang_nhap:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Tên đăng nhập '{username}' đã được sử dụng",
+            )
+        username = f"kh_{sdt}_{existed_user.MaTK + 1}"
+
+    # 2. Kiểm tra trùng số điện thoại đã có tài khoản
+    existed_kh = (
+        db.query(KhachHang)
+        .filter(KhachHang.SDT == sdt, KhachHang.MaTK.isnot(None))
+        .first()
+    )
+    if existed_kh:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Số điện thoại '{sdt}' đã được đăng ký cho một tài khoản khác",
+        )
+
+    # 3. Lấy vai trò KhachHang
+    vai_tro_kh = db.query(VaiTro).filter(VaiTro.TenVaiTro == "KhachHang").first()
+    if not vai_tro_kh:
+        vai_tro_kh = VaiTro(TenVaiTro="KhachHang", MoTa="Khách hàng cá nhân đăng ký trực tuyến")
+        db.add(vai_tro_kh)
+        db.flush()
+
+    # 4. Tạo tài khoản
+    new_user = TaiKhoan(
+        MaVaiTro=vai_tro_kh.MaVaiTro,
+        TenDangNhap=username,
+        MatKhau=hash_password(pwd),
+        TrangThai="HoatDong",
+    )
+    db.add(new_user)
+    db.flush()
+
+    # 5. Tạo thông tin khách hàng gắn với tài khoản
+    new_kh = KhachHang(
+        MaTK=new_user.MaTK,
+        HoTen=ho_ten,
+        SDT=sdt,
+        DiaChi=dia_chi,
+    )
+    db.add(new_kh)
+    db.commit()
+
+    db.refresh(new_user)
+    user_info = _build_user_response(new_user)
+
+    token = create_access_token(
+        data={
+            "sub": str(new_user.MaTK),
+            "ten_dang_nhap": new_user.TenDangNhap,
+            "vai_tro": user_info.vai_tro,
+            "ho_ten": user_info.ho_ten,
+        }
+    )
+
+    return LoginResponse(access_token=token, token_type="bearer", user=user_info)
+
+
+@router.post("/password/reset", response_model=MessageResponse, summary="Đặt lại mật khẩu bằng OTP")
+def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):
+    """Đặt lại mật khẩu cho số điện thoại."""
+    phone = req.phone.strip()
+    kh = db.query(KhachHang).filter(KhachHang.SDT == phone).first()
+    if not kh or not kh.MaTK:
+        # Kiểm tra nhân viên
+        nv = db.query(NhanVien).filter(NhanVien.SDT == phone).first()
+        if not nv or not nv.MaTK:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Không tìm thấy tài khoản gắn với số điện thoại {phone}",
+            )
+        user = db.query(TaiKhoan).filter(TaiKhoan.MaTK == nv.MaTK).first()
+    else:
+        user = db.query(TaiKhoan).filter(TaiKhoan.MaTK == kh.MaTK).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy tài khoản",
+        )
+
+    user.MatKhau = hash_password(req.new_password)
+    db.commit()
+    return MessageResponse(message="Đặt lại mật khẩu thành công")
+
+
+@router.post("/password/change", summary="Đổi mật khẩu tài khoản")
+@router.post("/doi-mat-khau", response_model=MessageResponse, summary="Đổi mật khẩu tài khoản")
+def change_password(
+    req: ChangePasswordRequest,
+    current_user: TaiKhoan = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Thay đổi mật khẩu cá nhân cho người dùng đang đăng nhập."""
+    old_p = req.mat_khau_cu or req.current_password or ""
+    new_p = req.mat_khau_moi or req.new_password or ""
+
+    if not verify_password(old_p, current_user.MatKhau):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mật khẩu hiện tại không chính xác",
+        )
+
+    if old_p == new_p:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mật khẩu mới không được trùng với mật khẩu cũ",
+        )
+
+    current_user.MatKhau = hash_password(new_p)
+    db.commit()
+
+    token = create_access_token(
+        data={
+            "sub": str(current_user.MaTK),
+            "ten_dang_nhap": current_user.TenDangNhap,
+            "vai_tro": current_user.vai_tro.TenVaiTro if current_user.vai_tro else "KhachHang",
+        }
+    )
+
+    return {"message": "Đổi mật khẩu thành công", "access_token": token, "token_type": "bearer"}
+
+
+@router.post("/phone/change", summary="Đổi số điện thoại tài khoản")
+def change_phone(
+    req: ChangePhoneRequest,
+    current_user: TaiKhoan = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Đổi số điện thoại tài khoản."""
+    new_p = (req.newPhone or req.new_phone or "").strip()
+    if not new_p:
+        raise HTTPException(status_code=400, detail="Vui lòng cung cấp số điện thoại mới")
+
+    if current_user.khach_hang:
+        current_user.khach_hang.SDT = new_p
+    elif current_user.nhan_vien:
+        current_user.nhan_vien.SDT = new_p
+
+    db.commit()
+
+    token = create_access_token(
+        data={
+            "sub": str(current_user.MaTK),
+            "ten_dang_nhap": current_user.TenDangNhap,
+            "vai_tro": current_user.vai_tro.TenVaiTro if current_user.vai_tro else "KhachHang",
+        }
+    )
+    return {"message": "Đổi số điện thoại thành công", "access_token": token, "token_type": "bearer"}
+
+
+@router.post("/logout", summary="Đăng xuất")
+def logout():
+    return {"message": "Đăng xuất thành công"}

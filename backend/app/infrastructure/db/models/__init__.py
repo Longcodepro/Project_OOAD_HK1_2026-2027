@@ -1,33 +1,28 @@
-from app.infrastructure.db.models.auth import AccountModel, OtpModel, RoleModel
-from app.infrastructure.db.models.booking import (
-    CounterSaleModel,
-    OrderModel,
-    PaymentModel,
-    TicketModel,
-)
-from app.infrastructure.db.models.fleet import SeatModel, VehicleModel, VehicleTypeModel
-from app.infrastructure.db.models.promo import CouponModel
-from app.infrastructure.db.models.refund import RefundModel
-from app.infrastructure.db.models.system import ActivityLogModel, SettingModel
-from app.infrastructure.db.models.trip import RouteModel, StopModel, TripModel, TripSeatModel
+from app.infrastructure.db.models.cai_dat import CaiDat
+from app.infrastructure.db.models.dat_ve import CT_DatVe, DatVe, LichSuVe, ThanhToan, ThongBaoSMS
+from app.infrastructure.db.models.khuyen_mai import KhuyenMai
+from app.infrastructure.db.models.nguoi_dung import KhachHang, NhanVien
+from app.infrastructure.db.models.phuong_tien import Ghe, LoaiXe, Xe
+from app.infrastructure.db.models.rbac import ChucNang, PhanQuyen, TaiKhoan, VaiTro
+from app.infrastructure.db.models.tuyen_chuyen import ChuyenXe, TuyenXe
 
 __all__ = [
-    "AccountModel",
-    "ActivityLogModel",
-    "CounterSaleModel",
-    "CouponModel",
-    "OrderModel",
-    "OtpModel",
-    "PaymentModel",
-    "RefundModel",
-    "RoleModel",
-    "RouteModel",
-    "SeatModel",
-    "SettingModel",
-    "StopModel",
-    "TicketModel",
-    "TripModel",
-    "TripSeatModel",
-    "VehicleModel",
-    "VehicleTypeModel",
+    "CT_DatVe",
+    "CaiDat",
+    "ChucNang",
+    "ChuyenXe",
+    "DatVe",
+    "Ghe",
+    "KhachHang",
+    "KhuyenMai",
+    "LichSuVe",
+    "LoaiXe",
+    "NhanVien",
+    "PhanQuyen",
+    "TaiKhoan",
+    "ThanhToan",
+    "ThongBaoSMS",
+    "TuyenXe",
+    "VaiTro",
+    "Xe",
 ]

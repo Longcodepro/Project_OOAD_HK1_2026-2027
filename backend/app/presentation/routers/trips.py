@@ -1,259 +1,295 @@
-from datetime import date
-from decimal import Decimal
-from typing import Literal
+from datetime import date, datetime, timedelta
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func
+from sqlalchemy.orm import Session, joinedload
 
-from app.application.use_cases.trips import TripService
-from app.domain.entities.account import Role
-from app.domain.entities.trip import RouteStatus, TripStatus, TripView
-from app.presentation.deps import Page, get_trip_service, require_roles
+from app.infrastructure.db.models import ChuyenXe, CT_DatVe, DatVe, TuyenXe, Xe
+from app.infrastructure.db.settings_service import get_setting_int
+from app.presentation.deps import get_db
 from app.presentation.schemas.trips import (
-    PriceUpdate,
-    RouteIn,
-    RouteOfferOut,
-    RouteOut,
-    RouteUpdate,
-    SearchResult,
-    SeatOut,
-    StopOut,
-    TripCreate,
-    TripDetail,
-    TripOut,
-    TripUpdate,
-    TripUpdated,
+    ChuyenXeItemResponse,
+    GheItemResponse,
+    SoDoGheResponse,
+    TuyenXeResponse,
 )
 
-public = APIRouter(tags=["tra cứu chuyến xe"])
-admin = APIRouter(
-    prefix="/admin",
-    tags=["admin: tuyến & chuyến xe"],
-    dependencies=[Depends(require_roles(Role.ADMIN))],
-)
+router = APIRouter(prefix="/tuyen-xe", tags=["tuyến & chuyến xe"])
+chuyen_router = APIRouter(prefix="/chuyen-xe", tags=["tuyến & chuyến xe"])
 
 
-def trip_out(v: TripView) -> TripOut:
-    t = v.trip
-    return TripOut(
-        id=t.id,
-        code=t.code or v.code,
-        route_id=t.route_id,
-        vehicle_id=t.vehicle_id,
-        origin=v.origin,
-        destination=v.destination,
-        plate=v.plate,
-        vehicle_type=v.vehicle_type,
-        departure_date=t.departure_date,
-        departure_time=t.departure_time,
-        arrival_at=t.arrival_at,
-        price=t.price,
-        status=t.status,
-        cancel_reason=t.cancel_reason,
-        available_seats=v.available_seats,
-        total_seats=v.total_seats,
-    )
-
-
-def _detail(svc: TripService, trip_id: int) -> TripDetail:
-    v = svc.view(trip_id)
-    stops = [
-        StopOut(id=s.id, name=s.name, kind=s.kind, order=s.order)
-        for s in svc.repo.get_stops(trip_id)
-    ]
-    return TripDetail(**trip_out(v).model_dump(), stops=stops)
-
-
-# ---------- công khai (UC01) ----------
-@public.get(
-    "/trips/search",
-    response_model=SearchResult,
-    summary="Tìm kiếm chuyến xe",
-    description="Tìm chuyến xe theo điểm đi, điểm đến, ngày đi kèm bộ lọc khung giờ, loại xe và khoảng giá vé.",
-)
-def search_trips(
-    origin: str = Query(..., description="Điểm khởi hành", examples=["Hà Nội"]),
-    destination: str = Query(..., description="Điểm đến", examples=["Đà Nẵng"]),
-    date: date = Query(..., description="Ngày khởi hành (YYYY-MM-DD)", examples=["2026-11-20"]),
-    time_of_day: Literal["SANG", "CHIEU", "DEM"] | None = Query(
-        None, description="Khung giờ: SANG (05:00-11:59), CHIEU (12:00-17:59), DEM (18:00-04:59)"
-    ),
-    vehicle_type_id: int | None = Query(None, description="Lọc theo loại xe"),
-    min_price: Decimal | None = Query(default=None, ge=0, description="Giá vé tối thiểu"),
-    max_price: Decimal | None = Query(default=None, ge=0, description="Giá vé tối đa"),
-    svc: TripService = Depends(get_trip_service),
+@router.get("", response_model=list[TuyenXeResponse], summary="Danh sách tuyến xe đang khai thác")
+def get_routes(
+    diem_di: str | None = None,
+    diem_den: str | None = None,
+    tat_ca: bool = False,
+    db: Session = Depends(get_db),
 ):
-    """Tìm kiếm chuyến xe công khai cho khách hàng."""
-    rows, suggestions = svc.search(
-        origin, destination, date, time_of_day, vehicle_type_id, min_price, max_price
-    )
-    return SearchResult(
-        items=[trip_out(v) for v in rows],
-        message=None if rows else "Không tìm thấy chuyến xe phù hợp",
-        suggested_dates=suggestions,
-    )
+    """Lấy danh sách các tuyến xe, hỗ trợ lọc theo Điểm đi và Điểm đến."""
+    query = db.query(TuyenXe)
+    if not tat_ca:
+        query = query.filter(TuyenXe.TrangThai == "HoatDong")
+    if diem_di:
+        query = query.filter(TuyenXe.DiemDi.ilike(f"%{diem_di.strip()}%"))
+    if diem_den:
+        query = query.filter(TuyenXe.DiemDen.ilike(f"%{diem_den.strip()}%"))
 
-
-@public.get(
-    "/routes",
-    response_model=list[RouteOfferOut],
-    summary="Tuyến xe phổ biến",
-    description="Danh sách các tuyến xe đang có chuyến sắp chạy kèm giá vé thấp nhất hiển thị ở trang chủ.",
-)
-def route_offers(svc: TripService = Depends(get_trip_service)):
-    """Công khai: các tuyến đang có chuyến sắp chạy + giá thấp nhất (trang chủ)."""
-    return svc.route_offers()
-
-
-@public.get(
-    "/trips/{trip_id}",
-    response_model=TripDetail,
-    summary="Chi tiết chuyến xe",
-    description="Xem thông tin chi tiết một chuyến xe kèm danh sách điểm đón và trả khách.",
-)
-def trip_detail(
-    trip_id: int = Path(..., description="ID chuyến xe"),
-    svc: TripService = Depends(get_trip_service),
-):
-    return _detail(svc, trip_id)
-
-
-@public.get(
-    "/trips/{trip_id}/seats",
-    response_model=list[SeatOut],
-    summary="Sơ đồ ghế chuyến xe",
-    description="Lấy sơ đồ vị trí và trạng thái ghế (trống, đang giữ, đã đặt) của chuyến xe.",
-)
-def trip_seats(
-    trip_id: int = Path(..., description="ID chuyến xe"),
-    svc: TripService = Depends(get_trip_service),
-):
+    routes = query.order_by(TuyenXe.MaTuyen).all()
     return [
-        SeatOut(
-            seat_id=s.seat_id,
-            code=s.code,
-            floor=s.floor,
-            row_no=s.row_no,
-            col_no=s.col_no,
-            state=s.state,
-            hold_until=s.hold_until,
+        TuyenXeResponse(
+            ma_tuyen=r.MaTuyen,
+            diem_di=r.DiemDi,
+            diem_den=r.DiemDen,
+            khoang_cach=r.KhoangCach,
+            thoi_gian_du_kien=r.ThoiGianDuKien,
+            mo_ta=r.MoTa,
+            trang_thai=r.TrangThai,
         )
-        for s in svc.seat_map(trip_id)
+        for r in routes
     ]
 
 
-# ---------- Admin: tuyến ----------
-@admin.get(
-    "/routes",
-    response_model=list[RouteOut],
-    summary="Danh sách tuyến xe",
-    description="Quản trị: Lấy danh sách toàn bộ các tuyến đường xe chạy, hỗ trợ lọc theo trạng thái hoạt động.",
-)
-def list_routes(
-    status: RouteStatus | None = Query(None, description="Lọc trạng thái: HOAT_DONG hoặc TAM_NGUNG"),
-    svc: TripService = Depends(get_trip_service),
+@chuyen_router.get("", response_model=list[ChuyenXeItemResponse], summary="Tìm kiếm chuyến xe công khai")
+def search_trips(
+    diem_di: Annotated[str | None, Query(description="Tỉnh/Thành phố hoặc Bến xe xuất phát")] = None,
+    diem_den: Annotated[str | None, Query(description="Tỉnh/Thành phố hoặc Bến xe nơi đến")] = None,
+    ngay_di: Annotated[date | None, Query(description="Ngày khởi hành (YYYY-MM-DD)")] = None,
+    ngay: Annotated[date | None, Query(description="Ngày khởi hành (alias)")] = None,
+    ma_loai_xe: Annotated[int | None, Query(description="Lọc theo loại xe")] = None,
+    ma_tuyen: Annotated[int | None, Query(description="Lọc theo mã tuyến")] = None,
+    tuyen_id: Annotated[int | None, Query(description="Lọc theo mã tuyến (alias)")] = None,
+    sap_xep: Annotated[str, Query(description="gio_som, gia_tang, gia_giam")] = "gio_som",
+    trang_thai: Annotated[str | None, Query(description="Lọc theo trạng thái cụ thể")] = None,
+    tat_ca_trang_thai: Annotated[bool, Query(description="Lấy tất cả các trạng thái chuyến")] = False,
+    db: Session = Depends(get_db),
 ):
-    """Lấy danh sách tuyến xe trong trang quản trị."""
-    return svc.repo.list_routes(status)
+    """Tìm kiếm các chuyến xe khả dụng với số ghế trống tính toán thời gian thực."""
+    actual_ma_tuyen = ma_tuyen if ma_tuyen is not None else tuyen_id
+    actual_ngay_di = ngay_di if ngay_di is not None else ngay
 
-
-@admin.post(
-    "/routes",
-    status_code=201,
-    response_model=RouteOut,
-    summary="Tạo tuyến xe mới",
-    description="Quản trị: Tạo một tuyến đường vận chuyển mới giữa hai điểm đi và đến kèm cự ly và thời gian ước tính.",
-)
-def create_route(body: RouteIn, svc: TripService = Depends(get_trip_service)):
-    """Tạo mới tuyến đường vận chuyển."""
-    return svc.create_route(body.origin, body.destination, body.distance_km, body.expected_minutes)
-
-
-@admin.patch(
-    "/routes/{route_id}",
-    response_model=RouteOut,
-    summary="Cập nhật tuyến xe",
-    description="Quản trị: Chỉnh sửa thông tin điểm đi, điểm đến, cự ly, thời gian chạy hoặc trạng thái của tuyến.",
-)
-def update_route(
-    route_id: int = Path(..., description="ID tuyến xe"),
-    body: RouteUpdate = ...,
-    svc: TripService = Depends(get_trip_service),
-):
-    """Cập nhật thông tin tuyến xe."""
-    return svc.update_route(route_id, body.model_dump(exclude_unset=True))
-
-
-# ---------- Admin: chuyến ----------
-@admin.get(
-    "/trips",
-    response_model=list[TripOut],
-    summary="Danh sách chuyến xe (Admin)",
-    description="Quản trị: Danh sách tất cả chuyến xe, hỗ trợ phân trang và lọc theo tuyến đường, ngày đi, trạng thái và biển số xe.",
-)
-def list_trips(
-    route_id: int | None = Query(None, description="Lọc theo ID tuyến xe"),
-    date: date | None = Query(None, description="Lọc theo ngày khởi hành (YYYY-MM-DD)"),
-    status: TripStatus | None = Query(None, description="Lọc theo trạng thái chuyến: MO_BAN, DANG_CHAY, HOAN_THANH, HUY"),
-    plate: str | None = Query(None, description="Lọc theo biển số xe"),
-    date_from: date | None = Query(None, description="Từ ngày khởi hành (YYYY-MM-DD), gồm cả ngày này"),
-    date_to: date | None = Query(None, description="Đến ngày khởi hành (YYYY-MM-DD), gồm cả ngày này"),
-    svc: TripService = Depends(get_trip_service),
-    page: Page = Depends(),
-):
-    """Danh sách chuyến xe dành cho quản trị viên (sắp theo ngày giờ đi tăng dần)."""
-    rows = svc.repo.list_trips(route_id, date, status, plate, date_from, date_to)
-    return [trip_out(v) for v in page.apply(rows)]
-
-
-@admin.post(
-    "/trips",
-    status_code=201,
-    response_model=TripDetail,
-    summary="Tạo chuyến xe mới",
-    description="Quản trị: Lập lịch cho một chuyến xe mới với xe, tuyến đường, ngày giờ khởi hành, giá vé và các điểm đón/trả.",
-)
-def create_trip(body: TripCreate, svc: TripService = Depends(get_trip_service)):
-    """Khởi tạo một chuyến xe mới."""
-    t = svc.create_trip(
-        body.route_id,
-        body.vehicle_id,
-        body.departure_date,
-        body.departure_time,
-        body.price,
-        body.pickup_points,
-        body.dropoff_points,
-        body.note,
+    query = (
+        db.query(ChuyenXe)
+        .join(ChuyenXe.tuyen_xe)
+        .join(ChuyenXe.xe)
+        .join(Xe.loai_xe)
+        .options(
+            joinedload(ChuyenXe.tuyen_xe),
+            joinedload(ChuyenXe.xe).joinedload(Xe.loai_xe),
+        )
     )
-    return _detail(svc, t.id)
+
+    if actual_ma_tuyen:
+        query = query.filter(ChuyenXe.MaTuyen == actual_ma_tuyen)
+
+    if trang_thai:
+        query = query.filter(ChuyenXe.TrangThai == trang_thai.strip())
+    elif not tat_ca_trang_thai:
+        query = query.filter(ChuyenXe.TrangThai.in_(["DangBan", "SapKhoiHanh", "HoatDong"]))
+
+    if diem_di:
+        query = query.filter(TuyenXe.DiemDi.ilike(f"%{diem_di.strip()}%"))
+    if diem_den:
+        query = query.filter(TuyenXe.DiemDen.ilike(f"%{diem_den.strip()}%"))
+    if actual_ngay_di:
+        query = query.filter(ChuyenXe.NgayKhoiHanh == actual_ngay_di)
+    if ma_loai_xe:
+        query = query.filter(Xe.MaLoaiXe == ma_loai_xe)
+
+    if sap_xep == "gia_tang":
+        query = query.order_by(ChuyenXe.GiaVe.asc(), ChuyenXe.GioKhoiHanh.asc())
+    elif sap_xep == "gia_giam":
+        query = query.order_by(ChuyenXe.GiaVe.desc(), ChuyenXe.GioKhoiHanh.asc())
+    else:  # gio_som
+        query = query.order_by(ChuyenXe.NgayKhoiHanh.asc(), ChuyenXe.GioKhoiHanh.asc())
+
+    trips = query.limit(100).all()
+
+    # Tính toán số ghế trống cho từng chuyến
+    now = datetime.now()
+    hold_min = get_setting_int(db, "THOI_GIAN_GIU_CHO_PHUT", 15)
+    cutoff_holding = now - timedelta(minutes=hold_min)
+
+    results: list[ChuyenXeItemResponse] = []
+    for trip in trips:
+        total_seats = trip.xe.loai_xe.SoGhe
+
+        # Đếm số ghế đã bán hoặc đang giữ chỗ còn hạn
+        booked_count = (
+            db.query(func.count(CT_DatVe.MaCT))
+            .join(CT_DatVe.dat_ve)
+            .filter(
+                CT_DatVe.MaChuyen == trip.MaChuyen,
+                (
+                    (DatVe.TrangThai == "DaThanhToan")
+                    | ((DatVe.TrangThai == "ChoThanhToan") & (DatVe.NgayDat >= cutoff_holding))
+                ),
+            )
+            .scalar()
+            or 0
+        )
+
+        available_seats = max(0, total_seats - booked_count)
+
+        results.append(
+            ChuyenXeItemResponse(
+                ma_chuyen=trip.MaChuyen,
+                ma_tuyen=trip.MaTuyen,
+                diem_di=trip.tuyen_xe.DiemDi,
+                diem_den=trip.tuyen_xe.DiemDen,
+                ngay_khoi_hanh=trip.NgayKhoiHanh,
+                gio_khoi_hanh=trip.GioKhoiHanh,
+                gia_ve=trip.GiaVe,
+                trang_thai=trip.TrangThai,
+                ghi_chu=trip.GhiChu,
+                ma_xe=trip.xe.MaXe,
+                bien_so=trip.xe.BienSo,
+                ten_loai_xe=trip.xe.loai_xe.TenLoaiXe,
+                tong_so_ghe=total_seats,
+                so_ghe_trong=available_seats,
+            )
+        )
+
+    return results
 
 
-@admin.patch(
-    "/trips/{trip_id}",
-    response_model=TripUpdated,
-    summary="Cập nhật lịch chuyến xe",
-    description="Quản trị: Đổi giờ khởi hành, đổi ngày chạy hoặc đổi phương tiện. Hệ thống tự động gửi tin nhắn SMS thông báo tới các hành khách đã đặt vé.",
-)
-def update_trip(
-    trip_id: int = Path(..., description="ID chuyến xe cần đổi lịch"),
-    body: TripUpdate = ...,
-    svc: TripService = Depends(get_trip_service),
-):
-    """Đổi giờ hoặc đổi xe; hành khách đã mua vé được báo SMS."""
-    _, notified = svc.update_trip(trip_id, body.model_dump(exclude_unset=True))
-    return TripUpdated(**_detail(svc, trip_id).model_dump(), notified_passengers=notified)
+@chuyen_router.get("/{ma_chuyen}", response_model=ChuyenXeItemResponse, summary="Chi tiết chuyến xe")
+def get_trip_detail(ma_chuyen: int, db: Session = Depends(get_db)):
+    """Lấy thông tin chi tiết của một chuyến xe cụ thể."""
+    trip = (
+        db.query(ChuyenXe)
+        .options(
+            joinedload(ChuyenXe.tuyen_xe),
+            joinedload(ChuyenXe.xe).joinedload(Xe.loai_xe),
+        )
+        .filter(ChuyenXe.MaChuyen == ma_chuyen)
+        .first()
+    )
+    if not trip:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Không tìm thấy chuyến xe có mã {ma_chuyen}",
+        )
+
+    now = datetime.now()
+    hold_min = get_setting_int(db, "THOI_GIAN_GIU_CHO_PHUT", 15)
+    cutoff_holding = now - timedelta(minutes=hold_min)
+    total_seats = trip.xe.loai_xe.SoGhe
+
+    booked_count = (
+        db.query(func.count(CT_DatVe.MaCT))
+        .join(CT_DatVe.dat_ve)
+        .filter(
+            CT_DatVe.MaChuyen == trip.MaChuyen,
+            (
+                (DatVe.TrangThai == "DaThanhToan")
+                | ((DatVe.TrangThai == "ChoThanhToan") & (DatVe.NgayDat >= cutoff_holding))
+            ),
+        )
+        .scalar()
+        or 0
+    )
+
+    return ChuyenXeItemResponse(
+        ma_chuyen=trip.MaChuyen,
+        ma_tuyen=trip.MaTuyen,
+        diem_di=trip.tuyen_xe.DiemDi,
+        diem_den=trip.tuyen_xe.DiemDen,
+        ngay_khoi_hanh=trip.NgayKhoiHanh,
+        gio_khoi_hanh=trip.GioKhoiHanh,
+        gia_ve=trip.GiaVe,
+        trang_thai=trip.TrangThai,
+        ghi_chu=trip.GhiChu,
+        ma_xe=trip.xe.MaXe,
+        bien_so=trip.xe.BienSo,
+        ten_loai_xe=trip.xe.loai_xe.TenLoaiXe,
+        tong_so_ghe=total_seats,
+        so_ghe_trong=max(0, total_seats - booked_count),
+    )
 
 
-@admin.patch(
-    "/trips/{trip_id}/price",
-    response_model=TripDetail,
-    summary="Điều chỉnh giá vé chuyến xe",
-    description="Quản trị: Cập nhật giá vé niêm yết mới cho chuyến xe. Vé đã mua trước đó giữ nguyên giá cũ.",
-)
-def update_price(
-    trip_id: int = Path(..., description="ID chuyến xe cần đổi giá"),
-    body: PriceUpdate = ...,
-    svc: TripService = Depends(get_trip_service),
-):
-    """Điều chỉnh giá vé của chuyến xe."""
-    svc.update_price(trip_id, body.price)
-    return _detail(svc, trip_id)
+@chuyen_router.get("/{ma_chuyen}/so-do-ghe", response_model=SoDoGheResponse, summary="Sơ đồ ghế thời gian thực")
+def get_trip_seat_map(ma_chuyen: int, db: Session = Depends(get_db)):
+    """Trả về sơ đồ từng ghế (tầng 1, tầng 2) và trạng thái động: TRONG, TAM_GIU, DA_DAT, BAO_TRI."""
+    trip = (
+        db.query(ChuyenXe)
+        .options(
+            joinedload(ChuyenXe.xe).joinedload(Xe.loai_xe),
+            joinedload(ChuyenXe.xe).joinedload(Xe.ghe_list),
+        )
+        .filter(ChuyenXe.MaChuyen == ma_chuyen)
+        .first()
+    )
+    if not trip:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Không tìm thấy chuyến xe có mã {ma_chuyen}",
+        )
+
+    now = datetime.now()
+    hold_min = get_setting_int(db, "THOI_GIAN_GIU_CHO_PHUT", 15)
+    cutoff_holding = now - timedelta(minutes=hold_min)
+
+    # Lấy danh sách các vé của chuyến này
+    ct_list = (
+        db.query(CT_DatVe)
+        .join(CT_DatVe.dat_ve)
+        .options(joinedload(CT_DatVe.dat_ve))
+        .filter(
+            CT_DatVe.MaChuyen == ma_chuyen,
+            DatVe.TrangThai.in_(["DaThanhToan", "ChoThanhToan"]),
+        )
+        .all()
+    )
+
+    booked_seat_ids: set[int] = set()
+    holding_seat_ids: set[int] = set()
+
+    for ct in ct_list:
+        if ct.dat_ve.TrangThai == "DaThanhToan":
+            booked_seat_ids.add(ct.MaGhe)
+        elif ct.dat_ve.TrangThai == "ChoThanhToan" and ct.dat_ve.NgayDat >= cutoff_holding:
+            holding_seat_ids.add(ct.MaGhe)
+
+    danh_sach_ghe: list[GheItemResponse] = []
+    # Sắp xếp ghế theo Tầng và Số ghế
+    sorted_ghe = sorted(trip.xe.ghe_list, key=lambda g: (g.Tang, g.SoGhe))
+
+    so_ghe_da_dat = 0
+    for ghe in sorted_ghe:
+        # Xác định trạng thái động của ghế
+        if ghe.TrangThai != "Trong":
+            status_ghe = "BAO_TRI"
+        elif ghe.MaGhe in booked_seat_ids:
+            status_ghe = "DA_DAT"
+            so_ghe_da_dat += 1
+        elif ghe.MaGhe in holding_seat_ids:
+            status_ghe = "TAM_GIU"
+            so_ghe_da_dat += 1
+        else:
+            status_ghe = "TRONG"
+
+        danh_sach_ghe.append(
+            GheItemResponse(
+                ma_ghe=ghe.MaGhe,
+                so_ghe=ghe.SoGhe,
+                tang=ghe.Tang,
+                trang_thai_vat_ly=ghe.TrangThai,
+                trang_thai_chuyen=status_ghe,
+                gia_ve=trip.GiaVe,
+            )
+        )
+
+    total_seats = trip.xe.loai_xe.SoGhe
+    so_ghe_trong = max(0, total_seats - so_ghe_da_dat)
+
+    return SoDoGheResponse(
+        ma_chuyen=trip.MaChuyen,
+        ma_xe=trip.xe.MaXe,
+        bien_so=trip.xe.BienSo,
+        ten_loai_xe=trip.xe.loai_xe.TenLoaiXe,
+        tong_so_ghe=total_seats,
+        so_ghe_trong=so_ghe_trong,
+        so_ghe_da_dat=so_ghe_da_dat,
+        danh_sach_ghe=danh_sach_ghe,
+    )

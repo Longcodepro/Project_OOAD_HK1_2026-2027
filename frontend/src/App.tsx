@@ -417,11 +417,9 @@ export default function App() {
       ? isClerk
         ? 'admin-counter'
         : 'admin-dashboard'
-      : isClerk && view !== 'admin-scan'
+      : isClerk && view !== 'admin-scan' && view !== 'admin-counter'
         ? 'admin-counter'
-        : !isClerk && view === 'admin-counter'
-          ? 'admin-dashboard'
-          : view
+        : view
 
     // Màn hình Soát vé độc lập (chế độ toàn màn hình cho camera scanner)
     if (adminView === 'admin-scan') {
@@ -550,6 +548,7 @@ export default function App() {
               setCurrentTicket(ticket)
             }}
             onLogout={handleCustomerLogout}
+            perfMode={perfMode}
           />
         )
       case 'login':
@@ -564,6 +563,7 @@ export default function App() {
             backendOnline={backendOnline}
             onSearch={handleSearch}
             onLogout={handleCustomerLogout}
+            perfMode={perfMode}
           />
         )
     }

@@ -100,6 +100,12 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
     }
   }
 
+  const validLoginIdentifier = () => {
+    if (phone.trim().length >= 3) return true
+    setError('Vui lòng nhập số điện thoại hoặc tên đăng nhập (tối thiểu 3 ký tự)')
+    return false
+  }
+
   const validPhone = () => {
     if (PHONE_RE.test(cleanPhone(phone))) return true
     setError(PHONE_HINT)
@@ -108,12 +114,12 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
 
   const handleLogin = (e: FormEvent) => {
     e.preventDefault()
-    if (!validPhone()) return
+    if (!validLoginIdentifier()) return
     if (!password) {
       setError('Vui lòng nhập mật khẩu.')
       return
     }
-    run(async () => onLoginSuccess(await authApi.login('customer', phone, password)))
+    run(async () => onLoginSuccess(await authApi.login('customer', phone.trim(), password)))
   }
 
   const handleRequestOtp = (e: FormEvent) => {
@@ -173,13 +179,12 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
         <form onSubmit={handleLogin} className="space-y-4" noValidate>
           <div>
             <label className="field-label" htmlFor="login-phone">
-              Số điện thoại
+              Số điện thoại hoặc Tên đăng nhập
             </label>
             <input
               id="login-phone"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
+              type="text"
+              autoComplete="username"
               value={phone}
               onChange={(e) => {
                 setPhone(e.target.value)
@@ -188,7 +193,7 @@ export function LoginPage({ setView, onLoginSuccess }: LoginPageProps) {
                   setErrorKind(null)
                 }
               }}
-              placeholder="0912345678"
+              placeholder="0908889999 hoặc kh_dangvulong"
               className="w-full"
               disabled={loading}
               required

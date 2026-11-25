@@ -1,37 +1,38 @@
 /**
  * @file CheckoutPage.tsx
- * @description Màn hình Điền Thông tin Hành khách và Thanh toán Đơn vé (Checkout & Payment Gateway).
+ * @description Màn hình Điền Thông tin Hành khách & Thanh toán Đơn vé (Checkout & Payment Flow).
  *
- * QUY TRÌNH NGHIỆP VỤ & LUỒNG XỬ LÝ:
- * 1. Khởi tạo & Điền thông tin hành khách theo từng ghế:
- *    - Ghế đầu tiên: tự động điền sẵn Họ tên và Số điện thoại từ tài khoản người dùng đăng nhập (`user`).
- *    - Các ghế tiếp theo: để trống cho khách tự nhập thông tin người đi cùng.
- * 2. Xác thực dữ liệu đầu vào (Client-side Validation):
- *    - Kiểm tra bắt buộc: Họ tên hành khách không được để trống.
- *    - Định dạng số điện thoại chuẩn Việt Nam (`PHONE_RE = /^0\d{9,10}$/`): bắt đầu bằng số 0, dài 10 hoặc 11 số.
- *    - Điểm đón và điểm trả khách: nếu chuyến có nhiều điểm đón/trả, bắt buộc phải chọn.
- * 3. Quản lý mã giảm giá (Coupon / Voucher):
- *    - Nhập mã và chuẩn hóa chữ in hoa (`trim().toUpperCase()`).
- *    - Gọi `couponsApi.validate(code, subtotal)` để kiểm tra tính hợp lệ và số tiền giảm trừ (`discount`, `finalAmount`).
- *    - Hỗ trợ hủy áp dụng mã giảm giá và khôi phục lại tổng tiền ban đầu.
- * 4. Đồng hồ đếm ngược giữ chỗ (`BookingTimer`):
- *    - Xác nhận và giữ chỗ lại tập ghế thông qua `bookingsApi.holdSeats`.
- *    - Khi hết giờ đếm ngược (`onExpire`): nhả ghế và hiện Modal cảnh báo hết hạn.
- *    - Khi người dùng bấm "Quay lại chọn ghế" (`backToSeats`): chủ động nhả ghế trên server trước khi lùi trang.
- * 5. Thanh toán & Phát hành vé:
- *    - Hỗ trợ các phương thức: Chuyển khoản VietQR, Ví điện tử MoMo, Thẻ ATM nội địa.
- *    - Gọi `bookingsApi.create`: tạo đơn hàng (`POST /orders`), thanh toán (`POST /orders/{id}/pay`),
- *      nhận danh sách vé điện tử (`Ticket[]`) và chuyển sang màn hình thành công (`SuccessPage`).
+ * TÍNH NĂNG CHÍNH:
+ * 1. Thông tin người đặt vé & liên hệ (Họ tên, SĐT, Email).
+ * 2. Checkbox "Áp dụng thông tin người đặt cho tất cả các vé" (MẶC ĐỊNH BẬT / CHECKED):
+ *    - Khi BẬT: Họ tên & SĐT của tất cả các ghế tự động đồng bộ theo người đặt.
+ *    - Khi TẮT: Mỗi ghế mở rộng thành ô nhập riêng để bạn đồng hành có cuống vé và mã vé riêng.
+ * 3. Thông tin tài khoản ngân hàng nhận hoàn tiền trực tuyến (Số tài khoản, Tên ngân hàng, Chủ tài khoản):
+ *    - Đảm bảo quyền lợi hoàn tiền tự động 100% khi chuyến xe bị hủy hoặc khách hủy vé theo quy định.
+ * 4. Thẩm định mã giảm giá khuyến mãi (Voucher) qua POST /api/khuyen-mai/kiem-tra.
+ * 5. Tạo đơn đặt vé qua POST /api/dat-ve và thực hiện thanh toán qua POST /api/dat-ve/{id}/thanh-toan.
+ * 6. Phương thức thanh toán: VietQR (hiển thị mã QR ngân hàng quét tức thì), Ví điện tử MoMo, Tiền mặt tại quầy.
+ * 7. Navigation Guard: Tự động gọi POST /api/dat-ve/{id}/huy để giải phóng ghế ngay lập tức nếu khách rời đi hoặc hủy đơn.
+ * 8. Giữ vững phong cách thiết kế Trống đồng Đông Sơn và chế độ mượt mà (perfMode).
  */
 
-import { useCallback, useEffect, useState } from 'react'
-import type { Trip, Ticket, View, User, Stop, BookingRequest } from '../types'
-import { bookingsApi, couponsApi, tripsApi, apiErrorMessage, formatVnd, type CouponCheck } from '../services/api'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { Trip, Ticket, View, User } from '../types'
+import type { DatVeResponse, Ghe, SoDoGhe } from '../types/counter'
+import {
+  apiErrorMessage,
+  cancelUnpaidBooking,
+  createOnlineBooking,
+  formatVnd,
+  getSeatMap,
+  payBooking,
+  updatePassengers,
+  validateCoupon,
+} from '../services/api'
 import { Header } from '../components/layout/Header'
 import { BookingTimer } from '../components/dongson/BookingTimer'
 import { Modal } from '../components/common/Modal'
 import { Button } from '../components/common/Button'
-import { fromYmd } from '../components/common/PickerFields'
 import { clearBookingFlow, saveChosenSeats } from '../services/viewState'
 
 export interface CheckoutPageProps {
@@ -51,30 +52,33 @@ export interface CheckoutPageProps {
   onSelectSeats?: (seats: string[]) => void
   /** Callback kích hoạt khi đặt vé và thanh toán thành công, truyền danh sách vé đã phát hành */
   onBookingSuccess: (tickets: Ticket[]) => void
+  /** Chế độ mượt mà giảm lag */
+  perfMode?: boolean
 }
 
-type PayMethod = BookingRequest['paymentMethod']
-
-/** Danh mục các phương thức thanh toán hỗ trợ */
-const PAY_METHODS: { id: PayMethod; title: string; desc: string; icon: string; badge?: string }[] = [
-  { id: 'vietqr', title: 'Chuyển khoản VietQR', desc: 'Quét mã QR bằng ứng dụng ngân hàng (tự động xác nhận).', icon: 'qr_code_scanner', badge: 'Khuyên dùng' },
-  { id: 'e-wallet', title: 'Ví điện tử MoMo', desc: 'Xác nhận thanh toán trong ứng dụng ví MoMo.', icon: 'account_balance_wallet' },
-  { id: 'domestic-card', title: 'Thẻ ATM nội địa', desc: 'Thanh toán bằng thẻ ngân hàng nội địa (Napas).', icon: 'credit_card' },
-  { id: 'cash', title: 'Tiền mặt tại quầy', desc: 'Giữ chỗ và thanh toán tiền mặt trực tiếp tại quầy vé bến xe.', icon: 'payments' },
+const POPULAR_BANKS = [
+  'Techcombank',
+  'Vietcombank',
+  'MBBank (MB)',
+  'VietinBank',
+  'ACB',
+  'BIDV',
+  'VPBank',
+  'TPBank',
+  'Sacombank',
+  'HDBank',
+  'VIB',
+  'OCB',
+  'MoMo',
 ]
 
-/** Biểu thức chính quy kiểm tra định dạng số điện thoại Việt Nam (10 hoặc 11 số bắt đầu bằng 0) */
-const PHONE_RE = /^0\d{9,10}$/
+type PaymentMethodType = 'VietQR' | 'MoMo' | 'TienMatTaiQuay'
 
-/**
- * Chuẩn hóa số điện thoại: loại bỏ khoảng trắng, dấu gạch nối, dấu chấm,
- * và chuyển đổi đầu số quốc tế +84 / 84 thành 0.
- */
-const normalizePhone = (raw: string) => {
-  let cleaned = raw.replace(/[\s.-]/g, '')
-  if (cleaned.startsWith('+84')) cleaned = '0' + cleaned.slice(3)
-  else if (cleaned.startsWith('84') && cleaned.length >= 11) cleaned = '0' + cleaned.slice(2)
-  return cleaned
+interface SeatPassenger {
+  ma_ghe: number
+  so_ghe: string
+  ho_ten: string
+  sdt: string
 }
 
 export function CheckoutPage({
@@ -87,769 +91,1047 @@ export function CheckoutPage({
   onSelectSeats,
   onBookingSuccess,
 }: CheckoutPageProps) {
-  /**
-   * Lưu trữ thông tin hành khách tương ứng với từng ghế.
-   * Cấu trúc: `{ [seatLabel]: { name: string, phone: string } }`
-   */
-  const [passengers, setPassengers] = useState<Record<string, { name: string; phone: string }>>({})
+  // Sơ đồ ghế và danh sách ghế đã chọn
+  const [seatMap, setSeatMap] = useState<SoDoGhe | null>(null)
+  const [loadingSeats, setLoadingSeats] = useState(true)
 
-  /**
-   * Lấy thông tin hành khách của một ghế:
-   * Nếu là ghế đầu tiên và chưa nhập, mặc định điền sẵn từ tài khoản người dùng đăng nhập.
-   */
-  const passengerOf = (label: string) =>
-    passengers[label] ??
-    (label === chosenSeats[0]
-      ? { name: user?.fullName ?? '', phone: user?.phone ?? '' }
-      : { name: '', phone: '' })
+  // Thông tin người đặt vé (Booker contact info)
+  const [bookerName, setBookerName] = useState(user?.name || '')
+  const [bookerPhone, setBookerPhone] = useState(user?.phone || '')
+  const [bookerEmail, setBookerEmail] = useState(user?.email || '')
+  const [orderNote, setOrderNote] = useState('')
 
-  /** Cập nhật thông tin hành khách cho một ghế cụ thể */
-  const setPassenger = (label: string, patch: Partial<{ name: string; phone: string }>) =>
-    setPassengers((prev) => ({ ...prev, [label]: { ...passengerOf(label), ...patch } }))
+  // UX Quy tắc 1: Checkbox "Áp dụng thông tin người đặt cho tất cả các vé" (MẶC ĐỊNH BẬT / CHECKED)
+  const [applyToAllSeats, setApplyToAllSeats] = useState<boolean>(true)
+  const [seatPassengers, setSeatPassengers] = useState<SeatPassenger[]>([])
+  const [activeAccordionSeat, setActiveAccordionSeat] = useState<number | null>(null)
 
-  /** Sao chép số điện thoại người đặt (ghế đầu tiên) cho tất cả các ghế còn lại */
-  const copyPhoneToAll = () => {
-    const mainPhone = passengerOf(chosenSeats[0]).phone
-    if (!mainPhone) return
-    setPassengers((prev) => {
-      const next = { ...prev }
-      for (const s of chosenSeats) {
-        next[s] = { ...(next[s] || passengerOf(s)), phone: mainPhone }
-      }
-      return next
-    })
-  }
+  // UX Quy tắc 2: Thông tin tài khoản ngân hàng nhận hoàn tiền trực tuyến (Online refund guarantee)
+  const [refundBank, setRefundBank] = useState('Techcombank')
+  const [refundAccount, setRefundAccount] = useState('')
+  const [refundAccountHolder, setRefundAccountHolder] = useState(
+    (user?.name || '').toUpperCase()
+  )
 
-  /** Phương thức thanh toán được chọn */
-  const [payMethod, setPayMethod] = useState<PayMethod>('vietqr')
-  /** Danh sách các điểm đón khách của chuyến */
-  const [pickupStops, setPickupStops] = useState<Stop[]>([])
-  /** Danh sách các điểm trả khách của chuyến */
-  const [dropoffStops, setDropoffStops] = useState<Stop[]>([])
-  /** ID điểm đón được chọn */
-  const [pickupId, setPickupId] = useState('')
-  /** ID điểm trả được chọn */
-  const [dropoffId, setDropoffId] = useState('')
-  /** Thông báo lỗi tải điểm đón/trả */
-  const [stopsError, setStopsError] = useState('')
-  /** Bản đồ lưu tầng của từng ghế (label -> floor) để hiển thị chi tiết */
-  const [seatFloors, setSeatFloors] = useState<Record<string, number>>({})
-  /** Số giây còn lại của phiên giữ chỗ theo backend */
-  const [holdSeconds, setHoldSeconds] = useState<number | null>(null)
-  /** Lỗi giữ chỗ (nếu bị tranh chấp hoặc hết hạn) */
-  const [holdError, setHoldError] = useState('')
-  /** Khóa tải lại giữ chỗ để phục vụ nút Thử lại */
-  const [holdReloadKey, setHoldReloadKey] = useState(0)
-  /** Cờ báo phiên giữ chỗ đã hết hạn */
+  // Khuyến mãi / Voucher (POST /api/khuyen-mai/kiem-tra)
+  const [couponCode, setCouponCode] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null)
+  const [couponDiscount, setCouponDiscount] = useState<number>(0)
+  const [checkingCoupon, setCheckingCoupon] = useState(false)
+  const [couponMsg, setCouponMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  // Phương thức thanh toán (VietQR, MoMo, Tiền mặt)
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>('VietQR')
+  const [simulationStatus, setSimulationStatus] = useState<'thanh_cong' | 'that_bai'>('thanh_cong')
+
+  // Đơn đặt vé tạm thời được tạo trên backend (ChoThanhToan)
+  const [createdBooking, setCreatedBooking] = useState<DatVeResponse | null>(null)
+  const createdBookingRef = useRef<DatVeResponse | null>(null)
+  useEffect(() => {
+    createdBookingRef.current = createdBooking
+  }, [createdBooking])
+
+  // Trạng thái giữ chỗ 15 phút (900 giây)
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(900)
   const [expired, setExpired] = useState(false)
-  /** Trạng thái đang gửi yêu cầu thanh toán */
+
+  // UI state
   const [submitting, setSubmitting] = useState(false)
-  /** Thông báo lỗi tổng quát */
-  const [errorMessage, setErrorMessage] = useState('')
-  /** Ô nhập mã giảm giá */
-  const [couponInput, setCouponInput] = useState('')
-  /** Kết quả thẩm định mã giảm giá sau khi áp dụng */
-  const [coupon, setCoupon] = useState<CouponCheck | null>(null)
-  /** Trạng thái đang kiểm tra mã giảm giá */
-  const [couponBusy, setCouponBusy] = useState(false)
-  /** Lỗi khi áp dụng mã giảm giá */
-  const [couponError, setCouponError] = useState('')
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [copiedField, setCopiedField] = useState<string | null>(null)
+  const [showVietQrModal, setShowVietQrModal] = useState(false)
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [pendingLeaveTarget, setPendingLeaveTarget] = useState<View>('seats')
 
-  const tripId = trip?.id
-  const hasInput = !!tripId && chosenSeats.length > 0
-  const seatCount = chosenSeats.length
-
-  /**
-   * Nạp danh sách điểm đón và trả thực tế của chuyến xe từ `tripsApi.getDetail`.
-   * Tự động chọn sẵn điểm đón đầu tiên và điểm trả cuối cùng làm mặc định hợp lệ.
-   */
+  // Tải sơ đồ ghế để lấy ma_ghe của các ghế được chọn
   useEffect(() => {
-    if (!tripId) return
+    if (!trip) return
     let alive = true
-    tripsApi
-      .getDetail(tripId)
-      .then((d) => {
+    setLoadingSeats(true)
+
+    getSeatMap(Number(trip.id))
+      .then((data) => {
         if (!alive) return
-        setPickupStops(d.pickupStops)
-        setDropoffStops(d.dropoffStops)
-        if (d.pickupStops.length > 0) setPickupId(String(d.pickupStops[0].id))
-        if (d.dropoffStops.length > 0) setDropoffId(String(d.dropoffStops[d.dropoffStops.length - 1].id))
+        setSeatMap(data)
+
+        // Khởi tạo danh sách hành khách theo từng ghế
+        const ghes = data.danh_sach_ghe.filter((g) => chosenSeats.includes(g.so_ghe))
+        const initialPassengers: SeatPassenger[] = ghes.map((g) => ({
+          ma_ghe: g.ma_ghe,
+          so_ghe: g.so_ghe,
+          ho_ten: bookerName,
+          sdt: bookerPhone,
+        }))
+        setSeatPassengers(initialPassengers)
       })
-      .catch((err) => alive && setStopsError(apiErrorMessage(err, 'Không tải được điểm đón/trả')))
+      .catch((err) => {
+        if (alive) setErrorMsg(apiErrorMessage(err, 'Không tải được thông tin ghế'))
+      })
+      .finally(() => {
+        if (alive) setLoadingSeats(false)
+      })
+
     return () => {
       alive = false
     }
-  }, [tripId])
+  }, [trip, chosenSeats])
 
-  /**
-   * Giữ chỗ thực tế trên server và lấy lại số giây còn lại:
-   * Nếu đã giữ từ trang chọn ghế, backend sẽ trả về thời gian còn lại mà không gia hạn thêm.
-   */
+  // Đồng bộ họ tên chủ thẻ theo họ tên người đặt nếu chưa nhập
   useEffect(() => {
-    if (!tripId || chosenSeats.length === 0) return
-    let alive = true
-    setHoldSeconds(null)
-    setHoldError('')
-    tripsApi
-      .getSeats(tripId)
-      .then(async (seats) => {
-        const picked = chosenSeats.map((label) => {
-          const seat = seats.find((s) => s.label === label)
-          if (!seat) throw new Error(`Không tìm thấy ghế ${label} của chuyến này`)
-          return seat
-        })
-        const hold = await bookingsApi.holdSeats(tripId, picked.map((s) => s.id))
-        if (!alive) return
-        setSeatFloors(Object.fromEntries(picked.map((s) => [s.label, s.floor])))
-        setHoldSeconds(hold.secondsLeft)
-      })
-      .catch((err) => alive && setHoldError(apiErrorMessage(err, 'Không giữ được chỗ')))
+    if (bookerName && !refundAccountHolder) {
+      setRefundAccountHolder(bookerName.toUpperCase())
+    }
+  }, [bookerName, refundAccountHolder])
+
+  // Đồng bộ seatPassengers khi bookerName hoặc bookerPhone thay đổi và applyToAllSeats đang BẬT
+  useEffect(() => {
+    if (applyToAllSeats) {
+      setSeatPassengers((prev) =>
+        prev.map((p) => ({
+          ...p,
+          ho_ten: bookerName,
+          sdt: bookerPhone,
+        }))
+      )
+    }
+  }, [applyToAllSeats, bookerName, bookerPhone])
+
+  // NAVIGATION GUARD: Hủy đơn chưa thanh toán ngay khi khách rời khỏi luồng checkout
+  const releaseCurrentBooking = useCallback(async () => {
+    const booking = createdBookingRef.current
+    if (booking && booking.trang_thai === 'ChoThanhToan') {
+      try {
+        await cancelUnpaidBooking(booking.ma_dat_ve)
+      } catch {
+        // Bỏ qua lỗi mạng khi thoát trang
+      }
+    }
+  }, [])
+
+  // Bắt sự kiện beforeunload (đóng tab/trình duyệt)
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const booking = createdBookingRef.current
+      if (booking && booking.trang_thai === 'ChoThanhToan') {
+        // Gửi beacon hoặc trigger hủy đơn
+        try {
+          navigator.sendBeacon(`/api/dat-ve/${booking.ma_dat_ve}/huy`)
+        } catch {
+          // Bỏ qua
+        }
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
     return () => {
-      alive = false
+      window.removeEventListener('beforeunload', handleBeforeUnload)
     }
-  }, [tripId, chosenSeats, holdReloadKey])
+  }, [])
 
-  /** Thử kiểm tra và giữ lại ghế khi bị lỗi mạng */
-  const retryHold = () => {
-    setHoldError('')
-    setHoldReloadKey((k) => k + 1)
-  }
-
-  /** Callback khi hết hạn giữ chỗ: chuyển cờ expired và nhả ghế trên server */
-  const onExpire = useCallback(() => {
-    setExpired(true)
-    if (tripId) bookingsApi.releaseSeats(tripId).catch(() => undefined)
-  }, [tripId])
-
-  /** Trạng thái mở hộp thoại cảnh báo khi người dùng muốn thoát quá trình thanh toán */
-  const [showLeaveModal, setShowLeaveModal] = useState(false)
-  const [pendingLeaveView, setPendingLeaveView] = useState<View>('seats')
-
-  /**
-   * Xử lý yêu cầu rời khỏi màn hình thanh toán:
-   * Nếu đang có ghế giữ chỗ, bắt buộc hiển thị Modal cảnh báo để người dùng xác nhận.
-   */
-  const handleRequestLeave = (targetView: View = 'seats') => {
-    if (chosenSeats.length > 0) {
-      setPendingLeaveView(targetView)
-      setShowLeaveModal(true)
-    } else {
-      setView(targetView)
-    }
-  }
-
-  /**
-   * Bắt sự kiện người dùng bấm nút Back của trình duyệt khi đang ở trang thanh toán:
-   * Giữ người dùng lại trang và hiển thị Modal xác nhận lựa chọn.
-   */
+  // Bắt sự kiện popstate (Nút Back của trình duyệt)
   useEffect(() => {
-    if (chosenSeats.length === 0) return
-
     const handlePopState = () => {
-      if (chosenSeats.length > 0) {
+      if (createdBookingRef.current) {
         window.location.hash = '#/checkout'
-        setPendingLeaveView('seats')
-        setShowLeaveModal(true)
+        setPendingLeaveTarget('seats')
+        setShowCancelModal(true)
       }
     }
 
     window.addEventListener('popstate', handlePopState)
-    return () => window.removeEventListener('popstate', handlePopState)
-  }, [chosenSeats.length])
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [])
 
-  /**
-   * Trường hợp 1: Khách muốn GIỮ NGUYÊN GHẾ ĐANG CHỌN và quay lại SeatsPage để chọn tiếp
-   * (áp dụng khi phiên giữ chỗ 5 phút còn hiệu lực).
-   */
-  const handleKeepHoldAndBack = () => {
-    setShowLeaveModal(false)
-    setView('seats')
+  // Đồng hồ đếm ngược giữ chỗ 15 phút
+  const handleExpireTimer = useCallback(async () => {
+    setExpired(true)
+    setErrorMsg('Đã hết hạn giữ chỗ 15 phút. Hệ thống đã giải phóng ghế.')
+    await releaseCurrentBooking()
+  }, [releaseCurrentBooking])
+
+  // Tính toán số tiền
+  const subtotal = trip ? Number(trip.price) * chosenSeats.length : 0
+  const finalPrice = Math.max(0, subtotal - couponDiscount)
+
+  // Xử lý kiểm tra voucher qua POST /api/khuyen-mai/kiem-tra
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return
+    try {
+      setCheckingCoupon(true)
+      setCouponMsg(null)
+      const res = await validateCoupon({
+        ma_code: couponCode.trim().toUpperCase(),
+        tong_tien: subtotal,
+      })
+      if (res.hop_le) {
+        setAppliedCoupon(res.ma_code)
+        setCouponDiscount(Number(res.tien_giam))
+        setCouponMsg({
+          type: 'success',
+          text: `Áp dụng thành công mã ${res.ma_code}! Giảm ${formatVnd(res.tien_giam)}`,
+        })
+      }
+    } catch (err) {
+      setCouponMsg({ type: 'error', text: apiErrorMessage(err, 'Mã khuyến mãi không hợp lệ') })
+    } finally {
+      setCheckingCoupon(false)
+    }
   }
 
-  /**
-   * Trường hợp 2: Khách XÁC NHẬN HỦY GIỮ CHỖ và rời khỏi thanh toán:
-   * Hủy bỏ thời gian giữ chỗ của các ghế trên backend, đưa ghế trở lại trạng thái trống (TRONG) ngay lập tức
-   * để không bị treo ghế trong hệ thống, dọn sạch session lưu trữ và chuyển trang.
-   */
-  const handleConfirmLeave = async () => {
-    setShowLeaveModal(false)
+  // Copy helper
+  const handleCopy = (text: string, field: string) => {
+    navigator.clipboard.writeText(text)
+    setCopiedField(field)
+    setTimeout(() => setCopiedField(null), 2000)
+  }
+
+  // Xác thực biểu mẫu trước khi tạo đơn & thanh toán
+  const validateForm = (): boolean => {
+    if (!trip) {
+      setErrorMsg('Chưa có thông tin chuyến xe.')
+      return false
+    }
+
+    if (chosenSeats.length === 0) {
+      setErrorMsg('Vui lòng chọn ít nhất 1 ghế.')
+      return false
+    }
+
+    if (!bookerName.trim() || bookerName.trim().length < 2) {
+      setErrorMsg('Vui lòng nhập họ và tên người đặt vé (tối thiểu 2 ký tự).')
+      return false
+    }
+
+    const cleanPhone = bookerPhone.replace(/\D/g, '')
+    if (cleanPhone.length < 9 || cleanPhone.length > 15) {
+      setErrorMsg('Vui lòng nhập số điện thoại hợp lệ (9 đến 15 chữ số).')
+      return false
+    }
+
+    // Nếu tắt "Áp dụng thông tin người đặt cho tất cả các vé", kiểm tra từng vé
+    if (!applyToAllSeats) {
+      for (const p of seatPassengers) {
+        if (!p.ho_ten.trim()) {
+          setErrorMsg(`Vui lòng nhập họ tên hành khách cho ghế ${p.so_ghe}.`)
+          return false
+        }
+        const pPhone = p.sdt.replace(/\D/g, '')
+        if (pPhone.length < 9) {
+          setErrorMsg(`Vui lòng nhập số điện thoại cho ghế ${p.so_ghe}.`)
+          return false
+        }
+      }
+    }
+
+    // Kiểm tra thông tin hoàn tiền bắt buộc
+    if (!refundAccount.trim()) {
+      setErrorMsg('Vui lòng nhập Số tài khoản ngân hàng để bảo đảm quyền lợi hoàn tiền trực tuyến.')
+      return false
+    }
+
+    if (!refundAccountHolder.trim()) {
+      setErrorMsg('Vui lòng nhập Tên chủ tài khoản ngân hàng (viết hoa không dấu).')
+      return false
+    }
+
+    return true
+  }
+
+  // Xử lý Tạo đơn đặt vé qua POST /api/dat-ve
+  const handleCreateOrder = async (): Promise<DatVeResponse> => {
+    if (!trip || !seatMap) throw new Error('Dữ liệu chuyến hoặc sơ đồ ghế chưa sẵn sàng')
+
+    const ghes = seatMap.danh_sach_ghe.filter((g) => chosenSeats.includes(g.so_ghe))
+    const seatIds = ghes.map((g) => g.ma_ghe)
+
+    const payload = {
+      ma_chuyen: Number(trip.id),
+      danh_sach_ma_ghe: seatIds,
+      ma_code_km: appliedCoupon || undefined,
+      ho_ten: bookerName.trim(),
+      sdt: bookerPhone.trim(),
+      dia_chi: bookerEmail.trim() || undefined,
+      ghi_chu: orderNote.trim() || undefined,
+      danh_sach_hanh_khach: applyToAllSeats
+        ? undefined
+        : seatPassengers.map((sp) => ({
+            ma_ghe: sp.ma_ghe,
+            ho_ten: sp.ho_ten.trim() || bookerName.trim(),
+            sdt: sp.sdt.trim() || bookerPhone.trim(),
+          })),
+    }
+
+    const booking = await createOnlineBooking(payload)
+    setCreatedBooking(booking)
+    createdBookingRef.current = booking
+    return booking
+  }
+
+  // Xử lý Thanh toán qua POST /api/dat-ve/{id}/thanh-toan
+  const handleExecutePayment = async (bookingId: number) => {
+    try {
+      setSubmitting(true)
+      setErrorMsg(null)
+
+      // Cập nhật danh sách hành khách nếu có điều chỉnh sau khi tạo đơn
+      if (!applyToAllSeats && seatPassengers.length > 0) {
+        const ctList = createdBookingRef.current?.danh_sach_ve || []
+        if (ctList.length > 0) {
+          await updatePassengers(bookingId, {
+            danh_sach_hanh_khach: seatPassengers.map((sp) => {
+              const ctItem = ctList.find((v) => v.ma_ghe === sp.ma_ghe)
+              return {
+                ma_ct: ctItem?.ma_ct || sp.ma_ghe,
+                ho_ten: sp.ho_ten.trim() || bookerName.trim(),
+                sdt: sp.sdt.trim() || bookerPhone.trim(),
+              }
+            }),
+          }).catch(() => undefined)
+        }
+      }
+
+      // Gửi yêu cầu thanh toán
+      const payRes = await payBooking(bookingId, {
+        phuong_thuc: paymentMethod,
+        so_tai_khoan: refundAccount.trim(),
+        ten_ngan_hang: refundBank,
+        ten_chu_tai_khoan: refundAccountHolder.trim().toUpperCase(),
+        ma_code_km: appliedCoupon || undefined,
+        mo_phong: simulationStatus,
+      })
+
+      if (payRes.trang_thai === 'ThanhCong') {
+        // Thanh toán thành công: Chuyển dữ liệu sang danh sách Ticket[]
+        const currentB = createdBookingRef.current
+        const veList = currentB?.danh_sach_ve || []
+
+        const issuedTickets: Ticket[] = veList.map((v) => {
+          const sp = seatPassengers.find((p) => p.ma_ghe === v.ma_ghe)
+          const pName = applyToAllSeats ? bookerName.trim() : (sp?.ho_ten.trim() || bookerName.trim())
+          const pPhone = applyToAllSeats ? bookerPhone.trim() : (sp?.sdt.trim() || bookerPhone.trim())
+
+          return {
+            id: v.ma_ct,
+            code: `VE-${v.ma_ct}`,
+            ticketCode: `VE-${v.ma_ct}`,
+            tripId: String(trip?.id || ''),
+            route: `${trip?.fromCity || ''} → ${trip?.toCity || ''}`,
+            departureAt: `${trip?.date || ''}T${trip?.time || '08:00'}:00`,
+            departureTime: trip?.time || '08:00',
+            date: trip?.date || '',
+            plate: trip?.plate || '51B-000.00',
+            passengerName: pName,
+            passengerPhone: pPhone,
+            seatNumber: v.so_ghe,
+            pickupPoint: `Bến xe ${trip?.fromCity || ''}`,
+            dropoffPoint: `Bến xe ${trip?.toCity || ''}`,
+            originalPrice: Number(v.don_gia || trip?.price || 0),
+            discount: couponDiscount / Math.max(1, veList.length),
+            totalAmount: Math.max(0, Number(v.don_gia || trip?.price || 0) - couponDiscount / Math.max(1, veList.length)),
+            status: paymentMethod === 'TienMatTaiQuay' ? 'CHO_THANH_TOAN' : 'CHUA_DI',
+            paymentStatus: paymentMethod === 'TienMatTaiQuay' ? 'PENDING' : 'PAID',
+            qrData: `TICKET|${v.ma_ct}|${bookingId}|${v.so_ghe}|${trip?.date}|${trip?.time}`,
+            orderId: bookingId,
+            paymentMethod: paymentMethod === 'VietQR' ? 'VietQR' : paymentMethod === 'MoMo' ? 'Ví MoMo' : 'Tiền mặt tại quầy',
+          }
+        })
+
+        // Hoàn tất: Xóa cờ navigation guard để không gọi hủy đơn
+        createdBookingRef.current = null
+        clearBookingFlow()
+        saveChosenSeats([])
+
+        setShowVietQrModal(false)
+        onBookingSuccess(issuedTickets)
+      } else {
+        setErrorMsg('Giao dịch thanh toán không thành công. Quý khách vui lòng thử lại hoặc chọn phương thức khác.')
+      }
+    } catch (err) {
+      setErrorMsg(apiErrorMessage(err, 'Thanh toán thất bại'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Nút bấm "Xác nhận & Tiến hành thanh toán"
+  const handleSubmitPayment = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setErrorMsg(null)
+
+    if (expired) {
+      setErrorMsg('Thời gian giữ chỗ đã hết hạn. Vui lòng quay lại chọn ghế.')
+      return
+    }
+
+    if (!validateForm()) return
+
+    try {
+      setSubmitting(true)
+      // 1. Tạo đơn đặt vé trước nếu chưa có
+      let booking = createdBookingRef.current
+      if (!booking) {
+        booking = await handleCreateOrder()
+      }
+
+      // 2. Nếu chọn VietQR, mở Modal mã VietQR cho khách quét
+      if (paymentMethod === 'VietQR') {
+        setShowVietQrModal(true)
+      } else {
+        // MoMo hoặc Tiền mặt: xử lý thanh toán ngay
+        await handleExecutePayment(booking.ma_dat_ve)
+      }
+    } catch (err) {
+      setErrorMsg(apiErrorMessage(err, 'Không tạo được đơn đặt vé'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Thoát khỏi trang hoặc bấm "Quay lại chọn ghế"
+  const handleRequestLeave = (target: View = 'seats') => {
+    setPendingLeaveTarget(target)
+    setShowCancelModal(true)
+  }
+
+  // Xác nhận thoát và hủy đơn giữ chỗ ngay
+  const handleConfirmCancel = async () => {
+    setShowCancelModal(false)
     setSubmitting(true)
     try {
-      if (tripId) {
-        await bookingsApi.releaseSeats(tripId).catch(() => undefined)
-      }
+      await releaseCurrentBooking()
     } finally {
-      if (onSelectSeats) onSelectSeats([])
-      saveChosenSeats([])
-      clearBookingFlow()
+      createdBookingRef.current = null
+      setCreatedBooking(null)
       setSubmitting(false)
-      setView(pendingLeaveView)
+      if (onSelectSeats) onSelectSeats(chosenSeats)
+      setView(pendingLeaveTarget)
     }
-  }
-
-  /** Quay lại bước chọn ghế khi hết hạn giữ chỗ */
-  const backToSeats = () => {
-    const done = () => {
-      if (onSelectSeats) onSelectSeats([])
-      saveChosenSeats([])
-      setView('seats')
-    }
-    if (tripId) bookingsApi.releaseSeats(tripId).then(done, done)
-    else done()
   }
 
   const header = (
-    <Header currentView="checkout" setView={handleRequestLeave} user={user} backendOnline={backendOnline} onLogout={onLogout} />
+    <Header
+      currentView="checkout"
+      setView={(v) => handleRequestLeave(v)}
+      user={user}
+      backendOnline={backendOnline}
+      onLogout={onLogout}
+    />
   )
 
-  // Trường hợp không có dữ liệu chuyến hoặc chưa chọn ghế
-  if (!trip || !hasInput) {
+  if (!trip) {
     return (
       <>
         {header}
-        <main className="max-w-[760px] mx-auto px-4 md:px-6 py-16 text-center space-y-4">
-          <h2 className="text-xl font-bold text-ink">Chưa chọn chuyến hoặc ghế</h2>
-          <p className="text-xs text-ink-soft">Vui lòng chọn chuyến xe và ghế trước khi đặt vé.</p>
-          <button type="button" onClick={() => setView('home')} className="btn btn-primary cursor-pointer">
-            Chọn chuyến xe
-          </button>
+        <main className="mx-auto max-w-[760px] px-4 py-16 text-center space-y-4">
+          <h2 className="text-xl font-bold text-ink">Chưa chọn chuyến xe</h2>
+          <p className="text-xs text-ink-soft">Vui lòng chọn chuyến xe và vị trí ghế trước khi thanh toán.</p>
+          <Button onClick={() => setView('home')}>Tìm chuyến xe</Button>
         </main>
       </>
     )
   }
 
-  const pickupName = pickupStops.find((s) => String(s.id) === pickupId)?.name
-  const dropoffName = dropoffStops.find((s) => String(s.id) === dropoffId)?.name
-  /** Tổng tiền tạm tính ban đầu trước khi áp dụng giảm giá */
-  const subtotal = trip.price * seatCount
-  /** Số tiền thực tế phải thanh toán sau khi trừ giảm giá coupon (nếu có) */
-  const payAmount = coupon ? coupon.finalAmount : subtotal
-  /** Điều kiện cho phép kích hoạt nút thanh toán */
-  const canPay = holdSeconds !== null && !holdError && !expired && !submitting
-
-  /** Áp dụng mã giảm giá qua API `couponsApi.validate` */
-  const applyCoupon = async () => {
-    const code = couponInput.trim()
-    if (!code) return setCouponError('Vui lòng nhập mã giảm giá')
-    setCouponBusy(true)
-    setCouponError('')
-    try {
-      setCoupon(await couponsApi.validate(code, subtotal))
-    } catch (err) {
-      setCoupon(null)
-      setCouponError(apiErrorMessage(err, 'Không áp dụng được mã giảm giá'))
-    } finally {
-      setCouponBusy(false)
-    }
-  }
-
-  /** Hủy áp dụng mã giảm giá */
-  const removeCoupon = () => {
-    setCoupon(null)
-    setCouponInput('')
-    setCouponError('')
-  }
-
-  /**
-   * Xử lý xác nhận tạo đơn và thanh toán vé:
-   * 1. Validate thông tin từng hành khách (Họ tên, SĐT 10-11 số).
-   * 2. Validate điểm đón/trả nếu chuyến có nhiều điểm dừng.
-   * 3. Gọi `bookingsApi.create`: tạo đơn và mô phỏng thanh toán qua cổng.
-   * 4. Gọi `onBookingSuccess` và chuyển sang trang SuccessPage.
-   */
-  const handlePayment = async () => {
-    setErrorMessage('')
-    const list = chosenSeats.map((label) => {
-      const p = passengerOf(label)
-      return {
-        seatLabel: label,
-        passengerName: p.name.trim(),
-        passengerPhone: normalizePhone(p.phone),
-      }
-    })
-    for (const p of list) {
-      if (!p.passengerName) return setErrorMessage(`Vui lòng nhập họ và tên hành khách ghế ${p.seatLabel}`)
-      if (!PHONE_RE.test(p.passengerPhone)) {
-        return setErrorMessage(`Số điện thoại ghế ${p.seatLabel} không hợp lệ (phải bắt đầu bằng 0 và có 10 hoặc 11 chữ số)`)
-      }
-    }
-    if (pickupStops.length > 0 && !pickupId) return setErrorMessage('Vui lòng chọn điểm đón')
-    if (dropoffStops.length > 0 && !dropoffId) return setErrorMessage('Vui lòng chọn điểm trả')
-
-    setSubmitting(true)
-    try {
-      const tickets = await bookingsApi.create({
-        tripId: trip.id,
-        passengers: list,
-        pickupStopId: pickupId ? Number(pickupId) : undefined,
-        dropoffStopId: dropoffId ? Number(dropoffId) : undefined,
-        paymentMethod: payMethod,
-        couponCode: coupon?.code,
-      })
-      onBookingSuccess(tickets)
-      setView('success')
-    } catch (err) {
-      setErrorMessage(apiErrorMessage(err, 'Không thể tạo đơn đặt vé'))
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  /** Component con hiển thị dropdown chọn điểm đón/trả */
-  const stopSelect = (label: string, stops: Stop[], value: string, onChange: (v: string) => void) =>
-    stops.length > 0 && (
-      <div className="space-y-1.5">
-        <label className="field-label">
-          {label} <span className="req">*</span>
-        </label>
-        {stops.length === 1 ? (
-          <p className="text-sm font-medium text-ink">{stops[0].name}</p>
-        ) : (
-          <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full">
-            <option value="">— Chọn {label.toLowerCase()} —</option>
-            {stops.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
-    )
-
   return (
     <>
       {header}
 
-      <main className="max-w-[1080px] mx-auto px-4 md:px-6 py-6 md:py-8 flex flex-col gap-6">
-        {/* Nút quay lại và Đồng hồ đếm ngược giữ chỗ */}
+      <main className="mx-auto max-w-[1080px] px-4 pb-20 pt-7 md:px-6">
+        {/* Nút quay lại & Đồng hồ đếm ngược giữ chỗ 15 phút */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <button
+            type="button"
             onClick={() => handleRequestLeave('seats')}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-soft hover:text-terracotta transition cursor-pointer"
+            className="text-sm text-ink-soft hover:text-terracotta transition cursor-pointer flex items-center gap-1 w-fit"
           >
             <span className="material-symbols-outlined text-sm">arrow_back</span>
-            <span>Quay lại chọn ghế</span>
+            <span>Quay lại chọn ghế khác</span>
           </button>
 
-          {holdSeconds !== null && !holdError && (
-            <BookingTimer key={`${tripId}-${chosenSeats.join(',')}-${holdSeconds}`} initialSeconds={holdSeconds} onExpire={onExpire} />
+          {!expired && (
+            <BookingTimer
+              key={`timer-${secondsRemaining}`}
+              initialSeconds={secondsRemaining}
+              onExpire={handleExpireTimer}
+            />
           )}
         </div>
 
-        {holdError && (
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded text-xs space-y-2" role="alert">
-            <div className="flex items-center gap-2 text-amber-900 font-semibold">
-              <span className="material-symbols-outlined text-base">warning</span>
-              <span>{holdError}</span>
-            </div>
-            <p className="text-amber-800">
-              Ghế có thể vừa hết hạn giữ chỗ hoặc kết nối mạng bị gián đoạn. Vui lòng bấm thử lại hoặc chọn lại ghế khác.
-            </p>
-            <div className="flex items-center gap-2 pt-1">
-              <button
-                type="button"
-                onClick={retryHold}
-                className="btn btn-ghost text-xs cursor-pointer py-1 px-3 border border-amber-300 bg-white text-ink"
-              >
-                Thử lại
-              </button>
-              <button
-                type="button"
-                onClick={backToSeats}
-                className="btn btn-primary text-xs cursor-pointer py-1 px-3"
-              >
-                Chọn lại ghế
-              </button>
-            </div>
+        {/* Thông báo lỗi nếu có */}
+        {errorMsg && (
+          <div className="mt-5 p-4 rounded bg-terracotta/10 border border-terracotta/30 text-xs text-terracotta font-semibold flex items-center gap-2">
+            <span className="material-symbols-outlined text-base">error</span>
+            <span>{errorMsg}</span>
           </div>
         )}
 
-        {/* Layout 2 cột: Cột trái nhập liệu (7 cột) & Cột phải tóm tắt thanh toán (5 cột) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          <div className="lg:col-span-7 space-y-6">
-            {/* Khối 1: Thông tin hành khách theo từng ghế */}
-            <section className="bg-[#FFFDF9] border border-hairline rounded p-5 md:p-6 space-y-4 shadow-2xs">
-              <div className="border-b border-hairline pb-3 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+        <form onSubmit={handleSubmitPayment} className="mt-6 grid gap-8 lg:grid-cols-[1fr_340px]">
+          {/* CỘT TRÁI (NỘI DUNG FORM CHÍNH) */}
+          <div className="space-y-6">
+            {/* THÔNG TIN CHUYẾN XE */}
+            <section className="bg-card border border-hairline rounded p-5 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <span className="text-[11px] font-bold text-terracotta tracking-wider uppercase">BƯỚC 1 TRÊN 2</span>
-                  <h2 className="text-xl font-extrabold text-ink tracking-tight mt-0.5">Thông tin hành khách</h2>
-                  <p className="text-xs text-ink-soft">Thông tin được ghi trên vé và dùng để làm thủ tục lên xe.</p>
+                  <span className="eyebrow">Chuyến xe đã chọn</span>
+                  <h2 className="text-lg font-bold text-ink mt-0.5">
+                    {trip.fromCity} <span className="text-terracotta">→</span> {trip.toCity}
+                  </h2>
                 </div>
-                {seatCount > 1 && (
-                  <button
-                    type="button"
-                    onClick={copyPhoneToAll}
-                    className="text-xs text-terracotta hover:underline font-semibold flex items-center gap-1 cursor-pointer"
-                    title="Sao chép SĐT người đặt cho các ghế còn lại"
-                  >
-                    <span className="material-symbols-outlined text-sm">content_copy</span>
-                    <span>Dùng 1 SĐT cho tất cả ghế</span>
-                  </button>
-                )}
+                <div className="text-right">
+                  <span className="text-xs text-ink-soft block">Khởi hành</span>
+                  <span className="text-sm font-bold text-ink">
+                    {trip.time} · {trip.date}
+                  </span>
+                </div>
               </div>
 
-              {chosenSeats.map((label) => {
-                const p = passengerOf(label)
-                return (
-                  <div key={label} className="space-y-2 pt-1">
-                    {seatCount > 1 && (
-                      <p className="text-xs font-bold text-terracotta">
-                        Ghế {label}
-                        {seatFloors[label] ? ` (Tầng ${seatFloors[label]})` : ''}
-                      </p>
-                    )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="field-label" htmlFor={`pax-name-${label}`}>
-                          Họ và tên hành khách <span className="req">*</span>
-                        </label>
-                        <input
-                          id={`pax-name-${label}`}
-                          type="text"
-                          value={p.name}
-                          onChange={(e) => setPassenger(label, { name: e.target.value })}
-                          className="w-full"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="field-label" htmlFor={`pax-phone-${label}`}>
-                          Số điện thoại <span className="req">*</span>
-                        </label>
-                        <input
-                          id={`pax-phone-${label}`}
-                          type="tel"
-                          value={p.phone}
-                          onChange={(e) => setPassenger(label, { phone: e.target.value })}
-                          inputMode="tel"
-                          className="w-full"
-                          required
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-
-              {/* Lựa chọn điểm đón và điểm trả khách */}
-              {(pickupStops.length > 0 || dropoffStops.length > 0) && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {stopSelect('Điểm đón', pickupStops, pickupId, setPickupId)}
-                  {stopSelect('Điểm trả', dropoffStops, dropoffId, setDropoffId)}
-                </div>
-              )}
-              {stopsError && <p className="text-xs text-red-700">{stopsError}</p>}
+              <div className="pt-2 border-t border-hairline/60 flex flex-wrap gap-4 text-xs text-ink-soft">
+                <span>Xe: <b className="text-ink">{trip.operator}</b> ({trip.plate})</span>
+                <span>Ghế đang đặt: <b className="text-terracotta">{chosenSeats.join(', ')}</b> ({chosenSeats.length} vé)</span>
+              </div>
             </section>
 
-            {/* Khối 2: Lựa chọn Phương thức thanh toán */}
-            <section className="bg-[#FFFDF9] border border-hairline rounded p-5 md:p-6 space-y-4 shadow-2xs">
-              <div className="border-b border-hairline pb-3">
-                <span className="text-[11px] font-bold text-terracotta tracking-wider uppercase">BƯỚC 2 TRÊN 2</span>
-                <h2 className="text-xl font-extrabold text-ink tracking-tight mt-0.5">Phương thức thanh toán</h2>
+            {/* 1. THÔNG TIN NGƯỜI ĐẶT VÉ (BOOKER CONTACT INFO) */}
+            <section className="bg-card border border-hairline rounded p-5 space-y-4">
+              <div className="flex items-center gap-2 border-b border-hairline/60 pb-3">
+                <span className="material-symbols-outlined text-terracotta text-xl">contact_mail</span>
+                <h3 className="font-extrabold text-sm uppercase tracking-wider text-ink">
+                  1. Thông tin người đặt vé & liên hệ
+                </h3>
               </div>
 
-              <div className="space-y-3 pt-1">
-                {PAY_METHODS.map((m) => (
-                  <label
-                    key={m.id}
-                    className={`flex items-start justify-between p-4 rounded border transition cursor-pointer ${
-                      payMethod === m.id
-                        ? 'border-terracotta bg-paper-deep/40 ring-1 ring-terracotta'
-                        : 'border-hairline hover:bg-paper-deep/20'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <input
-                        type="radio"
-                        name="payment"
-                        checked={payMethod === m.id}
-                        onChange={() => setPayMethod(m.id)}
-                        className="mt-1 w-4 h-4 accent-terracotta cursor-pointer"
-                      />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <b className="text-sm text-ink">{m.title}</b>
-                          {m.badge && (
-                            <span className="text-[10px] font-bold uppercase tracking-wider bg-terracotta/10 text-terracotta px-2 py-0.5 rounded">
-                              {m.badge}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-ink-soft mt-1">{m.desc}</p>
-                      </div>
-                    </div>
-                    <span className={`material-symbols-outlined text-2xl ${payMethod === m.id ? 'text-terracotta' : 'text-ink-soft'}`}>
-                      {m.icon}
-                    </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-ink mb-1">
+                    Họ và tên người đặt <span className="text-terracotta">*</span>
                   </label>
-                ))}
-              </div>
-
-              {payMethod === 'cash' ? (
-                <div className="dlg-note text-amber-900 bg-amber-50/80 border-amber-200 text-xs">
-                  <b>Lưu ý:</b> Với hình thức <b>Tiền mặt tại quầy</b>, đơn hàng sẽ được tạo và giữ chỗ theo thời gian quy định. Quý khách vui lòng đến trực tiếp quầy vé tại bến xe trước giờ xuất bến ít nhất 30 phút để thanh toán và nhận vé lên xe.
+                  <input
+                    type="text"
+                    required
+                    value={bookerName}
+                    onChange={(e) => setBookerName(e.target.value)}
+                    placeholder="Ví dụ: Nguyễn Văn A"
+                    className="w-full text-xs px-3 py-2.5 rounded border border-hairline bg-[#FFFDF9] text-ink focus:border-terracotta focus:outline-none"
+                  />
                 </div>
-              ) : (
-                <p className="dlg-note">Cổng thanh toán điện tử đang ở chế độ thử nghiệm.</p>
-              )}
-            </section>
-          </div>
 
-          {/* Cột phải: Tóm tắt hành trình chuyến xe và bảng tính tiền */}
-          <div className="lg:col-span-5 bg-paper-deep/80 border border-hairline rounded p-5 space-y-4 shadow-2xs">
-            <div className="border-b border-hairline pb-3">
-              <span className="text-xs font-bold text-ink-soft uppercase tracking-wider">TÓM TẮT CHUYẾN XE</span>
-              <h3 className="text-lg font-extrabold text-ink mt-1">
-                {trip.fromCity} → {trip.toCity}
-              </h3>
-              <p className="text-xs text-ink-soft">
-                Khởi hành: <b className="text-ink">{trip.time}</b> · Ngày {fromYmd(trip.date).toLocaleDateString('vi-VN')}
-              </p>
-            </div>
-
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between py-1 border-b border-hairline/60">
-                <span className="text-ink-soft">Loại xe</span>
-                <span className="font-bold text-ink">{trip.operator}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-hairline/60">
-                <span className="text-ink-soft">Biển số</span>
-                <span className="font-bold text-ink">{trip.plate}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-hairline/60">
-                <span className="text-ink-soft">{seatCount > 1 ? `Ghế (${seatCount})` : 'Ghế'}</span>
-                <span className="font-extrabold text-terracotta text-right">
-                  {seatCount > 1
-                    ? chosenSeats.join(', ')
-                    : `${chosenSeats[0]}${seatFloors[chosenSeats[0]] ? ` (Tầng ${seatFloors[chosenSeats[0]]})` : ''}`}
-                </span>
-              </div>
-              {pickupName && (
-                <div className="flex justify-between py-1 border-b border-hairline/60">
-                  <span className="text-ink-soft">Điểm đón</span>
-                  <span className="font-medium text-ink max-w-[200px] text-right truncate">{pickupName}</span>
+                <div>
+                  <label className="block text-xs font-semibold text-ink mb-1">
+                    Số điện thoại nhận vé/SMS <span className="text-terracotta">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={bookerPhone}
+                    onChange={(e) => setBookerPhone(e.target.value)}
+                    placeholder="Ví dụ: 0912345678"
+                    className="w-full text-xs px-3 py-2.5 rounded border border-hairline bg-[#FFFDF9] text-ink focus:border-terracotta focus:outline-none"
+                  />
                 </div>
-              )}
-              {dropoffName && (
-                <div className="flex justify-between py-1 border-b border-hairline/60">
-                  <span className="text-ink-soft">Điểm trả</span>
-                  <span className="font-medium text-ink max-w-[200px] text-right truncate">{dropoffName}</span>
-                </div>
-              )}
-            </div>
+              </div>
 
-            {/* Ô nhập mã giảm giá và tổng tính tiền */}
-            <div className="border-t border-hairline pt-3 space-y-2 text-xs">
-              <div className="space-y-1.5">
-                <label className="field-label" htmlFor="coupon">Mã giảm giá</label>
-                {coupon ? (
-                  <div className="flex items-center justify-between gap-2 rounded border border-celadon/40 bg-celadon/10 px-3 py-2 text-celadon font-semibold">
-                    <span>Đã áp dụng mã {coupon.code}</span>
-                    <button type="button" className="underline cursor-pointer" onClick={removeCoupon} disabled={submitting}>
-                      Bỏ mã
+              <div>
+                <label className="block text-xs font-semibold text-ink mb-1">
+                  Email nhận cuống vé điện tử (tùy chọn)
+                </label>
+                <input
+                  type="email"
+                  value={bookerEmail}
+                  onChange={(e) => setBookerEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  className="w-full text-xs px-3 py-2.5 rounded border border-hairline bg-[#FFFDF9] text-ink focus:border-terracotta focus:outline-none"
+                />
+              </div>
+
+              {/* CHECKBOX QUY TẮC: ÁP DỤNG THÔNG TIN NGƯỜI ĐẶT CHO TẤT CẢ CÁC VÉ (MẶC ĐỊNH BẬT / CHECKED) */}
+              <div className="pt-3 border-t border-hairline/60 space-y-3">
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={applyToAllSeats}
+                    onChange={(e) => setApplyToAllSeats(e.target.checked)}
+                    className="w-4 h-4 accent-terracotta cursor-pointer"
+                  />
+                  <span className="text-xs font-bold text-ink">
+                    Áp dụng thông tin người đặt cho tất cả các vé ({chosenSeats.length} ghế)
+                  </span>
+                </label>
+
+                {/* KHI BẬT: Hiển thị tóm tắt ngắn gọn */}
+                {applyToAllSeats ? (
+                  <div className="p-3 bg-paper-deep/60 border border-hairline rounded flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 truncate">
+                      <span className="px-2 py-0.5 rounded bg-terracotta/15 text-terracotta font-mono font-bold text-[11px]">
+                        {chosenSeats.join(', ')}
+                      </span>
+                      <span className="text-ink-soft truncate">
+                        {bookerName || 'Chưa nhập họ tên'} • {bookerPhone || 'Chưa nhập SĐT'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setApplyToAllSeats(false)}
+                      className="text-[11px] font-bold text-terracotta hover:underline shrink-0 ml-2 cursor-pointer"
+                    >
+                      [+] Tùy chỉnh người đi từng ghế
                     </button>
                   </div>
                 ) : (
-                  <div className="flex gap-2">
-                    <input
-                      id="coupon"
-                      value={couponInput}
-                      onChange={(e) => setCouponInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          applyCoupon()
-                        }
-                      }}
-                      disabled={couponBusy}
-                      placeholder="Nhập mã"
-                      className="min-w-0 flex-1 uppercase"
-                    />
-                    <button type="button" className="btn btn-ghost cursor-pointer" onClick={applyCoupon} disabled={couponBusy}>
-                      {couponBusy ? 'Đang kiểm tra...' : 'Áp dụng'}
-                    </button>
+                  /* KHI TẮT: Mỗi ghế mở rộng thành ô nhập riêng để bạn đồng hành có cuống vé và mã vé riêng */
+                  <div className="space-y-3 pt-2">
+                    <p className="text-[11px] text-ink-soft">
+                      Nhấp vào từng ghế dưới đây để nhập họ tên và SĐT riêng cho người đi cùng:
+                    </p>
+
+                    {seatPassengers.map((sp) => {
+                      const isOpen = activeAccordionSeat === sp.ma_ghe
+                      return (
+                        <div key={sp.ma_ghe} className="border border-hairline rounded overflow-hidden bg-card">
+                          <button
+                            type="button"
+                            onClick={() => setActiveAccordionSeat(isOpen ? null : sp.ma_ghe)}
+                            className="w-full p-3 bg-paper-deep/40 hover:bg-paper-deep/70 flex items-center justify-between text-xs font-semibold text-ink cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="px-2 py-0.5 bg-terracotta/15 text-terracotta font-mono font-bold rounded text-[11px]">
+                                Ghế {sp.so_ghe}
+                              </span>
+                              <span className="text-ink-soft">
+                                {sp.ho_ten || bookerName || 'Họ tên'} ({sp.sdt || bookerPhone || 'SĐT'})
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-terracotta font-bold">
+                              {isOpen ? '▲ Thu gọn' : '▼ Nhập thông tin'}
+                            </span>
+                          </button>
+
+                          {isOpen && (
+                            <div className="p-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-hairline bg-[#FFFDF9]">
+                              <div>
+                                <label className="block text-[11px] font-bold text-ink mb-1">
+                                  Họ tên người đi ghế {sp.so_ghe}
+                                </label>
+                                <input
+                                  type="text"
+                                  value={sp.ho_ten}
+                                  onChange={(e) => {
+                                    const val = e.target.value
+                                    setSeatPassengers((prev) =>
+                                      prev.map((p) => (p.ma_ghe === sp.ma_ghe ? { ...p, ho_ten: val } : p))
+                                    )
+                                  }}
+                                  placeholder={bookerName || 'Họ tên'}
+                                  className="w-full text-xs px-2.5 py-2 rounded border border-hairline bg-white text-ink focus:border-terracotta focus:outline-none"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-bold text-ink mb-1">
+                                  SĐT người đi ghế {sp.so_ghe}
+                                </label>
+                                <input
+                                  type="tel"
+                                  value={sp.sdt}
+                                  onChange={(e) => {
+                                    const val = e.target.value
+                                    setSeatPassengers((prev) =>
+                                      prev.map((p) => (p.ma_ghe === sp.ma_ghe ? { ...p, sdt: val } : p))
+                                    )
+                                  }}
+                                  placeholder={bookerPhone || 'Số điện thoại'}
+                                  className="w-full text-xs px-2.5 py-2 rounded border border-hairline bg-white text-ink focus:border-terracotta focus:outline-none"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
-                {couponError && (
-                  <p className="text-red-700" role="alert">
-                    {couponError}
+              </div>
+            </section>
+
+            {/* 2. THÔNG TIN HOÀN TIỀN TRỰC TUYẾN (BANK REFUND GUARANTEE) */}
+            <section className="bg-card border border-hairline rounded p-5 space-y-4">
+              <div className="flex items-center gap-2 border-b border-hairline/60 pb-3">
+                <span className="material-symbols-outlined text-celadon text-xl">account_balance</span>
+                <div>
+                  <h3 className="font-extrabold text-sm uppercase tracking-wider text-ink">
+                    2. Tài khoản ngân hàng nhận hoàn tiền (Cam kết bảo đảm)
+                  </h3>
+                  <p className="text-[11px] text-ink-soft mt-0.5">
+                    Hệ thống sẽ <b>tự động hoàn tiền trực tiếp 100% về tài khoản này</b> nếu chuyến xe bị hủy hoặc quý khách chủ động hủy vé hợp lệ theo quy định.
                   </p>
-                )}
+                </div>
               </div>
 
-              <div className="flex justify-between text-ink-soft">
-                <span>Giá vé ({seatCount} vé)</span>
-                <span>{formatVnd(subtotal)}</span>
-              </div>
-              {coupon && (
-                <div className="flex justify-between text-celadon font-semibold">
-                  <span>Giảm giá</span>
-                  <span>-{formatVnd(coupon.discount)}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-ink mb-1">
+                    Ngân hàng thụ hưởng <span className="text-terracotta">*</span>
+                  </label>
+                  <select
+                    value={refundBank}
+                    onChange={(e) => setRefundBank(e.target.value)}
+                    className="w-full text-xs px-3 py-2.5 rounded border border-hairline bg-[#FFFDF9] text-ink focus:border-terracotta focus:outline-none cursor-pointer"
+                  >
+                    {POPULAR_BANKS.map((b) => (
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              )}
-              <div className="flex justify-between text-base font-extrabold text-ink">
-                <span>Cần thanh toán</span>
-                <span className="text-xl text-terracotta">{formatVnd(payAmount)}</span>
+
+                <div>
+                  <label className="block text-xs font-semibold text-ink mb-1">
+                    Số tài khoản nhận hoàn tiền <span className="text-terracotta">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={refundAccount}
+                    onChange={(e) => setRefundAccount(e.target.value)}
+                    placeholder="Ví dụ: 190388998899"
+                    className="w-full text-xs font-mono px-3 py-2.5 rounded border border-hairline bg-[#FFFDF9] text-ink focus:border-terracotta focus:outline-none"
+                  />
+                </div>
               </div>
-              <p className="text-[11.5px] text-ink-soft">
-                Phí và số tiền hoàn được tính theo thời điểm hủy, xem khi hủy vé.
-              </p>
+
+              <div>
+                <label className="block text-xs font-semibold text-ink mb-1">
+                  Tên chủ tài khoản (Viết hoa không dấu) <span className="text-terracotta">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={refundAccountHolder}
+                  onChange={(e) => setRefundAccountHolder(e.target.value.toUpperCase())}
+                  placeholder="Ví dụ: NGUYEN VAN A"
+                  className="w-full text-xs font-mono uppercase px-3 py-2.5 rounded border border-hairline bg-[#FFFDF9] text-ink focus:border-terracotta focus:outline-none"
+                />
+              </div>
+            </section>
+
+            {/* 3. PHƯƠNG THỨC THANH TOÁN (VIETQR, MOMO, TIỀN MẶT) */}
+            <section className="bg-card border border-hairline rounded p-5 space-y-4">
+              <div className="flex items-center gap-2 border-b border-hairline/60 pb-3">
+                <span className="material-symbols-outlined text-bronze text-xl">payments</span>
+                <h3 className="font-extrabold text-sm uppercase tracking-wider text-ink">
+                  3. Chọn phương thức thanh toán
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* VietQR */}
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('VietQR')}
+                  className={`p-3.5 rounded border-2 text-left transition cursor-pointer ${
+                    paymentMethod === 'VietQR'
+                      ? 'border-terracotta bg-terracotta/10 text-ink shadow-xs'
+                      : 'border-hairline bg-[#FFFDF9] hover:border-terracotta/60 text-ink-soft'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 font-bold text-xs text-ink">
+                    <span className="material-symbols-outlined text-terracotta text-base">qr_code_scanner</span>
+                    <span>VietQR (Ngân hàng)</span>
+                  </div>
+                  <p className="text-[10px] text-ink-soft mt-1 leading-tight">
+                    Quét mã QR bằng App ngân hàng bất kỳ, xác nhận tự động.
+                  </p>
+                </button>
+
+                {/* MoMo */}
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('MoMo')}
+                  className={`p-3.5 rounded border-2 text-left transition cursor-pointer ${
+                    paymentMethod === 'MoMo'
+                      ? 'border-terracotta bg-terracotta/10 text-ink shadow-xs'
+                      : 'border-hairline bg-[#FFFDF9] hover:border-terracotta/60 text-ink-soft'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 font-bold text-xs text-ink">
+                    <span className="material-symbols-outlined text-terracotta text-base">account_balance_wallet</span>
+                    <span>Ví điện tử MoMo</span>
+                  </div>
+                  <p className="text-[10px] text-ink-soft mt-1 leading-tight">
+                    Xác nhận thanh toán qua ứng dụng ví điện tử MoMo.
+                  </p>
+                </button>
+
+                {/* Tiền mặt tại quầy */}
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('TienMatTaiQuay')}
+                  className={`p-3.5 rounded border-2 text-left transition cursor-pointer ${
+                    paymentMethod === 'TienMatTaiQuay'
+                      ? 'border-terracotta bg-terracotta/10 text-ink shadow-xs'
+                      : 'border-hairline bg-[#FFFDF9] hover:border-terracotta/60 text-ink-soft'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 font-bold text-xs text-ink">
+                    <span className="material-symbols-outlined text-terracotta text-base">storefront</span>
+                    <span>Tiền mặt tại quầy</span>
+                  </div>
+                  <p className="text-[10px] text-ink-soft mt-1 leading-tight">
+                    Giữ chỗ trực tuyến và thanh toán tiền mặt tại quầy vé bến xe.
+                  </p>
+                </button>
+              </div>
+
+              {/* Tùy chọn mô phỏng cổng thanh toán */}
+              <div className="p-3 bg-paper-deep/60 border border-hairline rounded flex flex-wrap items-center justify-between text-xs text-ink-soft gap-2">
+                <span>Chế độ mô phỏng thanh toán trực tuyến:</span>
+                <select
+                  value={simulationStatus}
+                  onChange={(e) => setSimulationStatus(e.target.value as 'thanh_cong' | 'that_bai')}
+                  className="px-2.5 py-1 rounded border border-hairline bg-white text-xs font-semibold text-ink cursor-pointer"
+                >
+                  <option value="thanh_cong">Mô phỏng: Thanh toán THÀNH CÔNG</option>
+                  <option value="that_bai">Mô phỏng: Thanh toán THẤT BẠI</option>
+                </select>
+              </div>
+            </section>
+          </div>
+
+          {/* CỘT PHẢI: TÓM TẮT ĐƠN HÀNG, MÃ GIẢM GIÁ & NÚT THANH TOÁN */}
+          <aside className="order-card h-fit p-5 space-y-5">
+            <div>
+              <p className="eyebrow">Tóm tắt đơn hàng</p>
+              <h3 className="font-extrabold text-base text-ink mt-0.5">
+                {chosenSeats.length} vé xe khách
+              </h3>
             </div>
 
-            {errorMessage && (
-              <div className="p-3.5 bg-red-50 border border-red-200 text-red-800 text-xs rounded space-y-2" role="alert">
-                <div className="flex items-start gap-2">
-                  <span className="material-symbols-outlined text-red-600 text-base shrink-0 mt-0.5">error</span>
-                  <div>
-                    <b className="block text-red-900 font-bold">Không thể hoàn tất đơn đặt vé</b>
-                    <p className="mt-0.5">{errorMessage}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={handlePayment}
-                    disabled={submitting || expired}
-                    className="btn btn-ghost text-xs cursor-pointer py-1 px-3 border border-red-300 bg-white text-red-800 hover:bg-red-50"
-                  >
-                    Thử lại
-                  </button>
-                  <button
-                    type="button"
-                    onClick={backToSeats}
-                    className="btn btn-ghost text-xs cursor-pointer py-1 px-3 underline text-ink-soft hover:text-ink"
-                  >
-                    Quay lại chọn ghế
-                  </button>
-                </div>
+            {/* Chi tiết ghế & giá vé */}
+            <div className="space-y-2 text-xs border-y border-dashed border-hairline py-3">
+              <div className="flex justify-between text-ink-soft">
+                <span>Giá vé ({chosenSeats.length} chỗ)</span>
+                <span className="font-semibold text-ink">{formatVnd(subtotal)}</span>
               </div>
-            )}
 
-            {/* Nút bấm thanh toán / xác nhận đặt chỗ */}
-            <button
-              type="button"
-              onClick={handlePayment}
-              disabled={!canPay}
-              className="cta-terracotta w-full h-12 flex items-center justify-center gap-2 text-sm font-bold text-paper rounded shadow-none hover:bg-terracotta-hover transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {submitting ? (
-                <span>Đang xử lý giao dịch...</span>
-              ) : payMethod === 'cash' ? (
-                <>
-                  <span className="material-symbols-outlined text-lg">payments</span>
-                  <span>Xác nhận đặt giữ chỗ {formatVnd(payAmount)}</span>
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined text-lg">lock</span>
-                  <span>Thanh toán {formatVnd(payAmount)}</span>
-                </>
+              {couponDiscount > 0 && (
+                <div className="flex justify-between text-celadon font-medium">
+                  <span>Khuyến mãi ({appliedCoupon})</span>
+                  <span>-{formatVnd(couponDiscount)}</span>
+                </div>
               )}
-            </button>
-          </div>
-        </div>
+
+              <div className="pt-2 border-t border-hairline/60 flex justify-between items-baseline">
+                <span className="text-sm font-bold text-ink">Tổng thanh toán</span>
+                <b className="text-xl font-extrabold text-terracotta font-mono">
+                  {formatVnd(finalPrice)}
+                </b>
+              </div>
+            </div>
+
+            {/* KHUYẾN MÃI / VOUCHER (POST /api/khuyen-mai/kiem-tra) */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-ink">Mã giảm giá (Voucher)</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  placeholder="CHAOBAN, VEXE2026..."
+                  className="flex-1 text-xs font-mono px-3 py-2 rounded border border-hairline bg-[#FFFDF9] text-ink uppercase focus:border-terracotta focus:outline-none"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={checkingCoupon || !couponCode.trim()}
+                  onClick={handleApplyCoupon}
+                  className="cursor-pointer text-xs"
+                >
+                  {checkingCoupon ? '...' : 'Áp dụng'}
+                </Button>
+              </div>
+
+              {couponMsg && (
+                <p
+                  className={`text-[11px] font-semibold ${
+                    couponMsg.type === 'success' ? 'text-celadon' : 'text-terracotta'
+                  }`}
+                >
+                  {couponMsg.text}
+                </p>
+              )}
+            </div>
+
+            {/* Nút hành động */}
+            <div className="pt-2 space-y-3">
+              <Button
+                type="submit"
+                disabled={submitting || expired || loadingSeats}
+                className="w-full py-3.5 text-xs font-bold bg-terracotta hover:bg-terracotta-hover text-paper cursor-pointer shadow-md"
+              >
+                {submitting ? 'Đang xử lý...' : paymentMethod === 'VietQR' ? 'Quét mã VietQR thanh toán →' : 'Xác nhận & Thanh toán →'}
+              </Button>
+
+              <button
+                type="button"
+                onClick={() => handleRequestLeave('seats')}
+                className="w-full py-2 text-xs font-semibold text-ink-soft hover:text-terracotta transition cursor-pointer"
+              >
+                Hủy đặt vé và chọn lại ghế
+              </button>
+            </div>
+          </aside>
+        </form>
       </main>
 
-      {/* Modal thông báo hết hạn giữ chỗ */}
-      {expired && (
+      {/* MODAL MÃ VIETQR QUÉT TỨC THÌ */}
+      {showVietQrModal && (
         <Modal
-          title="Hết thời gian giữ chỗ"
-          onClose={backToSeats}
+          title="Thanh toán chuyển khoản qua mã VietQR"
+          onClose={() => setShowVietQrModal(false)}
           footer={
-            <button type="button" className="btn btn-primary cursor-pointer" onClick={backToSeats}>
-              Chọn lại ghế
-            </button>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
+              <Button
+                variant="ghost"
+                onClick={() => setShowVietQrModal(false)}
+                className="cursor-pointer text-xs w-full sm:w-auto"
+              >
+                Đóng / Chọn cách khác
+              </Button>
+
+              <Button
+                variant="primary"
+                disabled={submitting}
+                onClick={() => {
+                  if (createdBookingRef.current) {
+                    handleExecutePayment(createdBookingRef.current.ma_dat_ve)
+                  }
+                }}
+                className="bg-terracotta hover:bg-terracotta-hover text-paper cursor-pointer text-xs w-full sm:w-auto"
+              >
+                {submitting ? 'Đang xác nhận...' : 'Tôi đã chuyển khoản xong ✓'}
+              </Button>
+            </div>
           }
         >
-          <div className="space-y-2">
-            <p className="text-sm text-ink">
-              {seatCount > 1 ? `Các ghế ${chosenSeats.join(', ')} không còn được giữ` : `Ghế ${chosenSeats[0]} không còn được giữ`} cho bạn (hết hạn 5 phút).
-            </p>
-            <p className="text-xs text-ink-soft">
-              Các ghế đã được tự động giải phóng trên hệ thống. Vui lòng quay lại sơ đồ chọn ghế để chọn và đặt lại vé.
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-center gap-5 p-4 rounded bg-paper-deep/60 border border-hairline">
+              {/* VietQR Code SVG */}
+              <div className="p-3 bg-white rounded border border-hairline shrink-0 text-center shadow-xs">
+                <svg className="w-32 h-32 mx-auto" viewBox="0 0 100 100" fill="currentColor">
+                  <rect x="0" y="0" width="30" height="30" rx="4" fill="#1b120c" />
+                  <rect x="5" y="5" width="20" height="20" rx="2" fill="#ffffff" />
+                  <rect x="9" y="9" width="12" height="12" rx="1" fill="#b85d38" />
+
+                  <rect x="70" y="0" width="30" height="30" rx="4" fill="#1b120c" />
+                  <rect x="75" y="5" width="20" height="20" rx="2" fill="#ffffff" />
+                  <rect x="79" y="9" width="12" height="12" rx="1" fill="#b85d38" />
+
+                  <rect x="0" y="70" width="30" height="30" rx="4" fill="#1b120c" />
+                  <rect x="5" y="75" width="20" height="20" rx="2" fill="#ffffff" />
+                  <rect x="9" y="79" width="12" height="12" rx="1" fill="#b85d38" />
+
+                  <rect x="36" y="10" width="8" height="8" fill="#b85d38" />
+                  <rect x="52" y="10" width="8" height="8" fill="#1b120c" />
+                  <rect x="44" y="38" width="12" height="12" rx="2" fill="#b85d38" />
+                  <rect x="10" y="44" width="8" height="8" fill="#1b120c" />
+                  <rect x="70" y="44" width="8" height="8" fill="#1b120c" />
+                  <rect x="36" y="60" width="8" height="8" fill="#1b120c" />
+                  <rect x="52" y="60" width="8" height="8" fill="#1b120c" />
+                  <rect x="74" y="84" width="12" height="8" fill="#1b120c" />
+                </svg>
+                <div className="text-[10px] font-extrabold text-terracotta mt-1">VIETQR 24/7</div>
+              </div>
+
+              {/* Thông tin chuyển khoản */}
+              <div className="space-y-1.5 text-xs flex-1 w-full">
+                <div className="flex justify-between items-center py-1 border-b border-hairline/60">
+                  <span className="text-ink-soft">Ngân hàng thụ hưởng:</span>
+                  <span className="font-bold text-ink">Techcombank (Hội sở)</span>
+                </div>
+
+                <div className="flex justify-between items-center py-1 border-b border-hairline/60">
+                  <span className="text-ink-soft">Số tài khoản:</span>
+                  <div className="flex items-center gap-1.5 font-mono font-bold text-ink">
+                    <span>190388998899</span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy('190388998899', 'stk')}
+                      className="text-[10px] text-terracotta hover:underline cursor-pointer"
+                    >
+                      {copiedField === 'stk' ? '✓ Đã chép' : 'Chép'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center py-1 border-b border-hairline/60">
+                  <span className="text-ink-soft">Chủ tài khoản:</span>
+                  <span className="font-bold text-ink">VEXE MIEN DONG JSC</span>
+                </div>
+
+                <div className="flex justify-between items-center py-1 border-b border-hairline/60">
+                  <span className="text-ink-soft">Số tiền cần thanh toán:</span>
+                  <span className="font-mono font-extrabold text-terracotta text-sm">
+                    {formatVnd(finalPrice)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-ink-soft">Nội dung chuyển khoản:</span>
+                  <div className="flex items-center gap-1.5 font-mono font-bold text-ink">
+                    <span>VEXEI #{createdBooking?.ma_dat_ve || trip.id}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(`VEXEI ${createdBooking?.ma_dat_ve || trip.id}`, 'nd')}
+                      className="text-[10px] text-terracotta hover:underline cursor-pointer"
+                    >
+                      {copiedField === 'nd' ? '✓ Đã chép' : 'Chép'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-[11.5px] text-ink-soft italic text-center">
+              Mở ứng dụng ngân hàng bất kỳ trên điện thoại, chọn Quét mã QR để thanh toán chính xác không cần nhập tay.
             </p>
           </div>
         </Modal>
       )}
 
-      {/* Modal cảnh báo khi người dùng muốn thoát trong lúc đang thanh toán */}
-      {showLeaveModal && (
+      {/* MODAL CẢNH BÁO NAVIGATION GUARD: XÁC NHẬN HỦY VÀ NHẢ GHẾ TỨC THÌ */}
+      {showCancelModal && (
         <Modal
-          title={pendingLeaveView === 'seats' ? 'Quay lại chọn ghế' : 'Xác nhận hủy đặt vé và rời đi'}
-          onClose={() => setShowLeaveModal(false)}
+          title="Xác nhận hủy đặt vé & giải phóng ghế"
+          onClose={() => setShowCancelModal(false)}
           footer={
-            pendingLeaveView === 'seats' ? (
-              <div className="flex flex-wrap justify-end gap-3">
-                <Button variant="ghost" onClick={() => setShowLeaveModal(false)}>
-                  Ở lại thanh toán
-                </Button>
-                <Button
-                  variant="primary"
-                  className="bg-amber-700 hover:bg-amber-800 text-white cursor-pointer"
-                  onClick={handleConfirmLeave}
-                >
-                  Hủy giữ ghế & Chọn lại
-                </Button>
-                {holdSeconds !== null && !expired && (
-                  <Button
-                    variant="primary"
-                    className="bg-terracotta hover:bg-terracotta/90 text-white cursor-pointer"
-                    onClick={handleKeepHoldAndBack}
-                  >
-                    Giữ ghế & Chọn tiếp →
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <div className="flex justify-end gap-3">
-                <Button variant="ghost" onClick={() => setShowLeaveModal(false)}>
-                  Ở lại thanh toán
-                </Button>
-                <Button
-                  variant="primary"
-                  className="bg-terracotta hover:bg-terracotta/90 text-white cursor-pointer"
-                  onClick={handleConfirmLeave}
-                >
-                  Xác nhận rời đi (Hủy giữ ghế)
-                </Button>
-              </div>
-            )
+            <div className="flex justify-end gap-3">
+              <Button variant="ghost" onClick={() => setShowCancelModal(false)}>
+                Ở lại tiếp tục thanh toán
+              </Button>
+              <Button
+                variant="primary"
+                className="bg-terracotta hover:bg-terracotta-hover text-paper cursor-pointer"
+                onClick={handleConfirmCancel}
+              >
+                Xác nhận hủy (Giải phóng ghế ngay)
+              </Button>
+            </div>
           }
         >
-          {pendingLeaveView === 'seats' ? (
-            <div className="space-y-3">
-              <p className="text-sm text-ink">
-                Bạn đang giữ chỗ các ghế: <b className="text-terracotta">{chosenSeats.join(', ')}</b>.
-              </p>
-              {holdSeconds !== null && !expired && (
-                <div className="text-xs text-celadon font-medium flex items-center gap-1.5 bg-celadon/10 px-3 py-2 rounded border border-celadon/30">
-                  <span className="material-symbols-outlined text-sm">timer</span>
-                  <span>
-                    Thời gian giữ chỗ còn lại: <b>{Math.floor(holdSeconds / 60)} phút {holdSeconds % 60} giây</b>.
-                  </span>
-                </div>
-              )}
-              <p className="text-sm text-ink-soft">
-                Nếu muốn đổi hoặc chọn thêm ghế, bạn có thể bấm <b>"Giữ ghế & Chọn tiếp"</b> để quay lại sơ đồ mà không bị mất ghế đang giữ.
-              </p>
-              <p className="text-xs text-ink-soft">
-                Nếu muốn hủy bỏ phiên chọn này và bắt đầu lại, bấm <b>"Hủy giữ ghế & Chọn lại"</b> để trả ghế về trạng thái trống ngay lập tức.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-sm text-ink">
-                Bạn đang thực hiện thanh toán cho các ghế: <b className="text-terracotta">{chosenSeats.join(', ')}</b>.
-              </p>
-              <p className="text-sm text-ink-soft">
-                Nếu bạn rời khỏi trang, hệ thống sẽ <b>hủy bỏ thời gian giữ chỗ</b> và đưa các ghế này trở lại trạng thái <b>trống (chưa ai chọn)</b> ngay lập tức để không bị treo ghế.
-              </p>
-              <p className="text-xs font-semibold text-terracotta">
-                Bạn có chắc chắn muốn hủy đặt vé và rời khỏi màn hình này không?
-              </p>
-            </div>
-          )}
+          <div className="space-y-3">
+            <p className="text-sm text-ink">
+              Bạn đang thực hiện thanh toán cho các vị trí ghế: <b className="text-terracotta">{chosenSeats.join(', ')}</b>.
+            </p>
+            <p className="text-xs text-ink-soft">
+              Nếu bạn rời khỏi luồng thanh toán lúc này, hệ thống sẽ <b>tự động hủy đơn đặt vé tạm thời trên máy chủ</b> và giải phóng các ghế này về trạng thái trống (TRONG) ngay lập tức để người khác có thể đặt.
+            </p>
+            <p className="text-xs font-semibold text-terracotta">
+              Bạn có chắc chắn muốn hủy phiên đặt chỗ này không?
+            </p>
+          </div>
         </Modal>
       )}
     </>

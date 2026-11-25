@@ -1,0 +1,4046 @@
+{
+  "info": {
+    "name": "OOAD - Full System API Verification (Newman)",
+    "_postman_id": "e8a93b42-1234-4567-89ab-cdef01234567",
+    "description": "Bộ kiểm thử tự động toàn bộ các endpoint backend của Hệ thống Quản trị & Đặt vé xe khách (OOAD).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "staff_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cust_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "trip_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "seat_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "booking_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "cancel_booking_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "counter_order_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "cancel_trip_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "counter_trip_id",
+      "value": "3",
+      "type": "string"
+    },
+    {
+      "key": "counter_trip_date",
+      "value": "2028-10-15",
+      "type": "string"
+    },
+    {
+      "key": "counter_trip_time",
+      "value": "08:00:00",
+      "type": "string"
+    },
+    {
+      "key": "counter_seat_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "counter_sdt",
+      "value": "0977112233",
+      "type": "string"
+    },
+    {
+      "key": "counter_hold_order_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "counter_hold_seat_id",
+      "value": "2",
+      "type": "string"
+    },
+    {
+      "key": "counter_hold_sdt",
+      "value": "0966112233",
+      "type": "string"
+    },
+    {
+      "key": "counter_refund_order_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "counter_ref_seat_id",
+      "value": "3",
+      "type": "string"
+    },
+    {
+      "key": "counter_ref_sdt",
+      "value": "0955112233",
+      "type": "string"
+    },
+    {
+      "key": "future_trip_date",
+      "value": "2027-08-15",
+      "type": "string"
+    },
+    {
+      "key": "future_trip_time",
+      "value": "10:00:00",
+      "type": "string"
+    },
+    {
+      "key": "new_promo_code",
+      "value": "KMNEW123",
+      "type": "string"
+    },
+    {
+      "key": "cash_promo_code",
+      "value": "CASH123",
+      "type": "string"
+    },
+    {
+      "key": "created_promo_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "new_vehicle_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "new_vehicle_plate",
+      "value": "51B-888.99",
+      "type": "string"
+    },
+    {
+      "key": "new_staff_username",
+      "value": "nv_nm_test1",
+      "type": "string"
+    },
+    {
+      "key": "new_staff_phone",
+      "value": "0988887777",
+      "type": "string"
+    },
+    {
+      "key": "new_staff_ma_tk",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01. Xác thực & Phân quyền (Auth & RBAC)",
+      "item": [
+        {
+          "name": "01. Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Database is UP', function () { var j = pm.response.json(); pm.expect(j.database).to.eql('up'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "02. Login Admin Success",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"ten_dang_nhap\": \"admin\", \"mat_khau\": \"MatKhau@123\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Save admin_token', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j.access_token).to.be.a('string');",
+                  "  pm.collectionVariables.set('admin_token', j.access_token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "03. Login Staff Success",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"ten_dang_nhap\": \"nv_miendong\", \"mat_khau\": \"MatKhau@123\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Save staff_token', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.collectionVariables.set('staff_token', j.access_token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "04. Login Customer By Phone Success",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"ten_dang_nhap\": \"0908889999\", \"mat_khau\": \"MatKhau@123\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Save cust_token', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.collectionVariables.set('cust_token', j.access_token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "05. Get Profile /me (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Role is QuanTri', function () { var j = pm.response.json(); pm.expect(j.vai_tro).to.eql('QuanTri'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "06. Login Failed - Invalid Password (Expect 401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"ten_dang_nhap\": \"admin\", \"mat_khau\": \"MatKhauSai123\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401 Unauthorized', function () { pm.response.to.have.status(401); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "07. RBAC Check - Customer Cannot Access Admin KPI (Expect 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cust_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/thong-ke",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "thong-ke"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 403 Forbidden', function () { pm.response.to.have.status(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "07b. RBAC Check - Admin Cannot Access Counter POS (Expect 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/quay/thong-ke-ca",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "quay",
+                "thong-ke-ca"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 403 Forbidden', function () { pm.response.to.have.status(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "07c. RBAC Check - Staff Cannot Access Admin Analytics (Expect 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/thong-ke",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "thong-ke"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 403 Forbidden', function () { pm.response.to.have.status(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02. Tuyến xe & Chuyến xe (Routes & Trips)",
+      "item": [
+        {
+          "name": "08. Get Routes List",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/tuyen-xe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tuyen-xe"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Has routes list', function () { var j = pm.response.json(); pm.expect(j).to.be.an('array'); pm.expect(j.length).to.be.above(0); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "09. Search Trips Publicly",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/chuyen-xe?diem_di=TP.+Hồ+Chí+Minh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "chuyen-xe"
+              ],
+              "query": [
+                {
+                  "key": "diem_di",
+                  "value": "TP. Hồ Chí Minh"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Save first trip_id', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j.length).to.be.above(0);",
+                  "  pm.collectionVariables.set('trip_id', String(j[0].ma_chuyen));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "10. Get Trip Detail",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/chuyen-xe/{{trip_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "chuyen-xe",
+                "{{trip_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Trip data valid', function () { var j = pm.response.json(); pm.expect(j.tong_so_ghe).to.be.above(0); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "11. Get Trip Detail Not Found (Expect 404)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/chuyen-xe/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "chuyen-xe",
+                "999999"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404 Not Found', function () { pm.response.to.have.status(404); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "12. Get Real-time Seat Map",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/chuyen-xe/{{trip_id}}/so-do-ghe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "chuyen-xe",
+                "{{trip_id}}",
+                "so-do-ghe"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Has available seats and save seat_id', function () {",
+                  "  var j = pm.response.json();",
+                  "  var available = j.danh_sach_ghe.filter(function(g) { return g.trang_thai_chuyen === 'TRONG'; });",
+                  "  pm.expect(available.length).to.be.above(0);",
+                  "  pm.collectionVariables.set('seat_id', String(available[0].ma_ghe));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03. Khuyến mãi & Voucher (Coupons)",
+      "item": [
+        {
+          "name": "13. List Active Coupons",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/khuyen-mai",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "khuyen-mai"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Returns promotions list', function () { var j = pm.response.json(); pm.expect(j).to.be.an('array'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "14. Validate Valid Coupon",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"ma_code\": \"CHAOBANMOI\", \"tong_tien\": 400000}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/khuyen-mai/kiem-tra",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "khuyen-mai",
+                "kiem-tra"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Coupon valid and discounted', function () { var j = pm.response.json(); pm.expect(j.hop_le).to.be.true; pm.expect(Number(j.tien_giam)).to.be.above(0); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "15. Validate Non-existent Coupon (Expect 404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"ma_code\": \"MABAYBA999\", \"tong_tien\": 400000}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/khuyen-mai/kiem-tra",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "khuyen-mai",
+                "kiem-tra"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404 Not Found', function () { pm.response.to.have.status(404); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "15b. Admin List All Promotions With Usage Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/khuyen-mai",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "khuyen-mai"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Returns promotions array with stats', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.be.an('array');",
+                  "  if (j.length > 0) {",
+                  "    pm.expect(j[0]).to.have.property('so_lan_su_dung');",
+                  "    pm.expect(j[0]).to.have.property('con_hieu_luc');",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "15c. Admin Create Promotion Percentage",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var uid = Math.floor(1000 + Math.random() * 9000);",
+                  "pm.collectionVariables.set('new_promo_code', 'KMPOST' + uid);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Created promo is valid', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j.ma_code).to.eql(pm.collectionVariables.get('new_promo_code'));",
+                  "  pm.expect(j.loai_giam).to.eql('PhanTram');",
+                  "  pm.expect(j.con_hieu_luc).to.be.true;",
+                  "  pm.collectionVariables.set('created_promo_id', j.ma_km);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"ten_km\": \"Ch\\u01b0\\u01a1ng tr\\u00ecnh gi\\u1ea3m gi\\u00e1 h\\u00e8 20%\", \"ma_code\": \"{{new_promo_code}}\", \"loai_giam\": \"PhanTram\", \"gia_tri_giam\": 20, \"gia_tri_giam_toi_da\": 60000, \"don_toi_thieu\": 150000, \"ngay_bat_dau\": \"2026-01-01T00:00:00\", \"ngay_ket_thuc\": \"2028-12-31T23:59:59\", \"mo_ta\": \"M\\u00e3 gi\\u1ea3m gi\\u00e1 t\\u1ea1o t\\u1ef1 \\u0111\\u1ed9ng qua Postman\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/khuyen-mai",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "khuyen-mai"
+              ]
+            }
+          }
+        },
+        {
+          "name": "15d. Admin Create Promotion Cash",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var uid = Math.floor(1000 + Math.random() * 9000);",
+                  "pm.collectionVariables.set('cash_promo_code', 'CASH' + uid);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Cash discount verified', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j.loai_giam).to.eql('TienMat');",
+                  "  pm.expect(Number(j.gia_tri_giam)).to.eql(30000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"ten_km\": \"Gi\\u1ea3m ngay 30k ti\\u1ec1n m\\u1eb7t\", \"ma_code\": \"{{cash_promo_code}}\", \"loai_giam\": \"TienMat\", \"gia_tri_giam\": 30000, \"don_toi_thieu\": 100000, \"ngay_bat_dau\": \"2026-01-01T00:00:00\", \"ngay_ket_thuc\": \"2028-12-31T23:59:59\", \"mo_ta\": \"Gi\\u1ea3m ti\\u1ec1n m\\u1eb7t tr\\u1ef1c ti\\u1ebfp\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/khuyen-mai",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "khuyen-mai"
+              ]
+            }
+          }
+        },
+        {
+          "name": "15e. Admin Create Promotion Duplicate Code Rejection (Expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"ten_km\": \"Tr\\u00f9ng m\\u00e3 code\", \"ma_code\": \"{{new_promo_code}}\", \"loai_giam\": \"PhanTram\", \"gia_tri_giam\": 10, \"don_toi_thieu\": 50000, \"ngay_bat_dau\": \"2026-01-01T00:00:00\", \"ngay_ket_thuc\": \"2028-12-31T23:59:59\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/khuyen-mai",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "khuyen-mai"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 Bad Request', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Duplicate error message', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j.detail).to.include('đã tồn tại');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "15f. Admin Toggle Promotion Status TamDung (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/khuyen-mai/{{created_promo_id}}/trang-thai",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "khuyen-mai",
+                "{{created_promo_id}}",
+                "trang-thai"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Status toggled to TamDung', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j.trang_thai).to.eql('TamDung');",
+                  "  pm.expect(j.con_hieu_luc).to.be.false;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "15g. Admin Toggle Promotion Status HoatDong (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"trang_thai\": \"HoatDong\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/khuyen-mai/{{created_promo_id}}/trang-thai",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "khuyen-mai",
+                "{{created_promo_id}}",
+                "trang-thai"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Status back to HoatDong', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j.trang_thai).to.eql('HoatDong');",
+                  "  pm.expect(j.con_hieu_luc).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "15h. Customer Access Admin Promotions Rejection (Expect 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cust_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/khuyen-mai",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "khuyen-mai"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 403 Forbidden', function () { pm.response.to.have.status(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "15i. Staff Access Admin Promotions Rejection (Expect 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/khuyen-mai",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "khuyen-mai"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 403 Forbidden', function () { pm.response.to.have.status(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04. Đặt vé & Thanh toán (Booking & Payments)",
+      "item": [
+        {
+          "name": "16. Create Online Booking",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var uid = Math.floor(100000 + Math.random() * 900000);",
+                  "pm.environment.set('test_sdt', '0944' + uid);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Save booking_id and status ChoThanhToan', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j.trang_thai).to.eql('ChoThanhToan');",
+                  "  pm.collectionVariables.set('booking_id', String(j.ma_dat_ve));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ma_chuyen\": {{trip_id}},\n  \"danh_sach_ma_ghe\": [{{seat_id}}],\n  \"ma_code_km\": \"CHAOBANMOI\",\n  \"ho_ten\": \"Nguyễn Văn Test Online\",\n  \"sdt\": \"{{test_sdt}}\",\n  \"dia_chi\": \"Quận 1, TP.HCM\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/dat-ve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dat-ve"
+              ]
+            }
+          }
+        },
+        {
+          "name": "17. Re-booking Same Seat Conflict (Expect 409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ma_chuyen\": {{trip_id}},\n  \"danh_sach_ma_ghe\": [{{seat_id}}],\n  \"ho_ten\": \"Khách Tranh Ghế\",\n  \"sdt\": \"0911888777\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/dat-ve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dat-ve"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 409 Conflict', function () { pm.response.to.have.status(409); });",
+                  "pm.test('Conflict message returned', function () { var j = pm.response.json(); pm.expect(j.detail).to.include('đã có người đặt'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "18. Get Booking Detail",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/dat-ve/{{booking_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dat-ve",
+                "{{booking_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Booking has seats list', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j.danh_sach_ve.length).to.be.above(0);",
+                  "  pm.collectionVariables.set('ticket_id', String(j.danh_sach_ve[0].ma_ct));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "19. Payment Simulation - Failed Case",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"phuong_thuc\": \"VietQR\", \"mo_phong\": \"that_bai\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/dat-ve/{{booking_id}}/thanh-toan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dat-ve",
+                "{{booking_id}}",
+                "thanh-toan"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Payment failed recorded', function () { var j = pm.response.json(); pm.expect(j.trang_thai).to.eql('ThatBai'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "20. Payment Simulation - Success Case",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"phuong_thuc\": \"VietQR\", \"so_tai_khoan\": \"0988776655\", \"ten_ngan_hang\": \"Techcombank\", \"ten_chu_tai_khoan\": \"NGUYEN VAN A\", \"mo_phong\": \"thanh_cong\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/dat-ve/{{booking_id}}/thanh-toan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dat-ve",
+                "{{booking_id}}",
+                "thanh-toan"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Payment success recorded', function () { var j = pm.response.json(); pm.expect(j.trang_thai).to.eql('ThanhCong'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "21. Double Payment Rejection (Expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"phuong_thuc\": \"VietQR\", \"mo_phong\": \"thanh_cong\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/dat-ve/{{booking_id}}/thanh-toan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dat-ve",
+                "{{booking_id}}",
+                "thanh-toan"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 Bad Request', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Reject already paid message', function () { var j = pm.response.json(); pm.expect(j.detail).to.include('đã được thanh toán'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "21b. Update Passenger Info (PUT /api/ve/:id/hanh-khach)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"danh_sach_hanh_khach\": [\n    {\"ma_ct\": {{ticket_id}}, \"ho_ten\": \"Nguyễn Văn A (Cập Nhật)\", \"sdt\": \"0988999888\"}\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ve/{{booking_id}}/hanh-khach",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ve",
+                "{{booking_id}}",
+                "hanh-khach"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 or 400 with valid rule message', function () {",
+                  "  pm.expect([200, 400]).to.include(pm.response.code);",
+                  "  if (pm.response.code === 200) {",
+                  "    var j = pm.response.json();",
+                  "    pm.expect(j.danh_sach_ve[0].ho_ten_hanh_khach).to.eql('Nguyễn Văn A (Cập Nhật)');",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05. Tra cứu vé & Hủy vé (Tickets & Refunds)",
+      "item": [
+        {
+          "name": "22. Public Ticket Lookup by Booking ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/ve/tra-cuu?ma_dat_ve={{booking_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ve",
+                "tra-cuu"
+              ],
+              "query": [
+                {
+                  "key": "ma_dat_ve",
+                  "value": "{{booking_id}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Lookup returns DaThanhToan', function () { var j = pm.response.json(); pm.expect(j[0].trang_thai).to.eql('DaThanhToan'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "23. Cancel Quote for Paid Booking",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/ve/{{booking_id}}/bao-gia-huy",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ve",
+                "{{booking_id}}",
+                "bao-gia-huy"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Cancel quote response valid', function () { var j = pm.response.json(); pm.expect(j.ma_dat_ve).to.be.a('number'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06. Quầy bán vé POS & Soát vé (Counter & Gate Checkin)",
+      "item": [
+        {
+          "name": "23b. Admin Schedules Trip For Counter POS",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var randYear = 2028 + Math.floor(Math.random() * 5);",
+                  "var randMonth = Math.floor(1 + Math.random() * 12);",
+                  "var randDay = Math.floor(1 + Math.random() * 28);",
+                  "var randHour = Math.floor(Math.random() * 24);",
+                  "var randMin = Math.floor(Math.random() * 60);",
+                  "var randSec = Math.floor(Math.random() * 60);",
+                  "var pad = function(n) { return (n < 10 ? '0' : '') + n; };",
+                  "pm.collectionVariables.set('counter_trip_date', randYear + '-' + pad(randMonth) + '-' + pad(randDay));",
+                  "pm.collectionVariables.set('counter_trip_time', pad(randHour) + ':' + pad(randMin) + ':' + pad(randSec));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', function () { pm.response.to.have.status(201); });",
+                  "var j = pm.response.json();",
+                  "pm.collectionVariables.set('counter_trip_id', String(j.ma_chuyen));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ma_tuyen\": 1,\n  \"ma_xe\": 1,\n  \"ngay_khoi_hanh\": \"{{counter_trip_date}}\",\n  \"gio_khoi_hanh\": \"{{counter_trip_time}}\",\n  \"gia_ve\": 250000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/chuyen-xe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "chuyen-xe"
+              ]
+            }
+          }
+        },
+        {
+          "name": "23c. Get Available Seats For Counter",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/chuyen-xe/{{counter_trip_id}}/so-do-ghe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "chuyen-xe",
+                "{{counter_trip_id}}",
+                "so-do-ghe"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "var seats = j.danh_sach_ghe.filter(function(g) { return g.trang_thai_chuyen === 'TRONG'; });",
+                  "pm.test('Has at least 3 available seats', function () { pm.expect(seats.length).to.be.at.least(3); });",
+                  "pm.collectionVariables.set('counter_seat_id', String(seats[0].ma_ghe));",
+                  "pm.collectionVariables.set('counter_hold_seat_id', String(seats[1].ma_ghe));",
+                  "pm.collectionVariables.set('counter_ref_seat_id', String(seats[2].ma_ghe));",
+                  "var uid = Math.floor(100000 + Math.random() * 900000);",
+                  "pm.collectionVariables.set('counter_sdt', '0977' + uid);",
+                  "pm.collectionVariables.set('counter_hold_sdt', '0966' + uid);",
+                  "pm.collectionVariables.set('counter_ref_sdt', '0955' + uid);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "24. Counter Staff Sells POS Ticket",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', function () { pm.response.to.have.status(201); });",
+                  "pm.test('POS order is DaThanhToan', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j.trang_thai).to.eql('DaThanhToan');",
+                  "  pm.collectionVariables.set('counter_order_id', String(j.ma_dat_ve));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ma_chuyen\": {{counter_trip_id}},\n  \"danh_sach_ma_ghe\": [{{counter_seat_id}}],\n  \"ho_ten\": \"Khách Vãng Lai Quầy\",\n  \"sdt\": \"{{counter_sdt}}\",\n  \"phuong_thuc\": \"TienMatTaiQuay\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/quay/dat-ve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "quay",
+                "dat-ve"
+              ]
+            }
+          }
+        },
+        {
+          "name": "24b. Customer Cannot Cancel Counter Ticket Online (Expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"ly_do\": \"Kh\\u00e1ch th\\u1eed t\\u1ef1 h\\u1ee7y v\\u00e9 qu\\u1ea7y qua m\\u1ea1ng\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ve/{{counter_order_id}}/yeu-cau-huy",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ve",
+                "{{counter_order_id}}",
+                "yeu-cau-huy"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 Bad Request', function () { pm.response.to.have.status(400); });",
+                  "var j = pm.response.json();",
+                  "pm.test('Instructs customer to visit counter for cash refund', function () { pm.expect(j.detail).to.include('quầy'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "24c. Print POS Thermal Ticket Receipt",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/quay/ve/{{counter_order_id}}/in-ve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "quay",
+                "ve",
+                "{{counter_order_id}}",
+                "in-ve"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "pm.test('Contains POS ASCII Thermal Receipt', function () {",
+                  "  pm.expect(j.noi_dung_in).to.include('VE XE KHACH (POS)');",
+                  "  pm.expect(j.ma_ve_barcode).to.include('BK');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "24d. Gate Ticket Check-in",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ma_dat_ve\": {{counter_order_id}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/quay/soat-ve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "quay",
+                "soat-ve"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "pm.test('Checkin valid', function () { pm.expect(j.hop_le).to.be.true; });",
+                  "pm.test('Checkin da_soat_truoc_do is false', function () { pm.expect(j.da_soat_truoc_do).to.be.false; });",
+                  "pm.test('Checkin contains vehicle license plate', function () { pm.expect(j.bien_so).to.be.a('string'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "24d2. Gate Ticket Double Check-in (Anti Duplicate)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ma_dat_ve\": {{counter_order_id}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/quay/soat-ve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "quay",
+                "soat-ve"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "pm.test('Double checkin rejected', function () { pm.expect(j.hop_le).to.be.false; });",
+                  "pm.test('Double checkin flag true', function () { pm.expect(j.da_soat_truoc_do).to.be.true; });",
+                  "pm.test('Warning message indicates already checked in', function () { pm.expect(j.thong_diep).to.include('CẢNH BÁO'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "24d3. Gate Fast Ticket Lookup Before Check-in",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/quay/tra-cuu-soat-ve?q={{counter_order_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "quay",
+                "tra-cuu-soat-ve"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{counter_order_id}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "pm.test('Found ticket in lookup', function () {",
+                  "  pm.expect(j).to.be.an('array').that.is.not.empty;",
+                  "  pm.expect(j[0].ma_dat_ve).to.eql(Number(pm.collectionVariables.get('counter_order_id')));",
+                  "  pm.expect(j[0].da_soat_ve).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "24d4. Gate Check-in RBAC Forbidden For Customer (Expect 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cust_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ma_dat_ve\": {{counter_order_id}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/quay/soat-ve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "quay",
+                "soat-ve"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 403 Forbidden', function () { pm.response.to.have.status(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "24d5. Gate Check-in RBAC Forbidden For Admin (Expect 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ma_dat_ve\": {{counter_order_id}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/quay/soat-ve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "quay",
+                "soat-ve"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 403 Forbidden', function () { pm.response.to.have.status(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "24e. Counter Phone Hold Booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', function () { pm.response.to.have.status(201); });",
+                  "var j = pm.response.json();",
+                  "pm.test('Hold booking is ChoThanhToan', function () {",
+                  "  pm.expect(j.trang_thai).to.eql('ChoThanhToan');",
+                  "  pm.expect(j.ghi_chu).to.include('Giữ chỗ qua điện thoại');",
+                  "  pm.collectionVariables.set('counter_hold_order_id', String(j.ma_dat_ve));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ma_chuyen\": {{counter_trip_id}},\n  \"danh_sach_ma_ghe\": [{{counter_hold_seat_id}}],\n  \"ho_ten\": \"Khách Gọi Điện Thoại\",\n  \"sdt\": \"{{counter_hold_sdt}}\",\n  \"thoi_han_phut\": 60,\n  \"ghi_chu\": \"Khách hẹn 30 phút sau ra quầy nhận vé\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/quay/giu-cho-dien-thoai",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "quay",
+                "giu-cho-dien-thoai"
+              ]
+            }
+          }
+        },
+        {
+          "name": "24f. Counter Create Ticket For Cash Refund",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', function () { pm.response.to.have.status(201); });",
+                  "var j = pm.response.json();",
+                  "pm.test('Order is DaThanhToan', function () {",
+                  "  pm.expect(j.trang_thai).to.eql('DaThanhToan');",
+                  "  pm.collectionVariables.set('counter_refund_order_id', String(j.ma_dat_ve));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ma_chuyen\": {{counter_trip_id}},\n  \"danh_sach_ma_ghe\": [{{counter_ref_seat_id}}],\n  \"ho_ten\": \"Khách Trả Vé Tiền Mặt\",\n  \"sdt\": \"{{counter_ref_sdt}}\",\n  \"phuong_thuc\": \"TienMatTaiQuay\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/quay/dat-ve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "quay",
+                "dat-ve"
+              ]
+            }
+          }
+        },
+        {
+          "name": "24g. Counter Process Cash Refund",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ly_do\": \"Khách mang vé ra quầy trả nhận tiền mặt trực tiếp\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/quay/ve/{{counter_refund_order_id}}/hoan-tien-mat",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "quay",
+                "ve",
+                "{{counter_refund_order_id}}",
+                "hoan-tien-mat"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "pm.test('Refund receipt generated', function () {",
+                  "  pm.expect(j.noi_dung_in_phieu_chi).to.include('PHIEU CHI HOAN TIEN MAT (POS)');",
+                  "  pm.expect(Number(j.so_tien_hoan_mat)).to.be.at.least(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "25. Get Counter Shift Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/quay/thong-ke-ca",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "quay",
+                "thong-ke-ca"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "pm.test('Shift revenue and order list recorded', function () {",
+                  "  pm.expect(j.tong_so_don).to.be.at.least(1);",
+                  "  pm.expect(j.danh_sach_don).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07. Quản trị hệ thống (Admin Management)",
+      "item": [
+        {
+          "name": "27. Admin KPI Overview",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/thong-ke",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "thong-ke"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('KPI fields present', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('tong_doanh_thu_thuc_te');",
+                  "  pm.expect(j).to.have.property('tong_tien_thu');",
+                  "  pm.expect(j).to.have.property('tong_tien_hoan');",
+                  "  pm.expect(j).to.have.property('tong_don_hang');",
+                  "  pm.expect(j).to.have.property('tong_ve_ban');",
+                  "  pm.expect(j.tong_chuyen_xe).to.be.above(0);",
+                  "  pm.expect(j.tong_khach_hang).to.be.above(0);",
+                  "  pm.expect(Number(j.tong_doanh_thu_thuc_te)).to.equal(Number(j.tong_tien_thu) - Number(j.tong_tien_hoan));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "28. Revenue By Route Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/thong-ke/tuyen-xe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "thong-ke",
+                "tuyen-xe"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Route revenue is array with route stats', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.be.an('array');",
+                  "  if (j.length > 0) {",
+                  "    pm.expect(j[0]).to.have.property('ma_tuyen');",
+                  "    pm.expect(j[0]).to.have.property('tuyen_xe');",
+                  "    pm.expect(j[0]).to.have.property('so_chuyen');",
+                  "    pm.expect(j[0]).to.have.property('so_ve_ban');",
+                  "    pm.expect(j[0]).to.have.property('tong_doanh_thu');",
+                  "    pm.expect(j[0]).to.have.property('ty_le_lap_day_trung_binh');",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "28b. Daily Revenue Trend (7 Days)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/thong-ke/theo-ngay?so_ngay=7",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "thong-ke",
+                "theo-ngay"
+              ],
+              "query": [
+                {
+                  "key": "so_ngay",
+                  "value": "7"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Daily stats returns 7 days', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.be.an('array');",
+                  "  pm.expect(j.length).to.equal(7);",
+                  "  pm.expect(j[0]).to.have.property('ngay');",
+                  "  pm.expect(j[0]).to.have.property('doanh_thu');",
+                  "  pm.expect(j[0]).to.have.property('so_ve');",
+                  "  pm.expect(j[0]).to.have.property('so_don');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "28c. Payment Methods Revenue Distribution",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/thong-ke/phuong-thuc-thanh-toan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "thong-ke",
+                "phuong-thuc-thanh-toan"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Payment methods breakdown valid', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.be.an('array');",
+                  "  pm.expect(j.length).to.be.above(0);",
+                  "  pm.expect(j[0]).to.have.property('phuong_thuc');",
+                  "  pm.expect(j[0]).to.have.property('ten_hien_thi');",
+                  "  pm.expect(j[0]).to.have.property('tong_tien');",
+                  "  pm.expect(j[0]).to.have.property('ty_le_phan_tram');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "28d. Export Revenue CSV File",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/thong-ke/xuat-csv",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "thong-ke",
+                "xuat-csv"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Content-Type is text/csv', function () {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('text/csv');",
+                  "});",
+                  "pm.test('Content-Disposition is attachment', function () {",
+                  "  pm.expect(pm.response.headers.get('Content-Disposition')).to.include('attachment');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "29. Admin Creates New Route",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"diem_di\": \"B\\u1ebfn xe Mi\\u1ec1n \\u0110\\u00f4ng m\\u1edbi\", \"diem_den\": \"B\\u1ebfn xe M\\u0169i N\\u00e9 (B\\u00ecnh Thu\\u1eadn)\", \"khoang_cach\": 215.5, \"thoi_gian_du_kien\": 240, \"mo_ta\": \"Tuy\\u1ebfn cao t\\u1ed1c D\\u1ea7u Gi\\u00e2y - Phan Thi\\u1ebft\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/tuyen-xe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "tuyen-xe"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Route created', function () { var j = pm.response.json(); pm.expect(j.diem_den).to.include('Mũi Né'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "29b. Admin Updates Route Status (Pause With Safety Warning)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"trang_thai\": \"TamDung\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/tuyen-xe/1/trang-thai",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "tuyen-xe",
+                "1",
+                "trang-thai"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "pm.test('Route status changed to TamDung', function () { pm.expect(j.trang_thai).to.eql('TamDung'); });",
+                  "pm.test('Warning field present', function () { pm.expect(j.so_chuyen_dang_mo_ban).to.be.at.least(0); });",
+                  "pm.test('Warning message present', function () { pm.expect(j.thong_diep).to.be.a('string'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "29c. Admin Re-activates Route Status (HoatDong)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"trang_thai\": \"HoatDong\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/tuyen-xe/1/trang-thai",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "tuyen-xe",
+                "1",
+                "trang-thai"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "pm.test('Route status restored to HoatDong', function () { pm.expect(j.trang_thai).to.eql('HoatDong'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "29d. Admin Gets Available Vehicles With Latest Trip",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/xe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "xe"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "pm.test('Returns active vehicles list', function () { pm.expect(j).to.be.an('array'); pm.expect(j.length).to.be.above(0); });",
+                  "pm.test('Vehicle has license plate and status', function () { pm.expect(j[0].bien_so).to.be.a('string'); pm.expect(j[0].trang_thai).to.eql('HoatDong'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "29e. Admin Bulk Schedules Trips (Bulk Scheduling)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var randDay = Math.floor(Math.random() * 15) + 10;",
+                  "var randHour = Math.floor(Math.random() * 23);",
+                  "var randMin = Math.floor(Math.random() * 59);",
+                  "var dStart = '2028-11-' + (randDay < 10 ? '0' + randDay : randDay);",
+                  "var dEnd = '2028-11-' + ((randDay + 2) < 10 ? '0' + (randDay + 2) : (randDay + 2));",
+                  "var tStr = (randHour < 10 ? '0' + randHour : randHour) + ':' + (randMin < 10 ? '0' + randMin : randMin) + ':00';",
+                  "pm.collectionVariables.set('bulk_start_date', dStart);",
+                  "pm.collectionVariables.set('bulk_end_date', dEnd);",
+                  "pm.collectionVariables.set('bulk_trip_time', tStr);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', function () { pm.response.to.have.status(201); });",
+                  "var j = pm.response.json();",
+                  "pm.test('Bulk trips created successfully', function () {",
+                  "  pm.expect(j.status).to.eql('success');",
+                  "  pm.expect(j.so_chuyen_tao).to.be.above(0);",
+                  "  pm.expect(j.danh_sach_ma_chuyen).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ma_tuyen\": 1,\n  \"ma_xe\": 4,\n  \"ngay_bat_dau\": \"{{bulk_start_date}}\",\n  \"ngay_ket_thuc\": \"{{bulk_end_date}}\",\n  \"gio_khoi_hanh\": \"{{bulk_trip_time}}\",\n  \"gia_ve\": 260000,\n  \"ghi_chu\": \"Lập lịch định kỳ Newman Test\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/chuyen-xe/lap-lich-hang-loat",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "chuyen-xe",
+                "lap-lich-hang-loat"
+              ]
+            }
+          }
+        },
+        {
+          "name": "29f. Admin Syncs Trip Lifecycle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/chuyen-xe/dong-bo-vong-doi",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "chuyen-xe",
+                "dong-bo-vong-doi"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "pm.test('Sync status success', function () { pm.expect(j.status).to.eql('success'); });",
+                  "pm.test('Lifecycle details present', function () {",
+                  "  pm.expect(j.chi_tiet).to.be.an('object');",
+                  "  pm.expect(j.chi_tiet.dang_ban).to.be.at.least(0);",
+                  "  pm.expect(j.chi_tiet.sap_khoi_hanh).to.be.at.least(0);",
+                  "  pm.expect(j.chi_tiet.dang_chay).to.be.at.least(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "30. Admin Schedules Trip For Cancel Test",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var randDay = Math.floor(Math.random() * 20) + 10;",
+                  "var randHour = Math.floor(Math.random() * 23);",
+                  "var randMin = Math.floor(Math.random() * 59);",
+                  "var dStr = '2027-09-' + (randDay < 10 ? '0' + randDay : randDay);",
+                  "var tStr = (randHour < 10 ? '0' + randHour : randHour) + ':' + (randMin < 10 ? '0' + randMin : randMin) + ':00';",
+                  "pm.collectionVariables.set('future_trip_date', dStr);",
+                  "pm.collectionVariables.set('future_trip_time', tStr);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', function () { pm.response.to.have.status(201); });",
+                  "var j = pm.response.json();",
+                  "pm.expect(j.ma_chuyen).to.be.above(0);",
+                  "pm.collectionVariables.set('cancel_trip_id', String(j.ma_chuyen));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ma_tuyen\": 1,\n  \"ma_xe\": 1,\n  \"ngay_khoi_hanh\": \"{{future_trip_date}}\",\n  \"gio_khoi_hanh\": \"{{future_trip_time}}\",\n  \"gia_ve\": 270000,\n  \"ghi_chu\": \"Chuyến test hủy và hoàn tiền 110%\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/chuyen-xe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "chuyen-xe"
+              ]
+            }
+          }
+        },
+        {
+          "name": "31. Preview Trip Cancellation Compensation Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/chuyen-xe/{{cancel_trip_id}}/bao-cao-huy",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "chuyen-xe",
+                "{{cancel_trip_id}}",
+                "bao-cao-huy"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "pm.test('Report default refund rate is 110%', function () { pm.expect(j.ty_le_hoan_mac_dinh).to.eql(110); });",
+                  "pm.test('Current status is DangBan', function () { pm.expect(j.trang_thai_hien_tai).to.eql('DangBan'); });",
+                  "pm.test('Tab 2 3-column notification table present', function () { pm.expect(j.danh_sach_thong_bao_khach).to.be.an('array'); });",
+                  "pm.test('SMS template present at bottom of Tab 2', function () { pm.expect(j.mau_tin_nhan_sms).to.be.a('string'); });",
+                  "pm.test('Preview SMS rendered', function () { pm.expect(j.noi_dung_sms_xem_truoc).to.be.a('string'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "32. Admin Confirms Trip Cancellation with 110% Compensation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"ly_do\": \"S\\u1ef1 c\\u1ed1 th\\u1eddi ti\\u1ebft b\\u00e3o l\\u0169 ng\\u1eadp \\u0111\\u01b0\\u1eddng\", \"ty_le_hoan_tien\": 110}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/chuyen-xe/{{cancel_trip_id}}/xac-nhan-huy",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "chuyen-xe",
+                "{{cancel_trip_id}}",
+                "xac-nhan-huy"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "pm.test('Trip status changed to HuyChuyen', function () { pm.expect(j.trang_thai).to.eql('HuyChuyen'); });",
+                  "pm.test('Applied refund rate is 110%', function () { pm.expect(j.ty_le_hoan_tien_ap_dung).to.eql(110); });",
+                  "pm.test('Refund channels recorded', function () {",
+                  "  pm.expect(j.so_don_online_hoan_ngay).to.be.at.least(0);",
+                  "  pm.expect(j.so_don_quay_cho_nhan_tien_mat).to.be.at.least(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "33. Negative Test - Cannot Cancel Completed Trip (Expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"ly_do\": \"Th\\u1eed h\\u1ee7y chuy\\u1ebfn \\u0111\\u00e3 ho\\u00e0n th\\u00e0nh\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/chuyen-xe/1/xac-nhan-huy",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "chuyen-xe",
+                "1",
+                "xac-nhan-huy"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 Bad Request', function () { pm.response.to.have.status(400); });",
+                  "var j = pm.response.json();",
+                  "pm.test('Error message mentions journey completion', function () { pm.expect(j.detail).to.include('kết thúc hành trình'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "33b. Negative Test - Cannot Confirm Complete Trip When Not Running (Expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/chuyen-xe/{{trip_id}}/xac-nhan-hoan-thanh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "chuyen-xe",
+                "{{trip_id}}",
+                "xac-nhan-hoan-thanh"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 Bad Request', function () { pm.response.to.have.status(400); });",
+                  "var j = pm.response.json();",
+                  "pm.test('Error message mentions trip not running yet', function () {",
+                  "  pm.expect(j.detail).to.include('chưa khởi hành lăn bánh');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "33c. Admin Sets Trip To Running (DangChay)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"trang_thai\": \"DangChay\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/chuyen-xe/{{trip_id}}/trang-thai",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "chuyen-xe",
+                "{{trip_id}}",
+                "trang-thai"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "pm.test('Trip status updated to DangChay', function () { pm.expect(j.trang_thai).to.eql('DangChay'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "34. Admin Confirms Trip Completion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/chuyen-xe/{{trip_id}}/xac-nhan-hoan-thanh?ghi_chu=Xe+c%E1%BA%ADp+b%E1%BA%BFn+an+to%C3%A0n",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "chuyen-xe",
+                "{{trip_id}}",
+                "xac-nhan-hoan-thanh"
+              ],
+              "query": [
+                {
+                  "key": "ghi_chu",
+                  "value": "Xe cập bến an toàn"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "pm.test('Status is success', function () { pm.expect(j.status).to.eql('success'); });",
+                  "pm.test('Trip is HoanThanh', function () { pm.expect(j.trang_thai).to.eql('HoanThanh'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08. Cài đặt hệ thống (System Settings)",
+      "item": [
+        {
+          "name": "35. Get System Settings",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/cai-dat",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cai-dat"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Contains required settings', function () {",
+                  "  var j = pm.response.json();",
+                  "  var keys = j.map(function(item) { return item.khoa; });",
+                  "  pm.expect(keys).to.include('THOI_GIAN_GIU_CHO_PHUT');",
+                  "  pm.expect(keys).to.include('TY_LE_PHI_HUY_VE');",
+                  "  pm.expect(keys).to.include('THOI_GIAN_HUY_TOI_THIEU_GIO');",
+                  "  pm.expect(keys).to.include('TY_LE_HOAN_TIEN_KHI_HUY_CHUYEN');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "36. Admin Updates Settings (Hold 20m, Fee 15%, Compensation 110%)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"thoi_gian_giu_cho_phut\": 20, \"ty_le_phi_huy_ve\": 15, \"thoi_gian_huy_toi_thieu_gio\": 24, \"ty_le_hoan_tien_khi_huy_chuyen\": 110}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cai-dat",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cai-dat"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Settings updated successfully', function () {",
+                  "  var j = pm.response.json();",
+                  "  var hold = j.find(function(i) { return i.khoa === 'THOI_GIAN_GIU_CHO_PHUT'; });",
+                  "  pm.expect(hold.gia_tri).to.eql('20');",
+                  "  var comp = j.find(function(i) { return i.khoa === 'TY_LE_HOAN_TIEN_KHI_HUY_CHUYEN'; });",
+                  "  pm.expect(comp.gia_tri).to.eql('110');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "37. Customer Cannot Update Settings (Expect 403)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cust_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"thoi_gian_giu_cho_phut\": 30}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cai-dat",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cai-dat"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 403 Forbidden', function () { pm.response.to.have.status(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "09. Quản lý Đội xe & Sơ đồ ghế (Vehicles & Seat Maps)",
+      "item": [
+        {
+          "name": "38. Admin Gets Vehicle Types",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/loai-xe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "loai-xe"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Vehicle types is an array with items', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.be.an('array');",
+                  "  pm.expect(j.length).to.be.above(0);",
+                  "  pm.expect(j[0].ma_loai_xe).to.be.a('number');",
+                  "  pm.expect(j[0].ten_loai_xe).to.be.a('string');",
+                  "  pm.expect(j[0].so_ghe).to.be.above(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "39. Admin Gets All Vehicles With Trip Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/phuong-tien",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "phuong-tien"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Vehicles list is an array', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.be.an('array');",
+                  "  pm.expect(j.length).to.be.above(0);",
+                  "  pm.expect(j[0].bien_so).to.be.a('string');",
+                  "  pm.expect(j[0].so_chuyen_da_chay).to.be.a('number');",
+                  "  pm.expect(['HoatDong', 'BaoTri', 'NgungHoatDong']).to.include(j[0].trang_thai);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "40. Admin Creates New Vehicle With Auto Seat Generation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"bien_so\": \"{{new_vehicle_plate}}\", \"hang_xe\": \"Thaco Mobihome 2024\", \"nam_san_xuat\": 2024, \"ma_loai_xe\": 1}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/phuong-tien",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "phuong-tien"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var r1 = Math.floor(100 + Math.random() * 899);",
+                  "var r2 = Math.floor(10 + Math.random() * 89);",
+                  "pm.collectionVariables.set('new_vehicle_plate', '51B-' + r1 + '.' + r2);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Vehicle created and save new_vehicle_id', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j.ma_xe).to.be.a('number');",
+                  "  pm.expect(j.so_ghe).to.eql(34);",
+                  "  pm.expect(j.trang_thai).to.eql('HoatDong');",
+                  "  pm.collectionVariables.set('new_vehicle_id', j.ma_xe.toString());",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "41. Admin Gets Vehicle Seat Map (Verify Auto-generated Seats)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/phuong-tien/{{new_vehicle_id}}/so-do-ghe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "phuong-tien",
+                "{{new_vehicle_id}}",
+                "so-do-ghe"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Seats list has 34 seats divided into 2 floors', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.be.an('array');",
+                  "  pm.expect(j.length).to.eql(34);",
+                  "  var tang1 = j.filter(function(s) { return s.tang === 1; });",
+                  "  var tang2 = j.filter(function(s) { return s.tang === 2; });",
+                  "  pm.expect(tang1.length).to.eql(17);",
+                  "  pm.expect(tang2.length).to.eql(17);",
+                  "  pm.expect(tang1[0].so_ghe).to.eql('A01');",
+                  "  pm.expect(tang2[0].so_ghe).to.eql('B01');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "42. Admin Creates Duplicate Vehicle License Plate (Expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"bien_so\": \"{{new_vehicle_plate}}\", \"hang_xe\": \"Hyundai\", \"nam_san_xuat\": 2024, \"ma_loai_xe\": 1}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/phuong-tien",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "phuong-tien"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 Bad Request', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Detail contains already exists message', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j.detail).to.include('đã tồn tại');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "43. Admin Updates Vehicle Status to BaoTri (Safety Warning Check)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"trang_thai\": \"BaoTri\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/phuong-tien/1/trang-thai",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "phuong-tien",
+                "1",
+                "trang-thai"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Status updated to BaoTri with warning if affected trips exist', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j.trang_thai).to.eql('BaoTri');",
+                  "  if (j.so_chuyen_anh_huong > 0) {",
+                  "    pm.expect(j.canh_bao).to.be.a('string');",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "44. Admin Restores Vehicle Status to HoatDong",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"trang_thai\": \"HoatDong\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/phuong-tien/1/trang-thai",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "phuong-tien",
+                "1",
+                "trang-thai"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Status restored to HoatDong without warnings', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j.trang_thai).to.eql('HoatDong');",
+                  "  pm.expect(j.so_chuyen_anh_huong).to.eql(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "45. Customer Cannot Access Admin Vehicles (Expect 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cust_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/phuong-tien",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "phuong-tien"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 403 Forbidden', function () { pm.response.to.have.status(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "46. Staff Cannot Modify Vehicle Status (Expect 403)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"trang_thai\": \"BaoTri\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/phuong-tien/1/trang-thai",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "phuong-tien",
+                "1",
+                "trang-thai"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 403 Forbidden', function () { pm.response.to.have.status(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10. Quản lý tài khoản & Phân quyền RBAC (Account Management & RBAC - UC21, UC22)",
+      "item": [
+        {
+          "name": "47. Admin Gets User Accounts List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/tai-khoan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "tai-khoan"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Returns list of accounts with RBAC details', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(Array.isArray(j)).to.be.true;",
+                  "  pm.expect(j.length).to.be.above(0);",
+                  "  var u = j[0];",
+                  "  pm.expect(u).to.have.property('ma_tk');",
+                  "  pm.expect(u).to.have.property('ten_dang_nhap');",
+                  "  pm.expect(u).to.have.property('vai_tro');",
+                  "  pm.expect(u).to.have.property('trang_thai');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "48. Admin Filters Users By Role",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/tai-khoan?vai_tro=NhanVienBanVe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "tai-khoan"
+              ],
+              "query": [
+                {
+                  "key": "vai_tro",
+                  "value": "NhanVienBanVe"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('All returned accounts have role NhanVienBanVe', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(Array.isArray(j)).to.be.true;",
+                  "  j.forEach(function(u) {",
+                  "    pm.expect(u.vai_tro).to.eql('NhanVienBanVe');",
+                  "  });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "49. Admin Searches Users By Keyword",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/tai-khoan?q=admin",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "tai-khoan"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "admin"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Search result contains admin account', function () {",
+                  "  var j = pm.response.json();",
+                  "  var found = j.some(function(u) { return u.ten_dang_nhap === 'admin'; });",
+                  "  pm.expect(found).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "50. Admin Creates New Staff Account",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var rand = Math.floor(100000 + Math.random() * 900000);",
+                  "pm.collectionVariables.set('new_staff_username', 'nv_nm_' + rand);",
+                  "pm.collectionVariables.set('new_staff_phone', '097' + rand);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Staff account created with NhanVienBanVe role', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j.vai_tro).to.eql('NhanVienBanVe');",
+                  "  pm.expect(j.trang_thai).to.eql('HoatDong');",
+                  "  pm.collectionVariables.set('new_staff_ma_tk', String(j.ma_tk));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"ten_dang_nhap\": \"{{new_staff_username}}\", \"mat_khau\": \"MatKhau@123\", \"ho_ten\": \"Nh\\u00e2n Vi\\u00ean Newman POS\", \"sdt\": \"{{new_staff_phone}}\", \"chuc_vu\": \"Nh\\u00e2n vi\\u00ean B\\u1ebfn xe Newman POS\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/nhan-vien",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "nhan-vien"
+              ]
+            }
+          }
+        },
+        {
+          "name": "51. Admin Creates Duplicate Staff Username Rejection (Expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"ten_dang_nhap\": \"{{new_staff_username}}\", \"mat_khau\": \"MatKhau@123\", \"ho_ten\": \"Nh\\u00e2n Vi\\u00ean Tr\\u00f9ng L\\u1eb7p\", \"sdt\": \"0918889999\", \"chuc_vu\": \"Nh\\u00e2n vi\\u00ean Qu\\u1ea7y\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/nhan-vien",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "nhan-vien"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 Bad Request', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Error message mentions duplicate username', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j.detail).to.include('Tên đăng nhập đã tồn tại');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "52. Admin Locks Staff Account",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"trang_thai\": \"Khoa\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/tai-khoan/{{new_staff_ma_tk}}/trang-thai",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "tai-khoan",
+                "{{new_staff_ma_tk}}",
+                "trang-thai"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Account status is now Khoa', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j.trang_thai).to.eql('Khoa');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "53. Admin Unlocks Staff Account",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"trang_thai\": \"HoatDong\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/tai-khoan/{{new_staff_ma_tk}}/trang-thai",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "tai-khoan",
+                "{{new_staff_ma_tk}}",
+                "trang-thai"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Account status is now HoatDong', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j.trang_thai).to.eql('HoatDong');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "54. Hard Security Constraint: Admin Cannot Lock Own Account (Expect 400)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"trang_thai\": \"Khoa\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/tai-khoan/1/trang-thai",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "tai-khoan",
+                "1",
+                "trang-thai"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 Bad Request', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Error detail forbids admin locking self', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j.detail).to.include('Bạn không thể tự khóa tài khoản quản trị của chính mình!');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "55. Admin Views User Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/tai-khoan/1/nhat-ky",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "tai-khoan",
+                "1",
+                "nhat-ky"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Returns audit logs array', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(Array.isArray(j)).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "56. RBAC Check - Customer Cannot Access User Management (Expect 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cust_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/tai-khoan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "tai-khoan"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 403 Forbidden', function () { pm.response.to.have.status(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "57. RBAC Check - Staff Cannot Create Staff Account (Expect 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staff_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"ten_dang_nhap\": \"hacker_staff\", \"mat_khau\": \"123456\", \"ho_ten\": \"Hacker\", \"sdt\": \"0999999999\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/nhan-vien",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "nhan-vien"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 403 Forbidden', function () { pm.response.to.have.status(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

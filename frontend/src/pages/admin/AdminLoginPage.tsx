@@ -34,7 +34,7 @@ export function AdminLoginPage({ onLoginSuccess, onBack }: AdminLoginPageProps) 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!phone.trim() || !password) {
-      setError('Vui lòng nhập số điện thoại và mật khẩu')
+      setError('Vui lòng nhập tên đăng nhập / số điện thoại và mật khẩu')
       return
     }
     setLoading(true)
@@ -77,12 +77,12 @@ export function AdminLoginPage({ onLoginSuccess, onBack }: AdminLoginPageProps) 
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
           <div>
-            <label htmlFor="admin-phone" className="field-label">Số điện thoại</label>
+            <label htmlFor="admin-phone" className="field-label">Tên đăng nhập hoặc Số điện thoại</label>
             <input
               id="admin-phone"
-              type="tel"
-              inputMode="tel"
+              type="text"
               autoComplete="username"
+              placeholder="admin, nv_miendong hoặc 0903123456"
               className="w-full"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}

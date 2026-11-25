@@ -38,6 +38,11 @@ export function AdminSidebar({ currentView, setView, user, pendingRefunds }: Adm
       icon: 'dashboard',
     },
     {
+      id: 'admin-counter',
+      label: 'Bán vé tại quầy (POS)',
+      icon: 'point_of_sale',
+    },
+    {
       id: 'admin-tickets',
       label: 'Quản lý vé & hoàn tiền',
       icon: 'confirmation_number',
